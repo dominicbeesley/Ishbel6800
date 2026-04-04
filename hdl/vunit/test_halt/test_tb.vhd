@@ -22,6 +22,8 @@ architecture rtl of test_tb is
    signal   i_cpu_nRES:          std_logic;
    signal   i_cpu_nHALT:         std_logic;
 
+   signal   i_cpu_din:           std_logic_vector(7 downto 0);
+
 begin
 
 
@@ -56,6 +58,8 @@ begin
 
          if run("test") then
 
+            i_cpu_din <= x"3F";
+
             i_cpu_nHALT <= '1';
             wait for 1 us;
             wait until i_cpu_nRES = '1';
@@ -65,26 +69,33 @@ begin
             end loop;
 
             i_cpu_nHALT <= '0';
+            i_cpu_din <= x"3E"; --WAIT
+
+            for i in 0 to 10 loop
+               wait until falling_edge(i_cpu_clk_phi2);
+            end loop;
+
+            i_cpu_nHALT <= '1';
 
 
          end if;
 
       end loop;
 
-      wait for 3 us;
+      wait for 20 us;
 
       test_runner_cleanup(runner); -- Simulation ends here
    end process;
 
    
-   e_cpu:entity work.cpu68
+   e_cpu:entity work.cpu68_dom
    port map (   
       clk         => i_cpu_clk_phi2,
       rst         => not i_cpu_nRES,
       rw          => open,
       vma         => open,
       address     => open,
-      data_in     => x"3F",
+      data_in     => i_cpu_din,
       data_out    => open,
       hold        => '0',
       halt        => not i_cpu_nHALT,
