@@ -1,0 +1,66 @@
+Sections:
+00: "org0001:ff00" (FF00-FF17)
+01: "org0002:fff8" (FFF8-0)
+
+
+Source: "test.asm"
+                        	     1: 
+                        	     2: 
+                        	     3: 
+                        	     4: 		.org 0xFF00
+00:FF00 3B              	     5: handle_irq:	rti
+00:FF01 3B              	     6: handle_swi:	rti
+00:FF02 3B              	     7: handle_nmi:	rti
+                        	     8: 
+                        	     9: 
+00:FF03 CE0200          	    10: handle_res:	ldx	#0x200
+00:FF06 35              	    11: 		txs
+00:FF07 0F              	    12: 		sei
+                        	    13: 
+                        	    14: 
+00:FF08 8623            	    15: 		ldaa	#0x23
+00:FF0A C625            	    16: 		ldab	#0x25
+00:FF0C CE6789          	    17: 		ldx	#0x6789
+                        	    18: 
+                        	    19: here:		
+00:FF0F 3F              	    20: 		swi
+                        	    21: 
+00:FF10 3E              	    22: 		wai
+                        	    23: 
+00:FF11 4C              	    24: 		inca
+00:FF12 5C              	    25: 		incb
+00:FF13 08              	    26: 		inx
+                        	    27: 
+00:FF14 7EFF0F          	    28: 		jmp	here
+                        	    29: 		
+                        	    30: 
+                        	    31: 
+                        	    32: 		.org 0xFFF8
+01:FFF8 FF00            	    33: hw_irq:		.word	handle_irq
+01:FFFA FF01            	    34: hw_swi:		.word	handle_swi
+01:FFFC FF02            	    35: hw_nmi:		.word	handle_nmi
+01:FFFE FF03            	    36: hw_res:		.word	handle_res
+                        	    37: 
+
+
+Symbols by name:
+handle_irq                       A:FF00
+handle_nmi                       A:FF02
+handle_res                       A:FF03
+handle_swi                       A:FF01
+here                             A:FF0F
+hw_irq                           A:FFF8
+hw_nmi                           A:FFFC
+hw_res                           A:FFFE
+hw_swi                           A:FFFA
+
+Symbols by value:
+FF00 handle_irq
+FF01 handle_swi
+FF02 handle_nmi
+FF03 handle_res
+FF0F here
+FFF8 hw_irq
+FFFA hw_swi
+FFFC hw_nmi
+FFFE hw_res
