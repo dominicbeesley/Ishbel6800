@@ -7,7 +7,7 @@ handle_swi:	rti
 handle_nmi:	rti
 
 
-handle_res:	ldx	#0x200
+handle_res:	ldx	#0x100
 		txs
 		sei
 

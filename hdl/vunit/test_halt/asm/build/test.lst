@@ -13,7 +13,7 @@ Source: "test.asm"
 00:FF02 3B              	     7: handle_nmi:	rti
                         	     8: 
                         	     9: 
-00:FF03 CE0200          	    10: handle_res:	ldx	#0x200
+00:FF03 CE0100          	    10: handle_res:	ldx	#0x100
 00:FF06 35              	    11: 		txs
 00:FF07 0F              	    12: 		sei
                         	    13: 

@@ -74,7 +74,7 @@ entity RAM_tb is
 		nOE			: in		std_logic;
 		nWE			: in		std_logic;
 		
-		tst_dump		: in		std_logic
+		tst_dump		: in		std_logic := '0'
 		
 	);
 		
@@ -123,7 +123,7 @@ begin
 		end if;
 	end process;
 	
-	D <= (others => 'Z') when i_nCS_OE_dly = '1' or i_nOE_dly = '1' or i_nWE_dly = '0' else
+	D <= (others => 'Z') when i_nCS_OE_dly = '1' or i_nOE_dly = '1' or i_nWE_dly = '0' or nWE = '0' else
 			i_D;
 	
 	i_nWE_dly <= nWE after twed;
