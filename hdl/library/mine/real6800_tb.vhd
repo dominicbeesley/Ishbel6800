@@ -55,7 +55,8 @@ ENTITY real_6800_tb IS
 			dly_addr  : time := 135 ns; 
 			dly_dhold : time := 10 ns; -- this is minimum
 			dly_tddw  : time := 160 ns;
-			dly_tba	 : time := 100 ns
+			dly_tba	 : time := 100 ns;
+			dly_tpcs	 : time := 110 ns
 		);
 	PORT (
 		PHI1				: IN		STD_LOGIC;
@@ -88,6 +89,10 @@ ARCHITECTURE Behavioral OF real_6800_tb IS
 	SIGNAL	i_cpu_D_in			: STD_LOGIC_VECTOR(7 downto 0);
 	SIGNAL	i_RnW_hold			: STD_LOGIC;
 
+	SIGNAL	i_RnW_dly			: STD_LOGIC;
+	SIGNAL	i_A_dly				: STD_LOGIC_VECTOR(15 downto 0);
+	SIGNAL	i_ba_dly				: STD_LOGIC;
+
 	SIGNAL	i_irq					: STD_LOGIC;
 	SIGNAL	i_nmi					: STD_LOGIC;
 	SIGNAL	i_vma					: STD_LOGIC;
@@ -107,14 +112,14 @@ BEGIN
 	i_irq <= not(nIRQ);
 
 	i_nmi <= not(nNMI);
-	i_halt <= not(nHALT);
 
 	i_reset <= not(nRESET);
 
 	i_cpu_clk <= PHI2;							-- NOTE: cpu68 is falling edge clock
 
-	RnW <= i_RnW AFTER dly_addr;
-	A <= i_cpu_A AFTER dly_addr;
+	i_RnW_dly <= transport i_RnW AFTER dly_addr;
+	i_A_dly <= transport i_cpu_A AFTER dly_addr;
+	i_ba_dly <= transport i_ba AFTER dly_addr;
 
 	p_phi2_ba:process(PHI2, BA)
 	begin
@@ -124,6 +129,9 @@ BEGIN
 	end process;
 
 	BA <= transport i_ba2 after dly_Tba;				
+
+	RnW <= i_RnW_dly when i_ba_dly = '0' else 'Z';
+	A <= i_A_dly when i_ba_dly = '0' else (others => 'Z');
 
 	VMA <= i_VMA;
 
@@ -135,10 +143,28 @@ BEGIN
 		end if;
 	end process;
 
+	p_halt:process(PHI1)
+	begin
+		if falling_edge(PHI1) then
+			i_halt <= not nHALT;
+		end if;
+	end process;
+
+	p_hlt_stb:process(PHI1)
+	begin
+		if falling_edge(PHI1) then
+			if nRESET = '1' and not(nHALT'stable(dly_tpcs)) then
+				report "Setup violation on nHALT"
+				severity warning;				
+			end if;
+		end if;
+	end process;
+
+
 	i_dbe_dh <= transport DBE after dly_dhold;
 	i_dbe_ddw <= transport DBE after dly_tddw;
 
-	D <= i_cpu_D_out_hold when i_RnW_hold = '0' and i_dbe_dh = '1' and i_dbe_ddw = '1' else
+	D <= i_cpu_D_out_hold when i_RnW_hold = '0' and i_dbe_dh = '1' and i_dbe_ddw = '1' and BA = '0' else
 		 (others => 'Z');
 
 	i_cpu_D_in <= D;
