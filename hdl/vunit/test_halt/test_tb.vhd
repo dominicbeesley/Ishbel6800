@@ -22,17 +22,26 @@ architecture rtl of test_tb is
    signal   i_cpu_clk_phi1:      std_logic;
    signal   i_cpu_clk_phi0:      std_logic;
 
-   signal   i_cpu_nRES:          std_logic;
+   signal   i_sys_nRES:          std_logic;
    signal   i_cpu_nHALT:         std_logic;
 
    signal   i_cpu_D:             std_logic_vector(7 downto 0);
    signal   i_cpu_A:             std_logic_vector(15 downto 0);
-   signal   i_cpu_rnw:           std_logic;
+   signal   i_cpu_RnW:           std_logic;
+   signal   i_cpu_BA:            std_logic;
+   signal   i_cpu_VMA:           std_logic;
 
    signal   i_nCS_ROM:           std_logic;
-   signal   i_nCS_RAM0:          std_logic;
+   signal   i_RAM0_nCS:          std_logic;
 
-   signal   i_RAM_nWE:           std_logic;
+   signal   i_RAM0_nWE:          std_logic;
+
+   signal   i_fp_btn_stop_n:     std_logic;
+   signal   i_fp_btn_run_n:      std_logic;
+
+   signal   i_per_nRD:           std_logic;
+   signal   i_bus_jam_rd:        std_logic;
+   signal   i_bus_jam_d:         std_logic_vector(7 downto 0);
 
 begin
 
@@ -52,9 +61,9 @@ begin
 
    p_reset:process
    begin
-      i_cpu_nRES <= '0';
+      i_sys_nRES <= '0';
       wait for 10 us;
-      i_cpu_nRES <= '1';
+      i_sys_nRES <= '1';
       wait;
    end process;
 
@@ -73,17 +82,11 @@ begin
 
          if run("test") then
 
-            i_cpu_nHALT <= '1';
+            i_fp_btn_run_n <= '1';
+            i_fp_btn_stop_n <= '1';
 
-            wait for 25 us;
-
-            i_cpu_nHALT <= '0';
-
-            wait for 20 us;
-
-            i_cpu_nHALT <= '1';
-
-            wait for 100 us;
+            
+            wait for 200 us;
 
 
          end if;
@@ -104,19 +107,19 @@ begin
       PHI2        => i_cpu_clk_phi2,
       A           => i_cpu_A,
       D           => i_cpu_D,
-      nRESET      => i_cpu_nRES,
+      nRESET      => i_sys_nRES,
       TSC         => '1',
       DBE         => i_cpu_clk_phi2,
       nHALT       => i_cpu_nHALT,
       nIRQ        => '1',
       nNMI        => '1',
-      VMA         => open,
-      RnW         => i_cpu_rnw,
-      BA          => open
+      VMA         => i_cpu_VMA,
+      RnW         => i_cpu_RnW,
+      BA          => i_cpu_ba
       );
 
 
-   i_nCS_ROM <= '0' when i_cpu_A(15 downto 8) = x"FF" else '1';
+   i_nCS_ROM <= '0' when i_cpu_A(15 downto 8) = x"FF" and i_cpu_VMA = '1' else '1';
 
    e_rom:entity work.ROM_tb 
    generic map (
@@ -127,12 +130,11 @@ begin
       A           => i_cpu_A(7 downto 0),
       D           => i_cpu_d,
       nCS         => i_nCS_ROM,
-      nOE         => not i_cpu_clk_phi2
+      nOE         => i_per_nRD
    );
 
-   i_nCS_RAM0 <= '0' when i_cpu_A(15 downto 8) = x"00" else '1';
-
-   i_ram_nWE <= '0' when i_cpu_rnw = '0' and i_cpu_clk_phi2 = '1' else '1';
+   i_RAM0_nCS <= '0' when i_cpu_A(15 downto 8) = x"00" and i_cpu_VMA = '1' else '1';
+   i_RAM0_nWE <= '0' when i_cpu_RnW = '0' and i_cpu_clk_phi2 = '1' else '1';
 
 
    e_ram:entity work.RAM_tb 
@@ -142,10 +144,43 @@ begin
    port map (
       A           => i_cpu_A(7 downto 0),
       D           => i_cpu_D,
-      nCS         => i_nCS_RAM0,
-      nOE         => not i_cpu_clk_phi2,
-      nWE         => i_ram_nWE
+      nCS         => i_RAM0_nCS,
+      nOE         => i_per_nRD,
+      nWE         => i_RAM0_nWE
    );
 
+   -- bus jam overrides normal reads from devices
+   i_per_nRD <=   '1' when i_bus_jam_rd else
+                  '0' when not i_cpu_clk_phi2 else
+                  '1';
+
+   e_fp:entity work.front_panel_ctl
+   port map (
+
+      -- clocks
+      cpu_clk_phi2   => i_cpu_clk_phi2,
+
+      -- front panel buttons and switches
+      btn_stop_n_i   => i_fp_btn_stop_n,
+      btn_run_n_i    => i_fp_btn_run_n,
+
+      -- system control in
+      sys_res_n_i    => i_sys_nRES,
+
+      -- cpu control in            
+      cpu_ba_i       => i_cpu_ba,
+      cpu_vma_i      => i_cpu_VMA,
+
+      -- cpu control out
+      cpu_halt_n_o   => i_cpu_nHALT,
+
+      -- bus override out
+      bus_jam_d_o    => i_bus_jam_d,
+      bus_jam_rd_o   => i_bus_jam_rd
+
+   );
+
+   i_cpu_D <=  i_bus_jam_d when i_bus_jam_rd = '1' and i_cpu_clk_phi2 = '1' else
+               (others => 'Z');
       
 end rtl;

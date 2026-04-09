@@ -14,6 +14,7 @@ lib = vu.add_library("lib")
 lib.add_source_files("./*.vhd")
 lib.add_source_files("../../library/3rdparty/JohnKent/cpu68_dom.vhd")
 lib.add_source_files("../../library/mine/*.vhd")
+lib.add_source_files("../../cards/*.vhd")
 
 vu.set_sim_option("disable_ieee_warnings",1)
 vu.set_sim_option("modelsim.vsim_flags", ["-voptargs=+acc"])

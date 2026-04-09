@@ -19,8 +19,6 @@ handle_res:	ldx	#0x100
 here:		
 		swi
 
-		wai
-
 		inca
 		incb
 		inx
