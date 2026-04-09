@@ -967,6 +967,7 @@ end process;
 --
 ------------------------------------
 process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
+variable v_next_state : state_type;
   	begin
 		  case state is
           when reset_state =>        --  released from reset
@@ -989,7 +990,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- idle the bus
 				 dout_ctrl  <= md_lo_dout;
              addr_ctrl  <= idle_ad;
-	 	       next_state <= vect_hi_state;
+	 	       v_next_state := vect_hi_state;
 
 			 --
 			 -- Jump via interrupt vector
@@ -1016,7 +1017,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 		       pc_ctrl    <= pull_hi_pc;
              addr_ctrl  <= int_hi_ad;
              dout_ctrl  <= pc_hi_dout;
-	 	       next_state <= vect_lo_state;
+	 	       v_next_state := vect_lo_state;
 			 --
 			 -- jump via interrupt vector
 			 -- iv holds vector type
@@ -1042,7 +1043,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 		       pc_ctrl    <= pull_lo_pc;
              addr_ctrl  <= int_lo_ad;
              dout_ctrl  <= pc_lo_dout;
-	 	       next_state <= fetch_state;
+	 	       v_next_state := fetch_state;
 
 			 --
 			 -- Here to fetch an instruction
@@ -1406,18 +1407,14 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
              addr_ctrl  <= fetch_ad;
              dout_ctrl  <= md_lo_dout;
 		  	    iv_ctrl    <= latch_iv;
-				 if halt = '1' then
-               pc_ctrl    <= latch_pc;
-				   nmi_ctrl   <= latch_nmi;
-			      next_state <= halt_state;
-				 -- service non maskable interrupts
-			    elsif (nmi_req = '1') and (nmi_ack = '0') then
-               pc_ctrl    <= latch_pc;
+				 if (nmi_req = '1') and (nmi_ack = '0') then
+             	-- service non maskable interrupts
+			      pc_ctrl    <= latch_pc;
 				   nmi_ctrl   <= set_nmi;
-			      next_state <= int_pcl_state;
-				 -- service maskable interrupts
-			    else
-				   --
+			      v_next_state := int_pcl_state;
+				 else
+				 	-- service maskable interrupts
+			      --
 					-- nmi request is not cleared until nmi input goes low
 					--
 				   if(nmi_req = '0') and (nmi_ack='1') then
@@ -1430,11 +1427,11 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					--
 				   if (irq = '1') and (cc(IBIT) = '0') then
                  pc_ctrl    <= latch_pc;
-			        next_state <= int_pcl_state;
+			        v_next_state := int_pcl_state;
                else
 				   -- Advance the PC to fetch next instruction byte
                  pc_ctrl    <= inc_pc;
-			        next_state <= decode_state;
+			        v_next_state := decode_state;
                end if;
 				 end if;
 			 --
@@ -1569,7 +1566,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  accb_ctrl  <= latch_accb;
 					  ix_ctrl    <= latch_ix;
 		         end case;
-					next_state <= fetch_state;
+					v_next_state := fetch_state;
 				 -- acca / accb inherent instructions
 	          when "0001" =>
 				   md_ctrl    <= fetch_first_md;
@@ -1615,7 +1612,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  acca_ctrl  <= latch_acca;
                  accb_ctrl  <= latch_accb;
 		         end case;
-					next_state <= fetch_state;
+					v_next_state := fetch_state;
 	          when "0010" => -- branch conditional
 				   md_ctrl    <= fetch_first_md;
 					acca_ctrl  <= latch_acca;
@@ -1630,95 +1627,95 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                pc_ctrl    <= inc_pc;
                case op_code(3 downto 0) is
 		         when "0000" => -- bra
-                 next_state <= branch_state;
+                 v_next_state := branch_state;
 		         when "0001" => -- brn
-					  next_state <= fetch_state;
+					  v_next_state := fetch_state;
 		         when "0010" => -- bhi
 					  if (cc(CBIT) or cc(ZBIT)) = '0' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "0011" => -- bls
 					  if (cc(CBIT) or cc(ZBIT)) = '1' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "0100" => -- bcc/bhs
 					  if cc(CBIT) = '0' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "0101" => -- bcs/blo
 					  if cc(CBIT) = '1' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "0110" => -- bne
 					  if cc(ZBIT) = '0' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "0111" => -- beq
 					  if cc(ZBIT) = '1' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "1000" => -- bvc
 					  if cc(VBIT) = '0' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "1001" => -- bvs
 					  if cc(VBIT) = '1' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "1010" => -- bpl
 					  if cc(NBIT) = '0' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "1011" => -- bmi
 					  if cc(NBIT) = '1' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "1100" => -- bge
 					  if (cc(NBIT) xor cc(VBIT)) = '0' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "1101" => -- blt
 					  if (cc(NBIT) xor cc(VBIT)) = '1' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "1110" => -- bgt
 					  if (cc(ZBIT) or (cc(NBIT) xor cc(VBIT))) = '0' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when "1111" => -- ble
 					  if (cc(ZBIT) or (cc(NBIT) xor cc(VBIT))) = '1' then
-					    next_state <= branch_state;
+					    v_next_state := branch_state;
 					  else
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end if;
 		         when others =>
-					  next_state <= fetch_state;
+					  v_next_state := fetch_state;
 		         end case;
 				 --
 				 -- Single byte stack operators
@@ -1737,7 +1734,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= load_ix;
                   sp_ctrl    <= latch_sp;
-						next_state <= fetch_state;
+						v_next_state := fetch_state;
 		         when "0001" => -- ins
                   left_ctrl  <= sp_left;
                   right_ctrl <= plus_one_right;
@@ -1745,7 +1742,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
                   sp_ctrl    <= load_sp;
-						next_state <= fetch_state;
+						v_next_state := fetch_state;
 		         when "0010" => -- pula
                   left_ctrl  <= sp_left;
                   right_ctrl <= plus_one_right;
@@ -1753,7 +1750,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
                   sp_ctrl    <= load_sp;
-						next_state <= pula_state;
+						v_next_state := pula_state;
 		         when "0011" => -- pulb
                   left_ctrl  <= sp_left;
                   right_ctrl <= plus_one_right;
@@ -1761,7 +1758,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
                   sp_ctrl    <= load_sp;
-						next_state <= pulb_state;
+						v_next_state := pulb_state;
 		         when "0100" => -- des
                   -- decrement sp
                   left_ctrl  <= sp_left;
@@ -1770,7 +1767,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
                   sp_ctrl    <= load_sp;
-						next_state <= fetch_state;
+						v_next_state := fetch_state;
 		         when "0101" => -- txs
 		            left_ctrl  <= ix_left;
 		            right_ctrl <= plus_one_right;
@@ -1778,7 +1775,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
 						sp_ctrl    <= load_sp;
-						next_state <= fetch_state;
+						v_next_state := fetch_state;
 		         when "0110" => -- psha
 		            left_ctrl  <= sp_left;
 		            right_ctrl <= zero_right;
@@ -1786,7 +1783,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
 						sp_ctrl    <= latch_sp;
-						next_state <= psha_state;
+						v_next_state := psha_state;
 		         when "0111" => -- pshb
 		            left_ctrl  <= sp_left;
 		            right_ctrl <= zero_right;
@@ -1794,7 +1791,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
 						sp_ctrl    <= latch_sp;
-						next_state <= pshb_state;
+						v_next_state := pshb_state;
 		         when "1000" => -- pulx
                   left_ctrl  <= sp_left;
                   right_ctrl <= plus_one_right;
@@ -1802,7 +1799,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
                   sp_ctrl    <= load_sp;
-						next_state <= pulx_hi_state;
+						v_next_state := pulx_hi_state;
 		         when "1001" => -- rts
                   left_ctrl  <= sp_left;
                   right_ctrl <= plus_one_right;
@@ -1810,7 +1807,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
                   sp_ctrl    <= load_sp;
-						next_state <= rts_hi_state;
+						v_next_state := rts_hi_state;
 		         when "1010" => -- abx
 		            left_ctrl  <= ix_left;
 		            right_ctrl <= accb_right;
@@ -1818,7 +1815,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= load_ix;
                   sp_ctrl    <= latch_sp;
-						next_state <= fetch_state;
+						v_next_state := fetch_state;
 		         when "1011" => -- rti
                   left_ctrl  <= sp_left;
                   right_ctrl <= plus_one_right;
@@ -1826,7 +1823,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
                   sp_ctrl    <= load_sp;
-						next_state <= rti_cc_state;
+						v_next_state := rti_cc_state;
 		         when "1100" => -- pshx
 		            left_ctrl  <= sp_left;
 		            right_ctrl <= zero_right;
@@ -1834,7 +1831,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
 						sp_ctrl    <= latch_sp;
-						next_state <= pshx_lo_state;
+						v_next_state := pshx_lo_state;
 		         when "1101" => -- mul
 		            left_ctrl  <= acca_left;
 		            right_ctrl <= accb_right;
@@ -1842,7 +1839,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
 						sp_ctrl    <= latch_sp;
-						next_state <= mul_state;
+						v_next_state := mul_state;
 		         when "1110" => -- wai
 		            left_ctrl  <= sp_left;
 		            right_ctrl <= zero_right;
@@ -1850,7 +1847,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
 						sp_ctrl    <= latch_sp;
-						next_state <= int_pcl_state;
+						v_next_state := int_pcl_state;
 		         when "1111" => -- swi
 		            left_ctrl  <= sp_left;
 		            right_ctrl <= zero_right;
@@ -1858,7 +1855,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
 						sp_ctrl    <= latch_sp;
-						next_state <= int_pcl_state;
+						v_next_state := int_pcl_state;
 		         when others =>
 		            left_ctrl  <= sp_left;
 		            right_ctrl <= zero_right;
@@ -1866,7 +1863,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					   cc_ctrl    <= latch_cc;
 						ix_ctrl    <= latch_ix;
 						sp_ctrl    <= latch_sp;
-						next_state <= fetch_state;
+						v_next_state := fetch_state;
 		         end case;
 				 --
 				 -- Accumulator A Single operand
@@ -1952,7 +1949,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  acca_ctrl  <= latch_acca;
 					  cc_ctrl    <= latch_cc;
 		         end case;
-				   next_state <= fetch_state;
+				   v_next_state := fetch_state;
 				 --
 				 -- single operand acc b
 				 -- Do not advance PC
@@ -2036,7 +2033,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  accb_ctrl  <= latch_accb;
 					  cc_ctrl    <= latch_cc;
 		         end case;
-				   next_state <= fetch_state;
+				   v_next_state := fetch_state;
 				 --
 				 -- Single operand indexed
 				 -- Two byte instruction so advance PC
@@ -2054,7 +2051,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                alu_ctrl   <= alu_nop;
 					cc_ctrl    <= latch_cc;
                pc_ctrl    <= inc_pc;
-				   next_state <= indexed_state;
+				   v_next_state := indexed_state;
              --
 				 -- Single operand extended addressing
 				 -- three byte instruction so advance the PC
@@ -2072,7 +2069,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                alu_ctrl   <= alu_nop;
 					cc_ctrl    <= latch_cc;
                pc_ctrl    <= inc_pc;
-				   next_state <= extended_state;
+				   v_next_state := extended_state;
 
 	          when "1000" => -- acca immediate
 				   md_ctrl    <= fetch_first_md;
@@ -2090,11 +2087,11 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                when "0011" | -- subdd #
 					     "1100" | -- cpx #
 					     "1110" => -- lds #
-					  next_state <= immediate16_state;
+					  v_next_state := immediate16_state;
 					when "1101" => -- bsr
-					  next_state <= bsr_state;
+					  v_next_state := bsr_state;
 					when others =>
-				     next_state <= fetch_state;
+				     v_next_state := fetch_state;
                end case;
 
 	          when "1001" => -- acca direct
@@ -2111,28 +2108,28 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                  alu_ctrl   <= alu_st8;
 					  cc_ctrl    <= latch_cc;
 				     md_ctrl    <= load_md;
-				     next_state <= write8_state;
+				     v_next_state := write8_state;
 					when "1111" => -- sts direct
                  left_ctrl  <= sp_left;
                  right_ctrl <= zero_right;
                  alu_ctrl   <= alu_st16;
 					  cc_ctrl    <= latch_cc;
 				     md_ctrl    <= load_md;
-				     next_state <= write16_state;
+				     v_next_state := write16_state;
 					when "1101" => -- jsr direct
                  left_ctrl  <= acca_left;
                  right_ctrl <= zero_right;
                  alu_ctrl   <= alu_nop;
 					  cc_ctrl    <= latch_cc;
 				     md_ctrl    <= fetch_first_md;
-					  next_state <= jsr_state;
+					  v_next_state := jsr_state;
 					when others =>
                  left_ctrl  <= acca_left;
                  right_ctrl <= zero_right;
                  alu_ctrl   <= alu_nop;
 					  cc_ctrl    <= latch_cc;
 				     md_ctrl    <= fetch_first_md;
-				     next_state <= read8_state;
+				     v_next_state := read8_state;
                end case;
 
 	          when "1010" => -- acca indexed
@@ -2147,7 +2144,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                alu_ctrl   <= alu_nop;
 					cc_ctrl    <= latch_cc;
                pc_ctrl    <= inc_pc;
-				   next_state <= indexed_state;
+				   v_next_state := indexed_state;
 
              when "1011" => -- acca extended
 				   md_ctrl    <= fetch_first_md;
@@ -2161,7 +2158,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                alu_ctrl   <= alu_nop;
 					cc_ctrl    <= latch_cc;
                pc_ctrl    <= inc_pc;
-				   next_state <= extended_state;
+				   v_next_state := extended_state;
 
 	          when "1100" => -- accb immediate
 				   md_ctrl    <= fetch_first_md;
@@ -2179,9 +2176,9 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                when "0011" | -- addd #
 					     "1100" | -- ldd #
 					     "1110" => -- ldx #
-					  next_state <= immediate16_state;
+					  v_next_state := immediate16_state;
 					when others =>
-				     next_state <= fetch_state;
+				     v_next_state := fetch_state;
                end case;
 
 	          when "1101" => -- accb direct
@@ -2198,28 +2195,28 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                  alu_ctrl   <= alu_st8;
 					  cc_ctrl    <= latch_cc;
 				     md_ctrl    <= load_md;
-				     next_state <= write8_state;
+				     v_next_state := write8_state;
 					when "1101" => -- std direct
                  left_ctrl  <= accd_left;
                  right_ctrl <= zero_right;
                  alu_ctrl   <= alu_st16;
 					  cc_ctrl    <= latch_cc;
 				     md_ctrl    <= load_md;
-					  next_state <= write16_state;
+					  v_next_state := write16_state;
 					when "1111" => -- stx direct
                  left_ctrl  <= ix_left;
                  right_ctrl <= zero_right;
                  alu_ctrl   <= alu_st16;
 					  cc_ctrl    <= latch_cc;
 				     md_ctrl    <= load_md;
-				     next_state <= write16_state;
+				     v_next_state := write16_state;
 					when others =>
                  left_ctrl  <= acca_left;
                  right_ctrl <= zero_right;
                  alu_ctrl   <= alu_nop;
 					  cc_ctrl    <= latch_cc;
 				     md_ctrl    <= fetch_first_md;
-				     next_state <= read8_state;
+				     v_next_state := read8_state;
                end case;
 
 	          when "1110" => -- accb indexed
@@ -2234,7 +2231,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                alu_ctrl   <= alu_nop;
 					cc_ctrl    <= latch_cc;
                pc_ctrl    <= inc_pc;
-				   next_state <= indexed_state;
+				   v_next_state := indexed_state;
 
              when "1111" => -- accb extended
 				   md_ctrl    <= fetch_first_md;
@@ -2248,7 +2245,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                alu_ctrl   <= alu_nop;
 					cc_ctrl    <= latch_cc;
                pc_ctrl    <= inc_pc;
-				   next_state <= extended_state;
+				   v_next_state := extended_state;
 
 	          when others =>
 				   md_ctrl    <= fetch_first_md;
@@ -2262,7 +2259,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                alu_ctrl   <= alu_nop;
   					cc_ctrl    <= latch_cc;
                pc_ctrl    <= latch_pc;
- 		         next_state <= fetch_state;
+ 		         v_next_state := fetch_state;
              end case;
 
 			  when immediate16_state =>
@@ -2284,7 +2281,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 			    md_ctrl    <= fetch_next_md;
              addr_ctrl  <= fetch_ad;
              dout_ctrl  <= md_lo_dout;
-				 next_state <= fetch_state;
+				 v_next_state := fetch_state;
            --
 			  -- ea holds 8 bit index offet
 			  -- calculate the effective memory address
@@ -2315,11 +2312,11 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                cc_ctrl    <= latch_cc;
 	            case op_code(3 downto 0) is
 		         when "1011" => -- undefined
-					  next_state <= fetch_state;
+					  v_next_state := fetch_state;
 		         when "1110" => -- jmp
-					  next_state <= jmp_state;
+					  v_next_state := jmp_state;
 		         when others =>
-					  next_state <= read8_state;
+					  v_next_state := read8_state;
 		         end case;
 	          when "1010" => -- acca indexed
 				   case op_code(3 downto 0) is
@@ -2329,28 +2326,28 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				     alu_ctrl   <= alu_st8;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= load_md;
-				     next_state <= write8_state;
+				     v_next_state := write8_state;
 					when "1101" => -- jsr
 			        left_ctrl  <= acca_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_nop;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= latch_md;
-					  next_state <= jsr_state;
+					  v_next_state := jsr_state;
 					when "1111" => -- sts
 			        left_ctrl  <= sp_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_st16;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= load_md;
-				     next_state <= write16_state;
+				     v_next_state := write16_state;
 					when others =>
 			        left_ctrl  <= acca_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_nop;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= latch_md;
-					  next_state <= read8_state;
+					  v_next_state := read8_state;
 					end case;
 	          when "1110" => -- accb indexed
 				   case op_code(3 downto 0) is
@@ -2360,28 +2357,28 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				     alu_ctrl   <= alu_st8;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= load_md;
-				     next_state <= write8_state;
+				     v_next_state := write8_state;
 					when "1101" => -- std direct
 			        left_ctrl  <= accd_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_st16;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= load_md;
-					  next_state <= write16_state;
+					  v_next_state := write16_state;
 					when "1111" => -- stx direct
 			        left_ctrl  <= ix_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_st16;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= load_md;
-				     next_state <= write16_state;
+				     v_next_state := write16_state;
 					when others =>
 			        left_ctrl  <= acca_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_nop;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= latch_md;
-					  next_state <= read8_state;
+					  v_next_state := read8_state;
 					end case;
 			    when others =>
                md_ctrl    <= latch_md;
@@ -2389,7 +2386,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				   right_ctrl <= zero_right;
 				   alu_ctrl   <= alu_nop;
                cc_ctrl    <= latch_cc;
-					next_state <= fetch_state;
+					v_next_state := fetch_state;
 			    end case;
            --
 			  -- ea holds the low byte of the absolute address
@@ -2421,11 +2418,11 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                cc_ctrl    <= latch_cc;
 	            case op_code(3 downto 0) is
 		         when "1011" => -- undefined
-					  next_state <= fetch_state;
+					  v_next_state := fetch_state;
 		         when "1110" => -- jmp
-					  next_state <= jmp_state;
+					  v_next_state := jmp_state;
 		         when others =>
-					  next_state <= read8_state;
+					  v_next_state := read8_state;
 		         end case;
 	          when "1011" => -- acca extended
 				   case op_code(3 downto 0) is
@@ -2435,28 +2432,28 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				     alu_ctrl   <= alu_st8;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= load_md;
-				     next_state <= write8_state;
+				     v_next_state := write8_state;
 					when "1101" => -- jsr
 			        left_ctrl  <= acca_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_nop;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= latch_md;
-					  next_state <= jsr_state;
+					  v_next_state := jsr_state;
 					when "1111" => -- sts
 			        left_ctrl  <= sp_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_st16;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= load_md;
-				     next_state <= write16_state;
+				     v_next_state := write16_state;
 					when others =>
 			        left_ctrl  <= acca_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_nop;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= latch_md;
-					  next_state <= read8_state;
+					  v_next_state := read8_state;
 					end case;
 	          when "1111" => -- accb extended
 				   case op_code(3 downto 0) is
@@ -2466,28 +2463,28 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				     alu_ctrl   <= alu_st8;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= load_md;
-				     next_state <= write8_state;
+				     v_next_state := write8_state;
 					when "1101" => -- std
 			        left_ctrl  <= accd_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_st16;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= load_md;
-					  next_state <= write16_state;
+					  v_next_state := write16_state;
 					when "1111" => -- stx
 			        left_ctrl  <= ix_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_st16;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= load_md;
-				     next_state <= write16_state;
+				     v_next_state := write16_state;
 					when others =>
 			        left_ctrl  <= acca_left;
 				     right_ctrl <= zero_right;
 				     alu_ctrl   <= alu_nop;
                  cc_ctrl    <= latch_cc;
                  md_ctrl    <= latch_md;
-					  next_state <= read8_state;
+					  v_next_state := read8_state;
 					end case;
 			    when others =>
                md_ctrl    <= latch_md;
@@ -2495,7 +2492,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				   right_ctrl <= zero_right;
 				   alu_ctrl   <= alu_nop;
                cc_ctrl    <= latch_cc;
-					next_state <= fetch_state;
+					v_next_state := fetch_state;
 			    end case;
            --
 			  -- here if ea holds low byte (direct page)
@@ -2523,7 +2520,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                      cc_ctrl    <= latch_cc;
 				         md_ctrl    <= fetch_first_md;
 					      ea_ctrl    <= latch_ea;
-					      next_state <= execute_state;
+					      v_next_state := execute_state;
 
 	              when "1001" | "1010" | "1011" => -- acca
 				       case op_code(3 downto 0) is
@@ -2537,7 +2534,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				         md_ctrl    <= fetch_first_md;
 				         -- increment the effective address in case of 16 bit load
 					      ea_ctrl    <= inc_ea;
-					      next_state <= read16_state;
+					      v_next_state := read16_state;
 --					    when "0111" =>   -- staa
 -- 					      left_ctrl  <= acca_left;
 --					      right_ctrl <= zero_right;
@@ -2545,7 +2542,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 --                     cc_ctrl    <= latch_cc;
 --				         md_ctrl    <= load_md;
 -- 					      ea_ctrl    <= latch_ea;
---					      next_state <= write8_state;
+--					      v_next_state := write8_state;
 --					    when "1101" => -- jsr
 --			            left_ctrl  <= acca_left;
 --				         right_ctrl <= zero_right;
@@ -2553,7 +2550,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 --                     cc_ctrl    <= latch_cc;
 --                     md_ctrl    <= latch_md;
 -- 					      ea_ctrl    <= latch_ea;
---					      next_state <= jsr_state;
+--					      v_next_state := jsr_state;
 --					    when "1111" =>  -- sts
 -- 					      left_ctrl  <= sp_left;
 --					      right_ctrl <= zero_right;
@@ -2561,7 +2558,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 --                     cc_ctrl    <= latch_cc;
 --				         md_ctrl    <= load_md;
 --					      ea_ctrl    <= latch_ea;
---					      next_state <= write16_state;
+--					      v_next_state := write16_state;
 					    when others =>
  					      left_ctrl  <= acca_left;
 					      right_ctrl <= zero_right;
@@ -2569,7 +2566,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                      cc_ctrl    <= latch_cc;
 				         md_ctrl    <= fetch_first_md;
  					      ea_ctrl    <= latch_ea;
-					      next_state <= fetch_state;
+					      v_next_state := fetch_state;
 					    end case;
 
 	              when "1101" | "1110" | "1111" => -- accb
@@ -2584,7 +2581,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				         md_ctrl    <= fetch_first_md;
 				         -- increment the effective address in case of 16 bit load
 					      ea_ctrl    <= inc_ea;
-					      next_state <= read16_state;
+					      v_next_state := read16_state;
 --					    when "0111" =>   -- stab
 -- 					      left_ctrl  <= accb_left;
 --					      right_ctrl <= zero_right;
@@ -2592,7 +2589,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 --                     cc_ctrl    <= latch_cc;
 --				         md_ctrl    <= load_md;
 --					      ea_ctrl    <= latch_ea;
---					      next_state <= write8_state;
+--					      v_next_state := write8_state;
 --					    when "1101" => -- std
 --			            left_ctrl  <= accd_left;
 --				         right_ctrl <= zero_right;
@@ -2600,7 +2597,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 --                     cc_ctrl    <= latch_cc;
 --                     md_ctrl    <= load_md;
 -- 					      ea_ctrl    <= latch_ea;
---					      next_state <= write16_state;
+--					      v_next_state := write16_state;
 --					    when "1111" =>  -- stx
 -- 					      left_ctrl  <= ix_left;
 --					      right_ctrl <= zero_right;
@@ -2608,7 +2605,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 --                     cc_ctrl    <= latch_cc;
 --				         md_ctrl    <= load_md;
 --					      ea_ctrl    <= latch_ea;
---					      next_state <= write16_state;
+--					      v_next_state := write16_state;
 					    when others =>
  					      left_ctrl  <= acca_left;
 					      right_ctrl <= zero_right;
@@ -2616,7 +2613,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                      cc_ctrl    <= latch_cc;
 				         md_ctrl    <= fetch_first_md;
 					      ea_ctrl    <= latch_ea;
-					      next_state <= execute_state;
+					      v_next_state := execute_state;
 					    end case;
 					  when others =>
  					    left_ctrl  <= acca_left;
@@ -2625,7 +2622,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
                    cc_ctrl    <= latch_cc;
 				       md_ctrl    <= fetch_first_md;
 					    ea_ctrl    <= latch_ea;
-					    next_state <= fetch_state;
+					    v_next_state := fetch_state;
 					  end case;
 
 			   when read16_state => -- read second data byte from ea
@@ -2648,7 +2645,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				     md_ctrl    <= fetch_next_md;
                  addr_ctrl  <= read_ad;
                  dout_ctrl  <= md_lo_dout;
-					  next_state <= fetch_state;
+					  v_next_state := fetch_state;
            --
 			  -- 16 bit Write state
 			  -- write high byte of ALU output.
@@ -2675,7 +2672,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
  				 -- write the ALU hi byte to ea
              addr_ctrl  <= write_ad;
              dout_ctrl  <= md_hi_dout;
-				 next_state <= write8_state;
+				 v_next_state := write8_state;
            --
 			  -- 8 bit write
 			  -- Write low 8 bits of ALU output
@@ -2700,7 +2697,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- write ALU low byte output
              addr_ctrl  <= write_ad;
              dout_ctrl  <= md_lo_dout;
-				 next_state <= fetch_state;
+				 v_next_state := fetch_state;
 
 				when jmp_state =>
                  acca_ctrl  <= latch_acca;
@@ -2721,7 +2718,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle the bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-                 next_state <= fetch_state;
+                 v_next_state := fetch_state;
 
 				when jsr_state => -- JSR
                  acca_ctrl  <= latch_acca;
@@ -2743,7 +2740,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- write pc low
                  addr_ctrl  <= push_ad;
 					  dout_ctrl  <= pc_lo_dout; 
-                 next_state <= jsr1_state;
+                 v_next_state := jsr1_state;
 
 				when jsr1_state => -- JSR
                  acca_ctrl  <= latch_acca;
@@ -2764,7 +2761,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- write pc hi
                  addr_ctrl  <= push_ad;
 					  dout_ctrl  <= pc_hi_dout; 
-                 next_state <= jmp_state;
+                 v_next_state := jmp_state;
 
 				when branch_state => -- Bcc
 				     -- default registers
@@ -2786,7 +2783,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle the bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-                 next_state <= fetch_state;
+                 v_next_state := fetch_state;
 
 				when bsr_state => -- BSR
 				     -- default
@@ -2808,7 +2805,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- write pc low
                  addr_ctrl  <= push_ad;
 					  dout_ctrl  <= pc_lo_dout; 
-                 next_state <= bsr1_state;
+                 v_next_state := bsr1_state;
 
 				when bsr1_state => -- BSR
 				     -- default registers
@@ -2830,7 +2827,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- write pc hi
                  addr_ctrl  <= push_ad;
 					  dout_ctrl  <= pc_hi_dout; 
-                 next_state <= branch_state;
+                 v_next_state := branch_state;
 
 				 when rts_hi_state => -- RTS
 				     -- default
@@ -2853,7 +2850,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  pc_ctrl    <= pull_hi_pc;
                  addr_ctrl  <= pull_ad;
                  dout_ctrl  <= pc_hi_dout;
-                 next_state <= rts_lo_state;
+                 v_next_state := rts_lo_state;
 
 				when rts_lo_state => -- RTS1
 				     -- default
@@ -2875,7 +2872,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  pc_ctrl    <= pull_lo_pc;
                  addr_ctrl  <= pull_ad;
                  dout_ctrl  <= pc_lo_dout;
-                 next_state <= fetch_state;
+                 v_next_state := fetch_state;
 
 				 when mul_state =>
 				     -- default
@@ -2897,7 +2894,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-				     next_state <= mulea_state;
+				     v_next_state := mulea_state;
 
 				 when mulea_state =>
 				     -- default
@@ -2920,7 +2917,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-				     next_state <= muld_state;
+				     v_next_state := muld_state;
 
 				 when muld_state =>
 				     -- default
@@ -2942,7 +2939,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-				     next_state <= mul0_state;
+				     v_next_state := mul0_state;
 
 				 when mul0_state =>
 				     -- default
@@ -2970,7 +2967,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-				     next_state <= mul1_state;
+				     v_next_state := mul1_state;
 
 				 when mul1_state =>
 				     -- default
@@ -2998,7 +2995,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-				     next_state <= mul2_state;
+				     v_next_state := mul2_state;
 
 				 when mul2_state =>
 				     -- default
@@ -3026,7 +3023,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-				     next_state <= mul3_state;
+				     v_next_state := mul3_state;
 
 				 when mul3_state =>
 				     -- default
@@ -3054,7 +3051,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-				     next_state <= mul4_state;
+				     v_next_state := mul4_state;
 
 				 when mul4_state =>
 				     -- default
@@ -3082,7 +3079,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-				     next_state <= mul5_state;
+				     v_next_state := mul5_state;
 
 				 when mul5_state =>
 				     -- default
@@ -3110,7 +3107,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-				     next_state <= mul6_state;
+				     v_next_state := mul6_state;
 
 				 when mul6_state =>
 				     -- default
@@ -3138,7 +3135,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-				     next_state <= mul7_state;
+				     v_next_state := mul7_state;
 
 				 when mul7_state =>
 				     -- default
@@ -3166,7 +3163,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-				     next_state <= fetch_state;
+				     v_next_state := fetch_state;
 
 			    when execute_state => -- execute single operand instruction
 				   -- default
@@ -3192,85 +3189,85 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					    alu_ctrl   <= alu_neg;
 					    cc_ctrl    <= load_cc;
 				       md_ctrl    <= load_md;
-				       next_state <= write8_state;
+				       v_next_state := write8_state;
  	              when "0011" => -- com
 		             right_ctrl <= zero_right;
 					    alu_ctrl   <= alu_com;
 					    cc_ctrl    <= load_cc;
 				       md_ctrl    <= load_md;
-				       next_state <= write8_state;
+				       v_next_state := write8_state;
 		           when "0100" => -- lsr
 						 right_ctrl <= zero_right;
 					    alu_ctrl   <= alu_lsr8;
 					    cc_ctrl    <= load_cc;
 				       md_ctrl    <= load_md;
-				       next_state <= write8_state;
+				       v_next_state := write8_state;
 		           when "0110" => -- ror
 						 right_ctrl <= zero_right;
 					    alu_ctrl   <= alu_ror8;
 					    cc_ctrl    <= load_cc;
 				       md_ctrl    <= load_md;
-				       next_state <= write8_state;
+				       v_next_state := write8_state;
 		           when "0111" => -- asr
 						 right_ctrl <= zero_right;
 					    alu_ctrl   <= alu_asr8;
 					    cc_ctrl    <= load_cc;
 				       md_ctrl    <= load_md;
-				       next_state <= write8_state;
+				       v_next_state := write8_state;
 		           when "1000" => -- asl
 						 right_ctrl <= zero_right;
 					    alu_ctrl   <= alu_asl8;
 					    cc_ctrl    <= load_cc;
 				       md_ctrl    <= load_md;
-				       next_state <= write8_state;
+				       v_next_state := write8_state;
 		           when "1001" => -- rol
 						 right_ctrl <= zero_right;
 					    alu_ctrl   <= alu_rol8;
 					    cc_ctrl    <= load_cc;
 				       md_ctrl    <= load_md;
-				       next_state <= write8_state;
+				       v_next_state := write8_state;
 		           when "1010" => -- dec
 		             right_ctrl <= plus_one_right;
 					    alu_ctrl   <= alu_dec;
 					    cc_ctrl    <= load_cc;
 				       md_ctrl    <= load_md;
-				       next_state <= write8_state;
+				       v_next_state := write8_state;
 		           when "1011" => -- undefined
 						 right_ctrl <= zero_right;
 					    alu_ctrl   <= alu_nop;
 					    cc_ctrl    <= latch_cc;
 				       md_ctrl    <= latch_md;
-				       next_state <= fetch_state;
+				       v_next_state := fetch_state;
 		           when "1100" => -- inc
 		             right_ctrl <= plus_one_right;
 					    alu_ctrl   <= alu_inc;
 					    cc_ctrl    <= load_cc;
 				       md_ctrl    <= load_md;
-				       next_state <= write8_state;
+				       v_next_state := write8_state;
 		           when "1101" => -- tst
 		             right_ctrl <= zero_right;
 					    alu_ctrl   <= alu_st8;
 					    cc_ctrl    <= load_cc;
 				       md_ctrl    <= latch_md;
-				       next_state <= fetch_state;
+				       v_next_state := fetch_state;
 		           when "1110" => -- jmp
 						 right_ctrl <= zero_right;
 					    alu_ctrl   <= alu_nop;
 					    cc_ctrl    <= latch_cc;
 				       md_ctrl    <= latch_md;
-				       next_state <= fetch_state;
+				       v_next_state := fetch_state;
 		           when "1111" => -- clr
 						 right_ctrl <= zero_right;
 					    alu_ctrl   <= alu_clr;
 					    cc_ctrl    <= load_cc;
 				       md_ctrl    <= load_md;
-				       next_state <= write8_state;
+				       v_next_state := write8_state;
 		           when others =>
 						 right_ctrl <= zero_right;
 					    alu_ctrl   <= alu_nop;
 					    cc_ctrl    <= latch_cc;
 				       md_ctrl    <= latch_md;
-				       next_state <= fetch_state;
+				       v_next_state := fetch_state;
 		           end case;
 
 	            when others =>
@@ -3289,7 +3286,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					  -- idle the bus
                  addr_ctrl  <= idle_ad;
                  dout_ctrl  <= md_lo_dout;
-		           next_state <= fetch_state;
+		           v_next_state := fetch_state;
               end case;
 
 			  when psha_state =>
@@ -3312,7 +3309,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- write acca
              addr_ctrl  <= push_ad;
 			    dout_ctrl  <= acca_dout; 
-             next_state <= fetch_state;
+             v_next_state := fetch_state;
 
 			  when pula_state =>
 				 -- default registers
@@ -3335,7 +3332,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 acca_ctrl  <= pull_acca;
              addr_ctrl  <= pull_ad;
              dout_ctrl  <= acca_dout;
-             next_state <= fetch_state;
+             v_next_state := fetch_state;
 
 			  when pshb_state =>
 				 -- default registers
@@ -3357,7 +3354,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- write accb
              addr_ctrl  <= push_ad;
 			    dout_ctrl  <= accb_dout; 
-             next_state <= fetch_state;
+             v_next_state := fetch_state;
 
 			  when pulb_state =>
 				 -- default
@@ -3380,7 +3377,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 accb_ctrl  <= pull_accb;
              addr_ctrl  <= pull_ad;
              dout_ctrl  <= accb_dout;
-             next_state <= fetch_state;
+             v_next_state := fetch_state;
 
 			  when pshx_lo_state =>
 				 -- default
@@ -3403,7 +3400,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- write ix low
              addr_ctrl  <= push_ad;
 			    dout_ctrl  <= ix_lo_dout; 
-             next_state <= pshx_hi_state;
+             v_next_state := pshx_hi_state;
 
 			  when pshx_hi_state =>
 				 -- default registers
@@ -3425,7 +3422,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- write ix hi
              addr_ctrl  <= push_ad;
 			    dout_ctrl  <= ix_hi_dout; 
-             next_state <= fetch_state;
+             v_next_state := fetch_state;
 
 		  	  when pulx_hi_state =>
 				 -- default
@@ -3447,7 +3444,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 ix_ctrl    <= pull_hi_ix;
              addr_ctrl  <= pull_ad;
              dout_ctrl  <= ix_hi_dout;
-             next_state <= pulx_lo_state;
+             v_next_state := pulx_lo_state;
 
 		  	  when pulx_lo_state =>
 				 -- default
@@ -3469,7 +3466,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 ix_ctrl    <= pull_lo_ix;
              addr_ctrl  <= pull_ad;
              dout_ctrl  <= ix_lo_dout;
-             next_state <= fetch_state;
+             v_next_state := fetch_state;
 
            --
 			  -- return from interrupt
@@ -3495,7 +3492,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
              cc_ctrl    <= latch_cc;
              addr_ctrl  <= idle_ad;
              dout_ctrl  <= cc_dout;
-             next_state <= rti_cc_state;
+             v_next_state := rti_cc_state;
 
 			  when rti_cc_state =>
 				 -- default registers
@@ -3517,7 +3514,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
              cc_ctrl    <= pull_cc;
              addr_ctrl  <= pull_ad;
              dout_ctrl  <= cc_dout;
-             next_state <= rti_accb_state;
+             v_next_state := rti_accb_state;
 
 			  when rti_accb_state =>
 				 -- default registers
@@ -3539,7 +3536,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 accb_ctrl  <= pull_accb;
              addr_ctrl  <= pull_ad;
              dout_ctrl  <= accb_dout;
-             next_state <= rti_acca_state;
+             v_next_state := rti_acca_state;
 
 			  when rti_acca_state =>
 				 -- default registers
@@ -3561,7 +3558,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 acca_ctrl  <= pull_acca;
              addr_ctrl  <= pull_ad;
              dout_ctrl  <= acca_dout;
-             next_state <= rti_ixh_state;
+             v_next_state := rti_ixh_state;
 
 			  when rti_ixh_state =>
 				 -- default
@@ -3583,7 +3580,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 ix_ctrl    <= pull_hi_ix;
              addr_ctrl  <= pull_ad;
              dout_ctrl  <= ix_hi_dout;
-             next_state <= rti_ixl_state;
+             v_next_state := rti_ixl_state;
 
 			  when rti_ixl_state =>
 				 -- default
@@ -3605,7 +3602,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 ix_ctrl    <= pull_lo_ix;
              addr_ctrl  <= pull_ad;
              dout_ctrl  <= ix_lo_dout;
-             next_state <= rti_pch_state;
+             v_next_state := rti_pch_state;
 
 			  when rti_pch_state =>
 				 -- default
@@ -3628,7 +3625,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 pc_ctrl    <= pull_hi_pc;
              addr_ctrl  <= pull_ad;
              dout_ctrl  <= pc_hi_dout;
-             next_state <= rti_pcl_state;
+             v_next_state := rti_pcl_state;
 
 			  when rti_pcl_state =>
 				 -- default
@@ -3650,7 +3647,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 pc_ctrl    <= pull_lo_pc;
              addr_ctrl  <= pull_ad;
              dout_ctrl  <= pc_lo_dout;
-             next_state <= fetch_state;
+             v_next_state := fetch_state;
 
 			  --
 			  -- here on interrupt
@@ -3676,7 +3673,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- write pc low
              addr_ctrl  <= push_ad;
 			    dout_ctrl  <= pc_lo_dout; 
-             next_state <= int_pch_state;
+             v_next_state := int_pch_state;
 
 			  when int_pch_state =>
 				 -- default
@@ -3698,7 +3695,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- write pc hi
              addr_ctrl  <= push_ad;
 			    dout_ctrl  <= pc_hi_dout; 
-             next_state <= int_ixl_state;
+             v_next_state := int_ixl_state;
 
 			  when int_ixl_state =>
 				 -- default
@@ -3720,7 +3717,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- write ix low
              addr_ctrl  <= push_ad;
 			    dout_ctrl  <= ix_lo_dout; 
-             next_state <= int_ixh_state;
+             v_next_state := int_ixh_state;
 
 			  when int_ixh_state =>
 				 -- default
@@ -3742,7 +3739,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- write ix hi
              addr_ctrl  <= push_ad;
 			    dout_ctrl  <= ix_hi_dout; 
-             next_state <= int_acca_state;
+             v_next_state := int_acca_state;
 
 			  when int_acca_state =>
 				 -- default
@@ -3764,7 +3761,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- write acca
              addr_ctrl  <= push_ad;
 			    dout_ctrl  <= acca_dout; 
-             next_state <= int_accb_state;
+             v_next_state := int_accb_state;
 
 
 			  when int_accb_state =>
@@ -3787,7 +3784,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- write accb
              addr_ctrl  <= push_ad;
 			    dout_ctrl  <= accb_dout; 
-             next_state <= int_cc_state;
+             v_next_state := int_cc_state;
 
 			  when int_cc_state =>
 				 -- default
@@ -3815,25 +3812,25 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 --
 			    if nmi_req = '1' then
 		  			iv_ctrl    <= nmi_iv;
-			      next_state <= vect_hi_state;
+			      v_next_state := vect_hi_state;
 			    else
 					--
 					-- IRQ is level sensitive
 					--
 				   if (irq = '1') and (cc(IBIT) = '0') then
 		  			  iv_ctrl    <= irq_iv;
-			        next_state <= int_mask_state;
+			        v_next_state := int_mask_state;
                else
 					  case op_code is
 					  when "00111110" => -- WAI (wait for interrupt)
                    iv_ctrl    <= latch_iv;
-	                next_state <= int_wai_state;
+	                v_next_state := int_wai_state;
 					  when "00111111" => -- SWI (Software interrupt)
                    iv_ctrl    <= swi_iv;
-	                next_state <= vect_hi_state;
+	                v_next_state := vect_hi_state;
 					  when others => -- bogus interrupt (return)
                    iv_ctrl    <= latch_iv;
-	                next_state <= rti_state;
+	                v_next_state := rti_state;
 					  end case;
 					end if;
 				 end if;
@@ -3859,7 +3856,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 			    if (nmi_req = '1') and (nmi_ack='0') then
 		  			iv_ctrl    <= nmi_iv;
 				   nmi_ctrl   <= set_nmi;
-			      next_state <= vect_hi_state;
+			      v_next_state := vect_hi_state;
 			    else
 				   --
 					-- nmi request is not cleared until nmi input goes low
@@ -3874,10 +3871,10 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 					--
 				   if (irq = '1') and (cc(IBIT) = '0') then
 		  			  iv_ctrl    <= irq_iv;
-			        next_state <= int_mask_state;
+			        v_next_state := int_mask_state;
                else
                  iv_ctrl    <= latch_iv;
-	              next_state <= int_wai_state;
+	              v_next_state := int_wai_state;
 					end if;
 				 end if;
 
@@ -3901,7 +3898,7 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- idle bus cycle
              addr_ctrl  <= idle_ad;
              dout_ctrl  <= md_lo_dout;
-             next_state <= vect_hi_state;
+             v_next_state := vect_hi_state;
 
 			  when halt_state => -- halt CPU.
 				 -- default
@@ -3924,9 +3921,9 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
              addr_ctrl  <= idle_ad;
              dout_ctrl  <= md_lo_dout;
 				 if halt = '1' then
-			      next_state <= halt_state;
+			      v_next_state := halt_state;
 				 else
-				   next_state <= fetch_state;
+				   v_next_state := fetch_state;
 				 end if;
 
 			  when others => -- error state halt on undefine states
@@ -3949,8 +3946,19 @@ process( state, op_code, cc, ea, irq, nmi_req, nmi_ack, hold, halt )
 				 -- idle bus cycle
              addr_ctrl  <= idle_ad;
              dout_ctrl  <= md_lo_dout;
-				 next_state <= error_state;
+				 v_next_state := error_state;
 		  end case;
+
+	-- DB: 20260409 - need to recognize halt before next instruction fetched
+
+	if halt = '1' and v_next_state = fetch_state then
+		pc_ctrl    <= latch_pc;
+		nmi_ctrl   <= latch_nmi;
+		next_state <= halt_state;
+	else
+		next_state <= v_next_state;
+	end if;
+
 end process;
 
 --------------------------------
