@@ -1,3 +1,9 @@
 **/vunit_out
 *.sublime-*
 *~
+*.chg
+**/db
+**/incremental_db
+**/output_files
+*.deps
+**/build
