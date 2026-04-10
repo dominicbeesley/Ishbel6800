@@ -63,6 +63,9 @@
 -- 4th April 2026 0.9							Dom Beesley 
 -- Add a quick'n'dirty BA signal for single-stepping
 
+-- 9th April 2026 0.9a							Dom Beesley 
+-- HALT timing, now registers in last instruction cycle
+
 library ieee;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_ARITH.ALL;
