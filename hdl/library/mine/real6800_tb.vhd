@@ -115,7 +115,7 @@ BEGIN
 
 	i_reset <= not(nRESET);
 
-	i_cpu_clk <= PHI2;							-- NOTE: cpu68 is falling edge clock
+	i_cpu_clk <= not PHI2;							
 
 	i_RnW_dly <= transport i_RnW AFTER dly_addr;
 	i_A_dly <= transport i_cpu_A AFTER dly_addr;
@@ -169,21 +169,20 @@ BEGIN
 
 	i_cpu_D_in <= D;
 
-	e_cpu: entity work.cpu68_dom port map (
-		clk			=> i_cpu_clk,
-		rst			=> i_RESET,
-		rw				=> i_RnW,
-		vma			=> i_vma,
-		address		=> i_cpu_A,
-		data_out		=> i_cpu_D_out,
-		data_in		=> i_cpu_D_in,
-		hold			=> '0',
+	e_cpu: entity work.dossy_cpu_6800 port map (
+		CLK_i			=> i_cpu_clk,
+		RST_i			=> i_RESET,
+		HALT_i		=> i_halt,
+		IRQ_i			=> i_irq,
+		NMI_i			=> i_nmi,
 
-		halt			=> i_halt,
-		irq			=> i_irq,
-		nmi			=> i_nmi,
-
-		ba				=> i_ba
+		RnW_o			=> i_RnW,
+		VMA_o			=> i_vma,
+		BA_o			=> i_ba,
+		A_o			=> i_cpu_A,
+		D_o			=> i_cpu_D_out,
+		D_i			=> i_cpu_D_in
+		
 	);
 
 END Behavioral;
