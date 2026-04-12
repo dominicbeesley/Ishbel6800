@@ -169,7 +169,7 @@ BEGIN
 
 	i_cpu_D_in <= D;
 
-	e_cpu: entity work.dossy_cpu_6800 port map (
+	e_cpu: entity work.dossy_6800_cpu port map (
 		CLK_i			=> i_cpu_clk,
 		RST_i			=> i_RESET,
 		HALT_i		=> i_halt,
