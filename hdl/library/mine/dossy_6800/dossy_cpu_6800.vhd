@@ -1,7 +1,6 @@
 library ieee;
 use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.STD_LOGIC_ARITH.ALL;
-use IEEE.STD_LOGIC_UNSIGNED.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 entity dossy_cpu_6800 is
 	port (	
@@ -40,73 +39,157 @@ architecture rtl of dossy_cpu_6800 is
 	signal   r_state		: t_state;
 	signal	i_next_state: t_state;
 
-	signal	i_PC_temp	: unsigned(15 downto 0);
-	signal	i_PC_inc		: unsigned(0 downto 0);
-	signal   r_PC			: unsigned(15 downto 0);
+
 
 	signal	i_DI_mux		: std_logic_vector(7 downto 0);
 	signal   ir_alu		: std_logic_vector(7 downto 0); -- latched ALU result
 
 	signal	r_IR			: std_logic_vector(7 downto 0);
 
+	-- 16 bit registers
+	signal   i_A_next		: std_logic_vector(15 downto 0);
+	signal	r_A			: std_logic_vector(15 downto 0);
+	signal   r_PC			: std_logic_vector(15 downto 0);
 	signal	r_SP			: std_logic_vector(15 downto 0);
 	signal	r_X			: std_logic_vector(15 downto 0);
 
+	-- 16 bit register control
+	type		t_A_ld is (keep, PC, SP, X, ALU, inc, dec);
+	signal	i_A_ld 		: t_A_ld;
+	type		i_IX_ld is (keep, A);
+	signal   i_PC_ld		: i_IX_ld;
+	signal   i_X_ld		: i_IX_ld;
+	signal   i_SP_ld		: i_IX_ld;
+
 begin
 
-	p_PC_temp:process(all)
-	begin
-		case r_state is
-			when s_jmp1 =>
-				i_PC_temp <= unsigned(ir_alu & i_DI_mux);
-			when others =>
-				i_PC_temp <= r_PC;
-		end case;
-	end process;
-
-	p_PC_inc:process(all)
+	p_PC_ld:process(all)
 	begin
 		case r_state is 
-			when s_jmp0 | s_fetch | s_ldix_imm =>
-				i_PC_inc <= "1";
-			when s_decode =>
-				case r_IR(7 downto 4) is
-					when x"0"|x"1"|x"3"|x"4"|x"5"|x"6"|x"A"|x"E" =>
-						i_PC_inc <= "0";
-					when x"2"|x"7"|x"8"|x"9"|x"B"|x"C"|x"D"|x"F" =>
-						i_PC_inc <= "1";
-					when others => 
-						i_PC_inc <= "0";
+			when s_fetch =>
+				i_PC_ld <= A;
+			when others =>
+				case i_next_state is
+					when s_ldix_imm =>
+						i_PC_ld <= A;
+					when others =>
+						i_PC_ld <= keep;	
 				end case;
-			when others => 
-				i_PC_inc <= "0";
 		end case;
 	end process;
 
-	p_PC:process(CLK_i)
+	p_A_ld:process(all)
+	begin
+		case r_state is
+			when s_reset =>
+				i_A_ld <= keep;
+			when s_jmp1 =>
+				i_A_ld <= ALU;
+			when others =>
+				case i_next_state is 
+					when s_fetch =>
+						i_A_ld <= PC;
+					when s_tsx0 =>
+						i_A_ld <= SP;
+					when s_txs0 =>
+						i_A_ld <= X;
+					when others =>
+						i_A_ld <= inc;
+				end case;
+		end case;
+	end process;
+
+	p_X_ld:process(all)
+	begin
+		case i_next_state is 
+			when s_tsx0 =>
+				i_X_ld <= A;
+			when others =>
+				i_X_ld <= keep;	
+		end case;
+	end process;
+
+	p_SP_ld:process(all)
+	begin
+		case i_next_state is 
+			when s_txs1 =>
+				i_SP_ld <= A;
+			when others =>
+				i_SP_ld <= keep;	
+		end case;
+	end process;
+
+	p_r_A_next:process(all)
+	begin
+		case i_A_ld is
+			when PC => i_A_next <= r_PC;
+			when SP => i_A_next <= r_SP;
+			when X =>  i_A_next <= r_X;
+			when inc => i_A_next <= std_logic_vector(unsigned(r_A) + 1);
+			when dec => i_A_next <= std_logic_vector(unsigned(r_A) + 1);
+			when ALU => i_A_next <= ir_alu & i_DI_mux;
+			when others => i_A_next <= r_A;
+		end case;
+	end process;
+
+	p_r_A:process(CLK_i)
 	begin
 		if rising_edge(CLK_i) then
 			if RST_i = '1' then
-				r_PC <= x"FFFE";
+				r_A <= x"FFFE";
 			else
-				r_PC <= i_PC_temp + i_PC_inc;
+				r_A <= i_A_next;
 			end if;
 		end if;
 	end process;
 
-	-- TODO: address bus mux
+	p_r_PC:process(CLK_i)
+	begin
+		if rising_edge(CLK_i) then
+			case i_PC_ld is
+				when A =>
+					r_PC <= i_A_next;
+				when others =>
+					r_PC <= r_PC;
+			end case;				
+		end if;
+	end process;
 
-	p_ADDR:process(all)
+	p_r_X:process(CLK_i)
+	begin
+		if rising_edge(CLK_i) then
+			case i_X_ld is
+				when A =>
+					r_X <= i_A_next;
+				when others =>
+					r_X <= r_X;
+			end case;				
+		end if;
+	end process;
+
+	p_r_SP:process(CLK_i)
+	begin
+		if rising_edge(CLK_i) then
+			case i_SP_ld is
+				when A =>
+					r_SP <= i_A_next;
+				when others =>
+					r_SP <= r_SP;
+			end case;				
+		end if;
+	end process;
+
+	A_o <= r_A;
+
+	
+	p_VMA:process(all)
 	begin
 		case r_state is 
 			when s_txs0 =>
-				A_o	<= r_X;
 				VMA_o <= '0';
 			when s_txs1 =>
-				A_o	<= r_SP;
 				VMA_o <= '0';
 			when others => 
-				A_o 	<= std_logic_vector(r_PC);
 				VMA_o <= '1';				
 		end case;
 	end process;
@@ -119,10 +202,10 @@ begin
 			when s_jmp1  =>		i_next_state <= s_fetch;
 			when s_fetch =>		i_next_state <= s_decode;
 
-			when s_txs0 =>		i_next_state <= s_txs1;
-			when s_txs1 =>		i_next_state <= s_fetch;
-			when s_tsx0 =>		i_next_state <= s_tsx1;
-			when s_tsx1 =>		i_next_state <= s_fetch;
+			when s_txs0 =>			i_next_state <= s_txs1;
+			when s_txs1 =>			i_next_state <= s_fetch;
+			when s_tsx0 =>			i_next_state <= s_tsx1;
+			when s_tsx1 =>			i_next_state <= s_fetch;
 
 			when s_decode=>		
 				case r_IR is
@@ -181,23 +264,5 @@ begin
 	end process;
 
 
-	-- REGISTER FILE -- maybe simplify this
-	p_X:process(CLK_i)
-	begin
-		if rising_edge(CLK_i) then
-			-- TODO: reset?
-			if r_state = s_ldix_imm then
-				if r_IR(6) = '0' then
-					r_SP <= ir_alu & i_DI_mux;
-				else
-					r_X <= ir_alu & i_DI_mux;
-				end if;
-			elsif r_state = s_txs0 then
-				r_SP <= r_X;
-			elsif r_state = s_tsx0 then
-				r_X <= r_SP;
-			end if;
-		end if;
-	end process;
 
 end rtl;
