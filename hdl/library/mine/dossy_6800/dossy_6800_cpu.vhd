@@ -50,6 +50,7 @@ architecture rtl of dossy_6800_cpu is
 	signal	ib_ABL				: std_logic_vector(7 downto 0);
 	signal	ib_ABLI				: std_logic_vector(7 downto 0);
 	signal	ib_ABH				: std_logic_vector(7 downto 0);
+	signal   ib_OBL				: std_logic_vector(7 downto 0);
 
 	-- internal bus mux controls
 	signal	i_mux_ABL_INCL 	: std_logic;
@@ -57,6 +58,9 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_mux_ABL_SPL	 	: std_logic;
 	signal	i_mux_ABL_IXL	 	: std_logic;
 	signal	i_mux_ABL_ABLI 	: std_logic;
+
+	signal	i_mux_OBL_ABL		: std_logic;
+	signal	i_mux_OBL_DB		: std_logic;
 
 	signal	i_mux_ABLI_ABL 	: std_logic;
 	signal	i_mux_ABLI_IXL		: std_logic;
@@ -71,12 +75,17 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_mux_DB_CCR	 	: std_logic;
 	signal	i_mux_DB_SUM		: std_logic;
 	signal	i_mux_DB_DBI		: std_logic;
+	signal 	i_mux_DB_RESV		: std_logic;
+	signal 	i_mux_DB_NMIV		: std_logic;
+	signal 	i_mux_DB_SWIV		: std_logic;
+	signal 	i_mux_DB_IRQV		: std_logic;
 
 	signal	i_mux_ABH_T		 	: std_logic;
 	signal	i_mux_ABH_INCH		: std_logic;
 	signal	i_mux_ABH_PCH	 	: std_logic;
 	signal	i_mux_ABH_SPH 		: std_logic;
 	signal	i_mux_ABH_IXH	 	: std_logic;
+	signal	i_mux_ABH_FF		: std_logic;
 
 	-- register file register values
 	signal	i_INCL_Q				: std_logic_vector(7 downto 0);
@@ -100,9 +109,6 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_ALU_CCR_Q			: std_logic_vector(7 downto 0);
 
 	-- register file control
-	signal	i_INLC_ld_ABL		: std_logic;
-	signal	i_INLC_ld_DB		: std_logic;
-	
 	signal	i_PCL_ld_INCL		: std_logic;
 	
 	signal	i_SPL_ld_ABL		: std_logic;
@@ -120,8 +126,6 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_T_ld_DB			: std_logic;
 	signal	i_T_ld_ABH			: std_logic;
 	
-	signal	i_INCH_ld_ABH		: std_logic;
-
 	signal	i_PCH_ld_INCH		: std_logic;
 
 	signal	i_SPH_ld_DB			: std_logic;
@@ -140,10 +144,32 @@ architecture rtl of dossy_6800_cpu is
 	-- incrementer
 	signal	r_incl				: std_logic_vector(7 downto 0);
 	signal	r_inch				: std_logic_vector(7 downto 0);
-	signal	i_INC_ctl			: t_inc_control;
+	signal	i_INC_src			: t_inc_source;
+	signal	i_INC_act			: t_inc_act;
 
 	-- other inputs to BUS MUXes
 	signal	i_SUM_Q				: std_logic_vector(7 downto 0);
+
+	-- other control signals
+	signal	i_VMA			: std_logic;
+	signal	r_VMA					: std_logic;
+
+	-- state machine
+	type t_cpu_state is (
+		RESET,
+		-- prep vector address
+		GP58,
+		-- load first vector address
+		R57,
+		-- load second vector address
+		R58,
+		-- TSL0 fetch
+		TSL0,
+		-- DIE
+		DIEBAD
+		);
+	signal i_next_state 	: t_cpu_state;
+	signal r_state			: t_cpu_state;
 
 begin
 
@@ -183,6 +209,22 @@ begin
 		D_o		=> ib_ABL
 	);
 
+	e_bus_mux_OBL:entity dossy_6800.dossy_6800_mux8
+	generic map (
+		WIDTH => 2
+	)
+	port map (
+		SEL_i		=> (
+			0 => i_mux_OBL_ABL,
+			1 => i_mux_OBL_DB
+		),
+		D_i		=> (
+			0 => ib_ABL,
+			1 => ib_DB
+		),
+		D_o		=> ib_OBL
+	);
+
 
 	e_bus_mux_ABLI:entity dossy_6800.dossy_6800_mux8
 	generic map (
@@ -209,7 +251,7 @@ begin
 
 	e_bus_mux_DB:entity dossy_6800.dossy_6800_mux8
 	generic map (
-		WIDTH => 7
+		WIDTH => 11
 	)
 	port map (
 		SEL_i		=> (
@@ -219,7 +261,11 @@ begin
 			3 => i_mux_DB_IXH,
 			4 => i_mux_DB_CCR,
 			5 => i_mux_DB_SUM,
-			6 => i_mux_DB_DBI
+			6 => i_mux_DB_DBI,
+			7 => i_mux_DB_RESV,
+			8 => i_mux_DB_NMIV,
+			9 => i_mux_DB_SWIV,
+			10=> i_mux_DB_IRQV
 		),
 		D_i		=> (
 			0 => i_T_Q,
@@ -228,14 +274,18 @@ begin
 			3 => i_IXH_Q,
 			4 => i_CCR_Q,
 			5 => i_SUM_Q,
-			6 => i_DBI_Q
+			6 => i_DBI_Q,
+			7 => x"FE",
+			8 => x"FC",
+			9 => x"FA",
+			10=> x"F8"
 		),
 		D_o		=> ib_DB
 	);
 
 	e_bus_mux_ABH:entity dossy_6800.dossy_6800_mux8
 	generic map (
-		WIDTH => 5
+		WIDTH => 6
 	)
 	port map (
 		SEL_i		=> (
@@ -243,14 +293,16 @@ begin
 			1 => i_mux_ABH_INCH,
 			2 => i_mux_ABH_PCH,
 			3 => i_mux_ABH_SPH,
-			4 => i_mux_ABH_IXH
+			4 => i_mux_ABH_IXH,
+			5 => i_mux_ABH_FF
 		),
 		D_i		=> (
 			0 => i_T_Q,
 			1 => i_INCH_Q,
 			2 => i_PCH_Q,
 			3 => i_SPH_Q,
-			4 => i_IXH_Q
+			4 => i_IXH_Q,
+			5 => x"FF"
 		),
 		D_o		=> ib_ABH
 	);
@@ -363,7 +415,7 @@ begin
 	e_reg_dbi:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
-		WE_i			=> i_DBI_ld_D,
+		WE_i			=> VMA_o,
 		D_i			=> D_i,
 		D_o			=> i_DBI_Q
 	);
@@ -373,7 +425,7 @@ begin
 		CLK_i			=> CLK_i,
 		WE_i			=> i_IR_ld_D,
 		D_i			=> D_i,
-		D_o			=> i_DBI_Q
+		D_o			=> i_IR_Q
 	);
 
 --
@@ -388,54 +440,205 @@ begin
 
 	-- this assumes a 16bit increment can be carried out in one cycle?
 	p_inc:process(CLK_i)
+	variable v_src_l : std_logic_vector(7 downto 0);
+	variable v_src_h : std_logic_vector(7 downto 0);
 	variable v_int	: std_logic_vector(8 downto 0); -- low order with carry
 	begin
 		if rising_edge(CLK_i) then
-			case i_INC_ctl is
-				when vec_res =>
-					r_incl <= x"FE";
-				when vec_nmi =>
-					r_incl <= x"FC";
-				when vec_swi =>
-					r_incl <= x"FA";
-				when vec_irq =>
-					r_incl <= x"F8";
-				when ld_a =>
-					r_incl <= ib_ABL;
-				when ld_db_ah =>
-					r_incl <= ib_DB;
-				when inc => 
-					v_int := std_logic_vector("0" & unsigned(r_incl) + 1);
-					r_incl <= v_int(7 downto 0);
-				when dec	=> 
-					v_int := std_logic_vector("0" & unsigned(r_incl) - 1);
-					r_incl <= v_int(7 downto 0);
+
+			case i_INC_src is 
+				when al_ah =>
+					v_src_l := ib_ABL;
+					v_src_h := ib_ABH;
+				when db_ah =>
+					v_src_l := ib_DB;
+					v_src_h := ib_ABH;
 				when others =>
-					r_incl <= r_incl;
+					v_src_l := i_INCL_Q;
+					v_src_h := i_INCH_Q;
 			end case;
 
-			case i_INC_ctl is
-				when vec_res | vec_nmi | vec_swi	| vec_irq =>
-					r_inch <= x"FF";
-				when ld_a | ld_db_ah =>
-					r_inch <= ib_ABH;
+			case i_INC_act is
+				when inc => 
+					v_int := std_logic_vector("0" & unsigned(v_src_l) + 1);
+					r_incl <= v_int(7 downto 0);
+				when dec	=> 
+					v_int := std_logic_vector("0" & unsigned(v_src_l) - 1);
+					r_incl <= v_int(7 downto 0);
+				when others =>
+					r_incl <= v_src_l;
+			end case;
+
+			case i_INC_act is
 				when inc => 
 					if v_int(8) = '1' then
-						r_inch <= std_logic_vector(unsigned(r_inch) + 1);
+						r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
+					else
+						r_inch <= v_src_h;
 					end if;
 				when dec =>
 					if v_int(8) = '1' then
-						r_inch <= std_logic_vector(unsigned(r_inch) - 1);
+						r_inch <= std_logic_vector(unsigned(v_src_h) - 1);
+					else
+						r_inch <= v_src_h;
 					end if;
 				when inc_page =>
-					r_inch <= std_logic_vector(unsigned(r_inch) + 1);
+					r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
 				when others	=>	
-					r_inch <= r_inch;
+					r_inch <= v_src_h;
 			end case;
 
 
 		end if;
 	end process;
 
+	i_INCH_Q <= r_inch;
+	i_INCL_Q <= r_incl;
+
+
+--
+--  ##                                 #  #              #      #
+-- #  #   #           #                ####              #
+-- #     ####   ###  ####   ##         ####   ###   ###  ###   ##    ###    ##
+--  ##    #    #  #   #    #  #        #  #  #  #  #     #  #   #    #  #  #  #
+--    #   #    #  #   #    ####        #  #  #  #  #     #  #   #    #  #  ####
+-- #  #   #    # ##   #    #           #  #  # ##  #     #  #   #    #  #  #
+--  ##     ##   # #    ##   ##         #  #   # #   ###  #  #  ###   #  #   ##
+--
+
+	p_state_machine:process(CLK_i)
+	begin
+		if rising_edge(CLK_i) then
+			if RST_i = '1' then
+				r_state <= RESET;
+			else
+				r_state <= i_next_state;
+			end if;
+		end if;
+	end process;
+
+	p_state_next:process(all) 
+	begin
+		case r_state is
+			when RESET =>
+				i_next_state <= GP58;
+			when GP58 => 
+				i_next_state <= R57;
+			when R57 =>
+				i_next_state <= R58;
+			when R58 =>
+				i_next_state <= TSL0;
+			when others =>
+				i_next_state <= DIEBAD;
+		end case;
+	end process;
+
+	p_control:process(all)
+	begin
+		i_mux_ABL_INCL 	<= '0';
+		i_mux_ABL_PCL 		<= '0';
+		i_mux_ABL_SPL 		<= '0';
+		i_mux_ABL_IXL 		<= '0';
+		i_mux_ABL_ABLI 	<= '0';
+		i_mux_OBL_ABL		<= '0';
+		i_mux_OBL_DB		<= '0';
+		i_mux_ABLI_ABL 	<= '0';
+		i_mux_ABLI_IXL 	<= '0';
+		i_mux_ABLI_ACCA 	<= '0';
+		i_mux_ABLI_ACCB 	<= '0';
+		i_mux_ABLI_IXH 	<= '0';
+		i_mux_DB_T 			<= '0';
+		i_mux_DB_PCH 		<= '0';
+		i_mux_DB_SPH 		<= '0';
+		i_mux_DB_IXH 		<= '0';
+		i_mux_DB_CCR 		<= '0';
+		i_mux_DB_SUM 		<= '0';
+		i_mux_DB_DBI 		<= '0';
+		i_mux_DB_RESV		<= '0';
+		i_mux_DB_NMIV		<= '0';
+		i_mux_DB_SWIV		<= '0';
+		i_mux_DB_IRQV		<= '0';
+		i_mux_ABH_T 		<= '0';
+		i_mux_ABH_INCH 	<= '0';
+		i_mux_ABH_PCH		<= '0';
+		i_mux_ABH_SPH		<= '0';
+		i_mux_ABH_IXH		<= '0';
+		i_mux_ABH_FF		<= '0';
+
+		i_PCL_ld_INCL		<= '0';
+		i_SPL_ld_ABL		<= '0';
+		i_SPL_ld_DB			<= '0';
+		i_IXL_ld_ABL		<= '0';
+		i_IXL_ld_DB			<= '0';
+		i_ACCB_ld_ABLI		<= '0';
+		i_ACCB_ld_DB		<= '0';
+		i_ACCA_ld_ABLI		<= '0';
+		i_ACCA_ld_DB		<= '0';
+		i_T_ld_DB			<= '0';
+		i_T_ld_ABH			<= '0';
+		i_PCH_ld_INCH		<= '0';
+		i_SPH_ld_DB			<= '0';
+		i_SPH_ld_ABH		<= '0';
+		i_IXH_ld_DB			<= '0';
+		i_IXH_ld_ABH		<= '0';
+		i_CCR_ld_DB			<= '0';
+		i_CCR_ld_ALU		<= '0';
+		i_DBI_ld_D			<= '0';
+		i_IR_ld_D			<= '0';
+
+		i_INC_src			<= inc;
+		i_INC_act			<= inc;
+
+		case r_state is 
+			when GP58 | RESET =>
+				--always reset, TODO: other interrupts
+				i_mux_DB_RESV <= '1';
+				i_mux_OBL_DB <= '1';
+				i_mux_ABH_FF <= '1';
+				-- TODO: set IM
+				if r_state /= RESET then
+					i_VMA <= '1';
+				end if;
+				i_INC_src <= db_ah;
+			when R57 =>
+				i_mux_DB_DBI <= '1';
+				i_T_ld_DB <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_mux_ABL_INCL <= '1';
+				i_mux_OBL_ABL <= '1';
+				i_VMA <= '1';
+			when R58 =>
+				i_mux_DB_DBI <= '1';
+				i_INC_src <= db_ah;
+				i_mux_ABH_T <= '1';
+				i_mux_OBL_DB <= '1';
+				i_VMA <= '1';
+			when TSL0 =>
+				i_IR_ld_D <= '1';
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_mux_OBL_ABL <= '1';
+				i_PCL_ld_INCL <= '1';
+				i_PCH_ld_INCH <= '1';
+
+
+			when others => 
+				null;
+
+		end case;
+
+	end process;
+
+
+
+
+	p_A:process(all)
+	begin
+		A_o <= ib_ABH & ib_OBL;
+		VMA_o <= i_VMA;
+	end process;
+
+	BA_o <= '0';
+	RnW_o  <= '1';
 
 end rtl;

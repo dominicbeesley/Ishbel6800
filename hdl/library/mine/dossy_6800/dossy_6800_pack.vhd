@@ -38,7 +38,8 @@ package dossy_6800 is
 	constant CCIX_C	: natural := 0;
 
 
-	type t_inc_control	is (vec_res, vec_swi, vec_nmi, vec_irq, ld_a, ld_db_ah, inc, dec, inc_page, hold);
+	type t_inc_source	is (al_ah, db_ah, inc);
+	type t_inc_act		is (inc, dec, inc_page, hold);
 
 end package dossy_6800;
 
