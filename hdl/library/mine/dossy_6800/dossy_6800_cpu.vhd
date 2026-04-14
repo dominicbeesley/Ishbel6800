@@ -1,14 +1,14 @@
 ----------------------------------------------------------------------------------
--- Company: 			Dossytronics
--- Engineer: 			Dominic Beesley
+-- Company:				Dossytronics
+-- Engineer:			Dominic Beesley
 -- 
--- Create Date:    	12/4/2025 
+-- Create Date:		12/4/2025 
 -- Design Name: 
--- Module Name:    	dossy_6800_cpu
+-- Module Name:		dossy_6800_cpu
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description: 		main cpu file
+-- Description:		main cpu file
 --
 -- Dependencies: 
 --
@@ -29,17 +29,17 @@ use dossy_6800.dossy_6800.all;
 
 entity dossy_6800_cpu is
 	port (	
-		CLK_i:    	in  std_logic;
-		RST_i:    	in  std_logic;
-		HALT_i:     in  std_logic;
-		IRQ_i:      in  std_logic;
-		NMI_i:      in  std_logic;
-		RnW_o:    	out std_logic;
-		VMA_o:	   out std_logic;
-		BA_o:       out std_logic;
-		A_o:	 		out std_logic_vector(15 downto 0);
-		D_i:	 		in  std_logic_vector(7 downto 0);
-		D_o:	 		out std_logic_vector(7 downto 0)
+		CLK_i:		in	 std_logic;
+		RST_i:		in	 std_logic;
+		HALT_i:		in	 std_logic;
+		IRQ_i:		in	 std_logic;
+		NMI_i:		in	 std_logic;
+		RnW_o:		out std_logic;
+		VMA_o:		out std_logic;
+		BA_o:			out std_logic;
+		A_o:			out std_logic_vector(15 downto 0);
+		D_i:			in	 std_logic_vector(7 downto 0);
+		D_o:			out std_logic_vector(7 downto 0)
 		);
 end;
 
@@ -50,42 +50,42 @@ architecture rtl of dossy_6800_cpu is
 	signal	ib_ABL				: std_logic_vector(7 downto 0);
 	signal	ib_ABLI				: std_logic_vector(7 downto 0);
 	signal	ib_ABH				: std_logic_vector(7 downto 0);
-	signal   ib_OBL				: std_logic_vector(7 downto 0);
+	signal	ib_OBL				: std_logic_vector(7 downto 0);
 
 	-- internal bus mux controls
-	signal	i_mux_ABL_INCL 	: std_logic;
-	signal	i_mux_ABL_PCL 		: std_logic;
-	signal	i_mux_ABL_SPL	 	: std_logic;
-	signal	i_mux_ABL_IXL	 	: std_logic;
-	signal	i_mux_ABL_ABLI 	: std_logic;
+	signal	i_mux_ABL_INCL		: std_logic;
+	signal	i_mux_ABL_PCL		: std_logic;
+	signal	i_mux_ABL_SPL		: std_logic;
+	signal	i_mux_ABL_IXL		: std_logic;
+	signal	i_mux_ABL_ABLI		: std_logic;
 
 	signal	i_mux_OBL_ABL		: std_logic;
 	signal	i_mux_OBL_DB		: std_logic;
 
-	signal	i_mux_ABLI_ABL 	: std_logic;
+	signal	i_mux_ABLI_ABL		: std_logic;
 	signal	i_mux_ABLI_IXL		: std_logic;
-	signal	i_mux_ABLI_ACCA 	: std_logic;
-	signal	i_mux_ABLI_ACCB 	: std_logic;
-	signal	i_mux_ABLI_IXH 	: std_logic;
-	signal	i_mux_ABLI_FF	 	: std_logic;
+	signal	i_mux_ABLI_ACCA	: std_logic;
+	signal	i_mux_ABLI_ACCB	: std_logic;
+	signal	i_mux_ABLI_IXH		: std_logic;
+	signal	i_mux_ABLI_FF		: std_logic;
 
-	signal	i_mux_DB_T 			: std_logic;
+	signal	i_mux_DB_T			: std_logic;
 	signal	i_mux_DB_PCH		: std_logic;
-	signal	i_mux_DB_SPH	 	: std_logic;
-	signal	i_mux_DB_IXH	 	: std_logic;
-	signal	i_mux_DB_CCR	 	: std_logic;
+	signal	i_mux_DB_SPH		: std_logic;
+	signal	i_mux_DB_IXH		: std_logic;
+	signal	i_mux_DB_CCR		: std_logic;
 	signal	i_mux_DB_SUM		: std_logic;
 	signal	i_mux_DB_DBI		: std_logic;
-	signal 	i_mux_DB_RESV		: std_logic;
-	signal 	i_mux_DB_NMIV		: std_logic;
-	signal 	i_mux_DB_SWIV		: std_logic;
-	signal 	i_mux_DB_IRQV		: std_logic;
+	signal	i_mux_DB_RESV		: std_logic;
+	signal	i_mux_DB_NMIV		: std_logic;
+	signal	i_mux_DB_SWIV		: std_logic;
+	signal	i_mux_DB_IRQV		: std_logic;
 
-	signal	i_mux_ABH_T		 	: std_logic;
+	signal	i_mux_ABH_T			: std_logic;
 	signal	i_mux_ABH_INCH		: std_logic;
-	signal	i_mux_ABH_PCH	 	: std_logic;
-	signal	i_mux_ABH_SPH 		: std_logic;
-	signal	i_mux_ABH_IXH	 	: std_logic;
+	signal	i_mux_ABH_PCH		: std_logic;
+	signal	i_mux_ABH_SPH		: std_logic;
+	signal	i_mux_ABH_IXH		: std_logic;
 	signal	i_mux_ABH_FF		: std_logic;
 
 	-- register file register values
@@ -181,20 +181,20 @@ architecture rtl of dossy_6800_cpu is
 		-- DIE
 		DIEBAD
 		);
-	signal i_next_state 	: t_cpu_state;
+	signal i_next_state	: t_cpu_state;
 	signal r_state			: t_cpu_state;
 
 begin
 
 
 --
--- ###                     #  #  #  #  #  #
--- #  #                    ####  #  #  #  #
--- #  #  #  #   ###        ####  #  #   ##    ##    ###
--- ###   #  #  #           #  #  #  #   ##   #  #  #
--- #  #  #  #   ##         #  #  #  #  #  #  ####   ##
--- #  #  #  #     #        #  #  #  #  #  #  #        #
--- ###    ###  ###         #  #   ##   #  #   ##   ###
+-- ###							#	#	#	#	#	#
+-- #	#							####	#	#	#	#
+-- #	#	#	#	 ###			####	#	#	 ##	 ##	 ###
+-- ###	#	#	#				#	#	#	#	 ##	#	#	#
+-- #	#	#	#	 ##			#	#	#	#	#	#	####	 ##
+-- #	#	#	#		#			#	#	#	#	#	#	#			#
+-- ###	 ###	###			#	#	 ##	#	#	 ##	###
 --
 
 -- TODO: bus muxes should probably surface combinatorial or inconsistent 
@@ -323,14 +323,14 @@ begin
 	);
 
 --
--- ###                #                                  ####   #    ##
--- #  #                           #                      #            #
--- #  #   ##    ###  ##     ###  ####   ##   # ##        #     ##     #     ##
--- ###   #  #  #  #   #    #      #    #  #  ##          ###    #     #    #  #
--- # #   ####  #  #   #     ##    #    ####  #           #      #     #    ####
--- #  #  #      ###   #       #   #    #     #           #      #     #    #
--- #  #   ##      #  ###   ###     ##   ##   #           #     ###   ###    ##
---              ##	
+-- ###					 #												####	 #		##
+-- #	#									 #								#				 #
+-- #	#	 ##	 ###	##		 ###	####	 ##	# ##			#		##		 #		 ##
+-- ###	#	#	#	#	 #		#		 #		#	#	##				###	 #		 #		#	#
+-- # #	####	#	#	 #		 ##	 #		####	#				#		 #		 #		####
+-- #	#	#		 ###	 #			#	 #		#		#				#		 #		 #		#
+-- #	#	 ##		#	###	###	  ##	 ##	#				#		###	###	 ##
+--					 ##	
 --
 
 	e_reg_pcl:entity dossy_6800.dossy_6800_reg8
@@ -445,12 +445,12 @@ begin
 
 --
 -- ###
---  #                                               #
---  #    ###    ###  # ##   ##  ## #    ##   ###   ####   ##   # ##
---  #    #  #  #     ##    #  # # # #  #  #  #  #   #    #  #  ##
---  #    #  #  #     #     #### # # #  ####  #  #   #    ####  #
---  #    #  #  #     #     #    # # #  #     #  #   #    #     #
--- ###   #  #   ###  #      ##  #   #   ##   #  #    ##   ##   #
+--	 #																 #
+--	 #		###	 ###	# ##	 ##  ## #	 ##	###	####	 ##	# ##
+--	 #		#	#	#		##		#	# # # #	#	#	#	#	 #		#	#	##
+--	 #		#	#	#		#		#### # # #	####	#	#	 #		####	#
+--	 #		#	#	#		#		#	  # # #	#		#	#	 #		#		#
+-- ###	#	#	 ###	#		 ##  #	#	 ##	#	#	  ##	 ##	#
 --
 
 	-- this assumes a 16bit increment can be carried out in one cycle?
@@ -512,13 +512,13 @@ begin
 
 
 --
---  ##                                 #  #              #      #
--- #  #   #           #                ####              #
--- #     ####   ###  ####   ##         ####   ###   ###  ###   ##    ###    ##
---  ##    #    #  #   #    #  #        #  #  #  #  #     #  #   #    #  #  #  #
---    #   #    #  #   #    ####        #  #  #  #  #     #  #   #    #  #  ####
--- #  #   #    # ##   #    #           #  #  # ##  #     #  #   #    #  #  #
---  ##     ##   # #    ##   ##         #  #   # #   ###  #  #  ###   #  #   ##
+--	 ##											#	#					#		 #
+-- #	#	 #				 #						####					#
+-- #		####	 ###	####	 ##			####	 ###	 ###	###	##		###	 ##
+--	 ##	 #		#	#	 #		#	#			#	#	#	#	#		#	#	 #		#	#	#	#
+--		#	 #		#	#	 #		####			#	#	#	#	#		#	#	 #		#	#	####
+-- #	#	 #		# ##	 #		#				#	#	# ##	#		#	#	 #		#	#	#
+--	 ##	  ##	 # #	  ##	 ##			#	#	 # #	 ###	#	#	###	#	#	 ##
 --
 
 	p_state_machine:process(CLK_i)
@@ -553,7 +553,7 @@ begin
 			when R58 =>
 				i_next_state <= TSL0;
 			when TSL0 | TSL0_D02 | EXT1 =>
-				if PMATCH(i_IR_Q,  "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
+				if PMATCH(i_IR_Q,	 "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
 					i_next_state <= T1_EXT0;
 				elsif PMATCH(i_IR_Q, "1---111-") then
 					i_next_state <= LDx_T1_D00;
@@ -573,32 +573,32 @@ begin
 
 	p_control:process(all)
 	begin
-		i_mux_ABL_INCL 	<= '0';
-		i_mux_ABL_PCL 		<= '0';
-		i_mux_ABL_SPL 		<= '0';
-		i_mux_ABL_IXL 		<= '0';
-		i_mux_ABL_ABLI 	<= '0';
+		i_mux_ABL_INCL		<= '0';
+		i_mux_ABL_PCL		<= '0';
+		i_mux_ABL_SPL		<= '0';
+		i_mux_ABL_IXL		<= '0';
+		i_mux_ABL_ABLI		<= '0';
 		i_mux_OBL_ABL		<= '0';
 		i_mux_OBL_DB		<= '0';
-		i_mux_ABLI_ABL 	<= '0';
-		i_mux_ABLI_IXL 	<= '0';
-		i_mux_ABLI_ACCA 	<= '0';
-		i_mux_ABLI_ACCB 	<= '0';
-		i_mux_ABLI_IXH 	<= '0';
+		i_mux_ABLI_ABL		<= '0';
+		i_mux_ABLI_IXL		<= '0';
+		i_mux_ABLI_ACCA	<= '0';
+		i_mux_ABLI_ACCB	<= '0';
+		i_mux_ABLI_IXH		<= '0';
 		i_mux_ABLI_FF		<= '0';
-		i_mux_DB_T 			<= '0';
-		i_mux_DB_PCH 		<= '0';
-		i_mux_DB_SPH 		<= '0';
-		i_mux_DB_IXH 		<= '0';
-		i_mux_DB_CCR 		<= '0';
-		i_mux_DB_SUM 		<= '0';
-		i_mux_DB_DBI 		<= '0';
+		i_mux_DB_T			<= '0';
+		i_mux_DB_PCH		<= '0';
+		i_mux_DB_SPH		<= '0';
+		i_mux_DB_IXH		<= '0';
+		i_mux_DB_CCR		<= '0';
+		i_mux_DB_SUM		<= '0';
+		i_mux_DB_DBI		<= '0';
 		i_mux_DB_RESV		<= '0';
 		i_mux_DB_NMIV		<= '0';
 		i_mux_DB_SWIV		<= '0';
 		i_mux_DB_IRQV		<= '0';
-		i_mux_ABH_T 		<= '0';
-		i_mux_ABH_INCH 	<= '0';
+		i_mux_ABH_T			<= '0';
+		i_mux_ABH_INCH		<= '0';
 		i_mux_ABH_PCH		<= '0';
 		i_mux_ABH_SPH		<= '0';
 		i_mux_ABH_IXH		<= '0';
@@ -734,6 +734,6 @@ begin
 	end process;
 
 	BA_o <= '0';
-	RnW_o  <= '1';
+	RnW_o	 <= '1';
 
 end rtl;
