@@ -8,6 +8,13 @@ handle_nmi:	rti
 
 
 handle_res:	ldx	#0x100
+		lds	#0x1234
+		ldx	0xF003
+		lds	0xF006
+
+		stx 	0x1000
+		sts 	0x1002
+
 		txs
 		sei
 

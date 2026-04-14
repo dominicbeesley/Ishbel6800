@@ -67,6 +67,7 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_mux_ABLI_ACCA 	: std_logic;
 	signal	i_mux_ABLI_ACCB 	: std_logic;
 	signal	i_mux_ABLI_IXH 	: std_logic;
+	signal	i_mux_ABLI_FF	 	: std_logic;
 
 	signal	i_mux_DB_T 			: std_logic;
 	signal	i_mux_DB_PCH		: std_logic;
@@ -165,6 +166,18 @@ architecture rtl of dossy_6800_cpu is
 		R58,
 		-- TSL0 fetch
 		TSL0,
+
+		-- load X/Y register
+		LDx_T1_D00,
+		LDx_D01,
+
+		-- generic fetch and set Z?
+		TSL0_D02,
+
+		-- EXTENDED addressing
+		T1_EXT0,
+		EXT1,
+
 		-- DIE
 		DIEBAD
 		);
@@ -228,7 +241,7 @@ begin
 
 	e_bus_mux_ABLI:entity dossy_6800.dossy_6800_mux8
 	generic map (
-		WIDTH => 5
+		WIDTH => 6
 	)
 	port map (
 		SEL_i		=> (
@@ -236,14 +249,16 @@ begin
 			1 => i_mux_ABLI_IXL,
 			2 => i_mux_ABLI_ACCA,
 			3 => i_mux_ABLI_ACCB,
-			4 => i_mux_ABLI_IXH
+			4 => i_mux_ABLI_IXH,
+			5 => i_mux_ABLI_FF
 		),
 		D_i		=> (
 			0 => ib_ABL,
 			1 => i_IXL_Q,
 			2 => i_ACCA_Q,
 			3 => i_ACCB_Q,
-			4 => i_IXH_Q
+			4 => i_IXH_Q,
+			5 => x"FF"
 		),
 		D_o		=> ib_ABLI
 	);
@@ -518,6 +533,15 @@ begin
 	end process;
 
 	p_state_next:process(all) 
+		function PMATCH(V: in std_logic_vector; M: in std_logic_vector) return boolean is
+		begin
+			if V ?= M then
+				return true;
+			else
+				return false;
+			end if;			
+		end function;
+
 	begin
 		case r_state is
 			when RESET =>
@@ -528,6 +552,20 @@ begin
 				i_next_state <= R58;
 			when R58 =>
 				i_next_state <= TSL0;
+			when TSL0 | TSL0_D02 | EXT1 =>
+				if PMATCH(i_IR_Q,  "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
+					i_next_state <= T1_EXT0;
+				elsif PMATCH(i_IR_Q, "1---111-") then
+					i_next_state <= LDx_T1_D00;
+				else
+					i_next_state <= DIEBAD;
+				end if;
+			when LDx_T1_D00 =>
+				i_next_state <= LDX_D01;
+			when LDX_D01 =>
+				i_next_state <= TSL0_D02;
+			when T1_EXT0 =>
+				i_next_state <= EXT1;				
 			when others =>
 				i_next_state <= DIEBAD;
 		end case;
@@ -547,6 +585,7 @@ begin
 		i_mux_ABLI_ACCA 	<= '0';
 		i_mux_ABLI_ACCB 	<= '0';
 		i_mux_ABLI_IXH 	<= '0';
+		i_mux_ABLI_FF		<= '0';
 		i_mux_DB_T 			<= '0';
 		i_mux_DB_PCH 		<= '0';
 		i_mux_DB_SPH 		<= '0';
@@ -613,13 +652,69 @@ begin
 				i_mux_ABH_T <= '1';
 				i_mux_OBL_DB <= '1';
 				i_VMA <= '1';
-			when TSL0 =>
 				i_IR_ld_D <= '1';
+			when TSL0 | TSL0_D02 =>
 				i_mux_ABL_INCL <= '1';
 				i_mux_ABH_INCH <= '1';
 				i_mux_OBL_ABL <= '1';
 				i_PCL_ld_INCL <= '1';
 				i_PCH_ld_INCH <= '1';
+				i_VMA <= '1';
+
+			when LDx_T1_D00 =>
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_mux_OBL_ABL <= '1';
+				i_VMA <= '1';
+				i_mux_DB_DBI <= '1';
+				if i_IR_Q(6) = '1' then
+					i_IXH_ld_DB <= '1';
+				else
+					i_SPH_ld_DB <= '1';
+				end if;
+				i_mux_ABLI_FF <= '1';
+				-- TODO ALU stuff
+
+			when LDx_D01 =>
+				if i_IR_Q(5 downto 4) = "00" then
+					-- was immediate, keep pc
+					i_mux_ABL_INCL <= '1';
+					i_mux_ABH_INCH <= '1';
+					i_INC_src <= inc;
+				else
+					i_mux_ABL_PCL <= '1';
+					i_mux_ABH_PCH <= '1';
+					i_INC_src <= al_ah;
+				end if;
+				i_mux_OBL_ABL <= '1';
+				i_VMA <= '1';
+				i_IR_ld_D <= '1';
+				i_mux_DB_DBI <= '1';
+				if i_IR_Q(6) = '1' then
+					i_IXL_ld_DB <= '1';
+				else
+					i_SPL_ld_DB <= '1';
+				end if;
+				i_mux_ABLI_FF <= '1';
+
+
+			when T1_EXT0 =>
+				i_mux_DB_DBI <= '1';
+				i_T_ld_DB <= '1';
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_mux_OBL_ABL <= '1';
+				i_VMA <= '1';
+			when EXT1 =>
+				i_mux_ABH_T <= '1';
+				i_mux_OBL_DB <= '1';
+				i_mux_ABL_INCL <= '1';
+				i_mux_DB_DBI <= '1';
+				i_INC_src <= db_ah;
+				i_PCH_ld_INCH <= '1';
+				i_PCL_ld_INCL <= '1';
+				i_VMA <= '1';
+
 
 
 			when others => 
