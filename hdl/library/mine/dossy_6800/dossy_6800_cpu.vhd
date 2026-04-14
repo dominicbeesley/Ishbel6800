@@ -38,8 +38,8 @@ entity dossy_6800_cpu is
 		VMA_o:	   out std_logic;
 		BA_o:       out std_logic;
 		A_o:	 		out std_logic_vector(15 downto 0);
-	   D_i:	 		in  std_logic_vector(7 downto 0);
-	   D_o:	 		out std_logic_vector(7 downto 0)
+		D_i:	 		in  std_logic_vector(7 downto 0);
+		D_o:	 		out std_logic_vector(7 downto 0)
 		);
 end;
 
