@@ -8,7 +8,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool versions: 
--- Description:		main cpu file
+-- Description:			main cpu file
 --
 -- Dependencies: 
 --
@@ -29,17 +29,17 @@ use dossy_6800.dossy_6800.all;
 
 entity dossy_6800_cpu is
 	port (	
-		CLK_i:		in	 std_logic;
-		RST_i:		in	 std_logic;
-		HALT_i:		in	 std_logic;
-		IRQ_i:		in	 std_logic;
-		NMI_i:		in	 std_logic;
+		CLK_i:		in	std_logic;
+		RST_i:		in	std_logic;
+		HALT_i:		in	std_logic;
+		IRQ_i:		in	std_logic;
+		NMI_i:		in	std_logic;
 		RnW_o:		out std_logic;
-		VMA_o:		out std_logic;
-		BA_o:			out std_logic;
+		VMA_o:	   out std_logic;
+		BA_o:		out std_logic;
 		A_o:			out std_logic_vector(15 downto 0);
-		D_i:			in	 std_logic_vector(7 downto 0);
-		D_o:			out std_logic_vector(7 downto 0)
+	   D_i:			in	std_logic_vector(7 downto 0);
+	   D_o:			out std_logic_vector(7 downto 0)
 		);
 end;
 
@@ -50,29 +50,34 @@ architecture rtl of dossy_6800_cpu is
 	signal	ib_ABL				: std_logic_vector(7 downto 0);
 	signal	ib_ABLI				: std_logic_vector(7 downto 0);
 	signal	ib_ABH				: std_logic_vector(7 downto 0);
-	signal	ib_OBL				: std_logic_vector(7 downto 0);
+	signal	 ib_OBL				: std_logic_vector(7 downto 0);
 
 	-- internal bus mux controls
-	signal	i_mux_ABL_INCL		: std_logic;
+	signal	i_mux_ABL_INCL	: std_logic;
 	signal	i_mux_ABL_PCL		: std_logic;
 	signal	i_mux_ABL_SPL		: std_logic;
 	signal	i_mux_ABL_IXL		: std_logic;
-	signal	i_mux_ABL_ABLI		: std_logic;
+	signal	i_mux_ABL_ABLI	: std_logic;
 
 	signal	i_mux_OBL_ABL		: std_logic;
 	signal	i_mux_OBL_DB		: std_logic;
 
-	signal	i_mux_ABLI_ABL		: std_logic;
+	signal	i_mux_ABLI_ABL	: std_logic;
 	signal	i_mux_ABLI_IXL		: std_logic;
-	signal	i_mux_ABLI_ACCA	: std_logic;
-	signal	i_mux_ABLI_ACCB	: std_logic;
-	signal	i_mux_ABLI_IXH		: std_logic;
+	signal	i_mux_ABLI_ACCA		: std_logic;
+	signal	i_mux_ABLI_ACCB		: std_logic;
+	signal	i_mux_ABLI_IXH	: std_logic;
 	signal	i_mux_ABLI_FF		: std_logic;
 
 	signal	i_mux_DB_T			: std_logic;
 	signal	i_mux_DB_PCH		: std_logic;
 	signal	i_mux_DB_SPH		: std_logic;
 	signal	i_mux_DB_IXH		: std_logic;
+	signal	i_mux_DB_PCL		: std_logic;
+	signal	i_mux_DB_SPL		: std_logic;
+	signal	i_mux_DB_IXL		: std_logic;
+	signal	i_mux_DB_ACCA		: std_logic;
+	signal	i_mux_DB_ACCB		: std_logic;
 	signal	i_mux_DB_CCR		: std_logic;
 	signal	i_mux_DB_SUM		: std_logic;
 	signal	i_mux_DB_DBI		: std_logic;
@@ -171,6 +176,18 @@ architecture rtl of dossy_6800_cpu is
 		LDx_T1_D00,
 		LDx_D01,
 
+		-- store X/Y register
+		STx_T1_D00,
+		STx_D01,
+		STx_D02,
+
+		-- TSX
+		TXS_T1_GP50,
+		TXS_GP51,
+
+		GP52,
+
+
 		-- generic fetch and set Z?
 		TSL0_D02,
 
@@ -181,20 +198,20 @@ architecture rtl of dossy_6800_cpu is
 		-- DIE
 		DIEBAD
 		);
-	signal i_next_state	: t_cpu_state;
+	signal i_next_state		: t_cpu_state;
 	signal r_state			: t_cpu_state;
 
 begin
 
 
 --
--- ###							#	#	#	#	#	#
--- #	#							####	#	#	#	#
--- #	#	#	#	 ###			####	#	#	 ##	 ##	 ###
--- ###	#	#	#				#	#	#	#	 ##	#	#	#
--- #	#	#	#	 ##			#	#	#	#	#	#	####	 ##
--- #	#	#	#		#			#	#	#	#	#	#	#			#
--- ###	 ###	###			#	#	 ##	#	#	 ##	###
+-- ###					   #  #	 #	#  #  #
+-- #  #					   ####	 #	#  #  #
+-- #  #	 #	#	###		   ####	 #	#	##	  ##	###
+-- ###	 #	#  #		   #  #	 #	#	##	 #	#  #
+-- #  #	 #	#	##		   #  #	 #	#  #  #	 ####	##
+-- #  #	 #	#	  #		   #  #	 #	#  #  #	 #		  #
+-- ###	  ###  ###		   #  #	  ##   #  #	  ##   ###
 --
 
 -- TODO: bus muxes should probably surface combinatorial or inconsistent 
@@ -266,7 +283,7 @@ begin
 
 	e_bus_mux_DB:entity dossy_6800.dossy_6800_mux8
 	generic map (
-		WIDTH => 11
+		WIDTH => 16
 	)
 	port map (
 		SEL_i		=> (
@@ -274,26 +291,36 @@ begin
 			1 => i_mux_DB_PCH,
 			2 => i_mux_DB_SPH,
 			3 => i_mux_DB_IXH,
-			4 => i_mux_DB_CCR,
-			5 => i_mux_DB_SUM,
-			6 => i_mux_DB_DBI,
-			7 => i_mux_DB_RESV,
-			8 => i_mux_DB_NMIV,
-			9 => i_mux_DB_SWIV,
-			10=> i_mux_DB_IRQV
+			4 => i_mux_DB_PCL,
+			5 => i_mux_DB_SPL,
+			6 => i_mux_DB_IXL,
+			7 => i_mux_DB_ACCA,
+			8 => i_mux_DB_ACCB,
+			9 => i_mux_DB_CCR,
+			10=> i_mux_DB_SUM,
+			11=> i_mux_DB_DBI,
+			12=> i_mux_DB_RESV,
+			13=> i_mux_DB_NMIV,
+			14=> i_mux_DB_SWIV,
+			15=> i_mux_DB_IRQV
 		),
 		D_i		=> (
 			0 => i_T_Q,
 			1 => i_PCH_Q,
 			2 => i_SPH_Q,
 			3 => i_IXH_Q,
-			4 => i_CCR_Q,
-			5 => i_SUM_Q,
-			6 => i_DBI_Q,
-			7 => x"FE",
-			8 => x"FC",
-			9 => x"FA",
-			10=> x"F8"
+			4 => i_PCL_Q,
+			5 => i_SPL_Q,
+			6 => i_IXL_Q,
+			7 => i_ACCA_Q,
+			8 => i_ACCB_Q,
+			9 => i_CCR_Q,
+			10=> i_SUM_Q,
+			11=> i_DBI_Q,
+			12=> x"FE",
+			13=> x"FC",
+			14=> x"FA",
+			15=> x"F8"
 		),
 		D_o		=> ib_DB
 	);
@@ -323,14 +350,14 @@ begin
 	);
 
 --
--- ###					 #												####	 #		##
--- #	#									 #								#				 #
--- #	#	 ##	 ###	##		 ###	####	 ##	# ##			#		##		 #		 ##
--- ###	#	#	#	#	 #		#		 #		#	#	##				###	 #		 #		#	#
--- # #	####	#	#	 #		 ##	 #		####	#				#		 #		 #		####
--- #	#	#		 ###	 #			#	 #		#		#				#		 #		 #		#
--- #	#	 ##		#	###	###	  ##	 ##	#				#		###	###	 ##
---					 ##	
+-- ###				  #									 ####	#	 ##
+-- #  #							  #						 #			  #
+-- #  #	  ##	###	 ##		###	 ####	##	 # ##		 #	   ##	  #		##
+-- ###	 #	#  #  #	  #	   #	  #	   #  #	 ##			 ###	#	  #	   #  #
+-- # #	 ####  #  #	  #		##	  #	   ####	 #			 #		#	  #	   ####
+-- #  #	 #		###	  #		  #	  #	   #	 #			 #		#	  #	   #
+-- #  #	  ##	  #	 ###   ###	   ##	##	 #			 #	   ###	 ###	##
+--				##	
 --
 
 	e_reg_pcl:entity dossy_6800.dossy_6800_reg8
@@ -445,12 +472,12 @@ begin
 
 --
 -- ###
---	 #																 #
---	 #		###	 ###	# ##	 ##  ## #	 ##	###	####	 ##	# ##
---	 #		#	#	#		##		#	# # # #	#	#	#	#	 #		#	#	##
---	 #		#	#	#		#		#### # # #	####	#	#	 #		####	#
---	 #		#	#	#		#		#	  # # #	#		#	#	 #		#		#
--- ###	#	#	 ###	#		 ##  #	#	 ##	#	#	  ##	 ##	#
+--	#												#
+--	#	 ###	###	 # ##	##	## #	##	 ###   ####	  ##   # ##
+--	#	 #	#  #	 ##	   #  # # # #  #  #	 #	#	#	 #	#  ##
+--	#	 #	#  #	 #	   #### # # #  ####	 #	#	#	 ####  #
+--	#	 #	#  #	 #	   #	# # #  #	 #	#	#	 #	   #
+-- ###	 #	#	###	 #		##	#	#	##	 #	#	 ##	  ##   #
 --
 
 	-- this assumes a 16bit increment can be carried out in one cycle?
@@ -499,7 +526,7 @@ begin
 					end if;
 				when inc_page =>
 					r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
-				when others	=>	
+				when others =>	
 					r_inch <= v_src_h;
 			end case;
 
@@ -512,13 +539,13 @@ begin
 
 
 --
---	 ##											#	#					#		 #
--- #	#	 #				 #						####					#
--- #		####	 ###	####	 ##			####	 ###	 ###	###	##		###	 ##
---	 ##	 #		#	#	 #		#	#			#	#	#	#	#		#	#	 #		#	#	#	#
---		#	 #		#	#	 #		####			#	#	#	#	#		#	#	 #		#	#	####
--- #	#	 #		# ##	 #		#				#	#	# ##	#		#	#	 #		#	#	#
---	 ##	  ##	 # #	  ##	 ##			#	#	 # #	 ###	#	#	###	#	#	 ##
+--	##								   #  #				 #		#
+-- #  #	  #			  #				   ####				 #
+-- #	 ####	###	 ####	##		   ####	  ###	###	 ###   ##	 ###	##
+--	##	  #	   #  #	  #	   #  #		   #  #	 #	#  #	 #	#	#	 #	#  #  #
+--	  #	  #	   #  #	  #	   ####		   #  #	 #	#  #	 #	#	#	 #	#  ####
+-- #  #	  #	   # ##	  #	   #		   #  #	 # ##  #	 #	#	#	 #	#  #
+--	##	   ##	# #	   ##	##		   #  #	  # #	###	 #	#  ###	 #	#	##
 --
 
 	p_state_machine:process(CLK_i)
@@ -553,10 +580,12 @@ begin
 			when R58 =>
 				i_next_state <= TSL0;
 			when TSL0 | TSL0_D02 | EXT1 =>
-				if PMATCH(i_IR_Q,	 "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
+				if PMATCH(i_IR_Q,  "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
 					i_next_state <= T1_EXT0;
-				elsif PMATCH(i_IR_Q, "1---111-") then
+				elsif PMATCH(i_IR_Q, "1---1110") then
 					i_next_state <= LDx_T1_D00;
+				elsif PMATCH(i_IR_Q, "1---1111") then
+					i_next_state <= STx_T1_D00;
 				else
 					i_next_state <= DIEBAD;
 				end if;
@@ -564,6 +593,12 @@ begin
 				i_next_state <= LDX_D01;
 			when LDX_D01 =>
 				i_next_state <= TSL0_D02;
+			when STx_T1_D00 =>
+				i_next_state <= STx_D01;
+			when STx_D01 =>
+				i_next_state <= STx_D02;
+			when STx_D02 =>
+				i_next_state <= TSL0;
 			when T1_EXT0 =>
 				i_next_state <= EXT1;				
 			when others =>
@@ -573,23 +608,28 @@ begin
 
 	p_control:process(all)
 	begin
-		i_mux_ABL_INCL		<= '0';
+		i_mux_ABL_INCL	<= '0';
 		i_mux_ABL_PCL		<= '0';
 		i_mux_ABL_SPL		<= '0';
 		i_mux_ABL_IXL		<= '0';
-		i_mux_ABL_ABLI		<= '0';
+		i_mux_ABL_ABLI	<= '0';
 		i_mux_OBL_ABL		<= '0';
 		i_mux_OBL_DB		<= '0';
-		i_mux_ABLI_ABL		<= '0';
-		i_mux_ABLI_IXL		<= '0';
-		i_mux_ABLI_ACCA	<= '0';
-		i_mux_ABLI_ACCB	<= '0';
-		i_mux_ABLI_IXH		<= '0';
+		i_mux_ABLI_ABL	<= '0';
+		i_mux_ABLI_IXL	<= '0';
+		i_mux_ABLI_ACCA		<= '0';
+		i_mux_ABLI_ACCB		<= '0';
+		i_mux_ABLI_IXH	<= '0';
 		i_mux_ABLI_FF		<= '0';
 		i_mux_DB_T			<= '0';
 		i_mux_DB_PCH		<= '0';
 		i_mux_DB_SPH		<= '0';
 		i_mux_DB_IXH		<= '0';
+		i_mux_DB_PCL		<= '0';
+		i_mux_DB_SPL		<= '0';
+		i_mux_DB_IXL		<= '0';
+		i_mux_DB_ACCA		<= '0';
+		i_mux_DB_ACCB		<= '0';
 		i_mux_DB_CCR		<= '0';
 		i_mux_DB_SUM		<= '0';
 		i_mux_DB_DBI		<= '0';
@@ -598,7 +638,7 @@ begin
 		i_mux_DB_SWIV		<= '0';
 		i_mux_DB_IRQV		<= '0';
 		i_mux_ABH_T			<= '0';
-		i_mux_ABH_INCH		<= '0';
+		i_mux_ABH_INCH	<= '0';
 		i_mux_ABH_PCH		<= '0';
 		i_mux_ABH_SPH		<= '0';
 		i_mux_ABH_IXH		<= '0';
@@ -628,6 +668,9 @@ begin
 		i_INC_src			<= inc;
 		i_INC_act			<= inc;
 
+		RnW_o					<= '1';
+		i_VMA					<= '1';
+
 		case r_state is 
 			when GP58 | RESET =>
 				--always reset, TODO: other interrupts
@@ -635,8 +678,8 @@ begin
 				i_mux_OBL_DB <= '1';
 				i_mux_ABH_FF <= '1';
 				-- TODO: set IM
-				if r_state /= RESET then
-					i_VMA <= '1';
+				if r_state = RESET then
+					i_VMA <= '0';
 				end if;
 				i_INC_src <= db_ah;
 			when R57 =>
@@ -645,13 +688,11 @@ begin
 				i_mux_ABH_INCH <= '1';
 				i_mux_ABL_INCL <= '1';
 				i_mux_OBL_ABL <= '1';
-				i_VMA <= '1';
 			when R58 =>
 				i_mux_DB_DBI <= '1';
 				i_INC_src <= db_ah;
 				i_mux_ABH_T <= '1';
 				i_mux_OBL_DB <= '1';
-				i_VMA <= '1';
 				i_IR_ld_D <= '1';
 			when TSL0 | TSL0_D02 =>
 				i_mux_ABL_INCL <= '1';
@@ -659,13 +700,11 @@ begin
 				i_mux_OBL_ABL <= '1';
 				i_PCL_ld_INCL <= '1';
 				i_PCH_ld_INCH <= '1';
-				i_VMA <= '1';
 
 			when LDx_T1_D00 =>
 				i_mux_ABL_INCL <= '1';
 				i_mux_ABH_INCH <= '1';
 				i_mux_OBL_ABL <= '1';
-				i_VMA <= '1';
 				i_mux_DB_DBI <= '1';
 				if i_IR_Q(6) = '1' then
 					i_IXH_ld_DB <= '1';
@@ -687,7 +726,6 @@ begin
 					i_INC_src <= al_ah;
 				end if;
 				i_mux_OBL_ABL <= '1';
-				i_VMA <= '1';
 				i_IR_ld_D <= '1';
 				i_mux_DB_DBI <= '1';
 				if i_IR_Q(6) = '1' then
@@ -697,6 +735,46 @@ begin
 				end if;
 				i_mux_ABLI_FF <= '1';
 
+			when STx_T1_D00 =>
+
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_mux_OBL_ABL <= '1';
+				RnW_o <= '0';
+				if i_IR_Q(6) = '1' then
+					i_mux_DB_IXH <= '1';
+				else
+					i_mux_DB_SPH <= '1';
+				end if;
+				i_INC_src <= inc;
+				i_INC_act <= inc;
+
+			when STx_D01 =>
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_mux_OBL_ABL <= '1';
+				RnW_o <= '0';
+				if i_IR_Q(6) = '1' then
+					i_mux_DB_IXL <= '1';
+				else
+					i_mux_DB_SPL <= '1';
+				end if;
+
+			when STx_D02 =>
+				if i_IR_Q(5 downto 4) = "00" then
+					-- was immediate, keep pc
+					i_mux_ABL_INCL <= '1';
+					i_mux_ABH_INCH <= '1';
+					i_INC_src <= inc;
+				else
+					i_mux_ABL_PCL <= '1';
+					i_mux_ABH_PCH <= '1';
+					i_INC_src <= al_ah;
+				end if;
+				i_mux_OBL_ABL <= '1';
+				i_IR_ld_D <= '1';
+				-- TODO: this whole cycle had to be added - I think we need to move writes back a cycle somehow!
+
 
 			when T1_EXT0 =>
 				i_mux_DB_DBI <= '1';
@@ -704,7 +782,6 @@ begin
 				i_mux_ABL_INCL <= '1';
 				i_mux_ABH_INCH <= '1';
 				i_mux_OBL_ABL <= '1';
-				i_VMA <= '1';
 			when EXT1 =>
 				i_mux_ABH_T <= '1';
 				i_mux_OBL_DB <= '1';
@@ -713,7 +790,13 @@ begin
 				i_INC_src <= db_ah;
 				i_PCH_ld_INCH <= '1';
 				i_PCL_ld_INCL <= '1';
-				i_VMA <= '1';
+				if i_IR_Q(2 downto 0) = "111" then
+					-- its a write next
+					i_VMA <= '0';
+					i_INC_act <= hold;
+				else
+					i_VMA <= '1';
+				end if;
 
 
 
@@ -734,6 +817,6 @@ begin
 	end process;
 
 	BA_o <= '0';
-	RnW_o	 <= '1';
+	D_o <= ib_DB;
 
 end rtl;
