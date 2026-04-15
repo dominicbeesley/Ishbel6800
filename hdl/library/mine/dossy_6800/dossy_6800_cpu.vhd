@@ -205,7 +205,8 @@ architecture rtl of dossy_6800_cpu is
 		EXT1,
 
 		-- DIE
-		DIEBAD
+		DIEBAD,
+		WAIT_INTER
 		);
 	signal i_next_state		: t_cpu_state;
 	signal r_state			: t_cpu_state;
@@ -620,7 +621,13 @@ begin
 			when SWAI_GP56 =>
 				i_next_state <= SWAI_GP57;
 			when SWAI_GP57 =>
-				i_next_state <= GP58;
+				if i_IR_Q /= x"3F" then -- TODO: better check here!
+					i_next_state <= GP58;
+				else
+					i_next_state <= WAIT_INTER;
+
+			when WAIT_INTER =>
+				i_next_state <= WAIT_INTER;
 
 			when GP52 =>
 				i_next_state <= TSL0;
