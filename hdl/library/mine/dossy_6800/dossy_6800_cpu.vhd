@@ -58,7 +58,6 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_mux_ABL_SPL		: std_logic;
 	signal	i_mux_ABL_ABLI	: std_logic;
 
-	signal	i_mux_OBL_ABL		: std_logic;
 	signal	i_mux_OBL_DB		: std_logic;
 
 	signal	i_mux_ABLI_ABL	: std_logic;
@@ -147,7 +146,8 @@ architecture rtl of dossy_6800_cpu is
 	-- incrementer
 	signal	r_incl				: std_logic_vector(7 downto 0);
 	signal	r_inch				: std_logic_vector(7 downto 0);
-	signal	i_INC_src			: t_inc_source;
+	signal	i_INC_H_src			: t_inc_h_src;
+	signal	i_INC_L_src			: t_inc_l_src;
 	signal	i_INC_act			: t_inc_act;
 
 	-- other inputs to BUS MUXes
@@ -155,7 +155,7 @@ architecture rtl of dossy_6800_cpu is
 
 	-- other control signals
 	signal	i_VMA			: std_logic;
-	signal	r_VMA					: std_logic;
+	signal	i_RnW			: std_logic;
 
 	-- state machine
 	type t_cpu_state is (
@@ -255,22 +255,8 @@ begin
 		D_o		=> ib_ABL
 	);
 
-	e_bus_mux_OBL:entity dossy_6800.dossy_6800_mux8
-	generic map (
-		WIDTH => 2
-	)
-	port map (
-		SEL_i		=> (
-			0 => i_mux_OBL_ABL,
-			1 => i_mux_OBL_DB
-		),
-		D_i		=> (
-			0 => ib_ABL,
-			1 => ib_DB
-		),
-		D_o		=> ib_OBL
-	);
-
+	ib_OBL <= ib_DB when i_mux_OBL_DB = '1' else
+				 ib_ABL;
 
 	e_bus_mux_ABLI:entity dossy_6800.dossy_6800_mux8
 	generic map (
@@ -504,15 +490,19 @@ begin
 	begin
 		if rising_edge(CLK_i) then
 
-			case i_INC_src is 
-				when al_ah =>
+			case i_INC_L_src is 
+				when abl =>
 					v_src_l := ib_ABL;
-					v_src_h := ib_ABH;
-				when db_ah =>
+				when db =>
 					v_src_l := ib_DB;
-					v_src_h := ib_ABH;
 				when others =>
 					v_src_l := i_INCL_Q;
+			end case;
+
+			case i_INC_H_src is 
+				when abh =>
+					v_src_h := ib_ABH;
+				when others =>
 					v_src_h := i_INCH_Q;
 			end case;
 
@@ -575,7 +565,7 @@ begin
 		end if;
 	end process;
 
-	p_state_next:process(all) 
+	p_control:process(all)
 		function PMATCH(V: in std_logic_vector; M: in std_logic_vector) return boolean is
 		begin
 			if V ?= M then
@@ -585,103 +575,31 @@ begin
 			end if;			
 		end function;
 
+		impure function DECODE return t_cpu_state is
+		begin
+			if PMATCH(i_IR_Q, "00110101") then
+				return TXS_T1_GP50;
+			elsif PMATCH(i_IR_Q, "00111111") then
+				return SWAI_T1_GP50;
+			elsif PMATCH(i_IR_Q, "00111011") then
+				return RTI_T1_GP50;
+			elsif PMATCH(i_IR_Q,  "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
+				return T1_EXT0;
+			elsif PMATCH(i_IR_Q, "1---1110") then
+				return LDx_T1_D00;
+			elsif PMATCH(i_IR_Q, "1---1111") then
+				return STx_T1_D00;
+			else
+				return DIEBAD;
+			end if;
+		end function;
 	begin
-		case r_state is
-			when RESET =>
-				i_next_state <= GP58;
-			when GP58 => 
-				i_next_state <= R57;
-			when R57 =>
-				i_next_state <= R58;
-			when R58 =>
-				i_next_state <= TSL0;
-			when TSL0 | TSL0_D02 | EXT1 =>
-				if PMATCH(i_IR_Q, "00110101") then
-					i_next_state <= TXS_T1_GP50;
-				elsif PMATCH(i_IR_Q, "00111111") then
-					i_next_state <= SWAI_T1_GP50;
-				elsif PMATCH(i_IR_Q, "00111011") then
-					i_next_state <= RTI_T1_GP50;
-				elsif PMATCH(i_IR_Q,  "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
-					i_next_state <= T1_EXT0;
-				elsif PMATCH(i_IR_Q, "1---1110") then
-					i_next_state <= LDx_T1_D00;
-				elsif PMATCH(i_IR_Q, "1---1111") then
-					i_next_state <= STx_T1_D00;
-				else
-					i_next_state <= DIEBAD;
-				end if;
-			when TXS_T1_GP50 => 
-				i_next_state <= TXS_GP51;
-			when TXS_GP51 =>
-				i_next_state <= GP52;
+		i_next_state <= DIEBAD;
 
-			when SWAI_T1_GP50 =>
-				i_next_state <= SWAI_GP51;
-			when SWAI_GP51 =>
-				i_next_state <= SWAI_GP52;
-			when SWAI_GP52 =>
-				i_next_state <= SWAI_GP53;
-			when SWAI_GP53 =>
-				i_next_state <= SWAI_GP54;
-			when SWAI_GP54 =>
-				i_next_state <= SWAI_GP55;
-			when SWAI_GP55 =>
-				i_next_state <= SWAI_GP56;
-			when SWAI_GP56 =>
-				i_next_state <= SWAI_GP57;
-			when SWAI_GP57 =>
-				if i_IR_Q /= x"3E" then -- TODO: better check here!
-					i_next_state <= GP58;
-				else
-					i_next_state <= WAIT_INTER;
-				end if;
-			when WAIT_INTER =>	
-				i_next_state <= WAIT_INTER;		-- TODO: this is WAIT's WAIT state...what to do here, BA?
-
-			when RTI_T1_GP50 =>
-				i_next_state <= RTI_GP51;
-			when RTI_GP51 =>
-				i_next_state <= RTI_GP52;
-			when RTI_GP52 =>
-				i_next_state <= RTI_R53;
-			when RTI_R53 =>
-				i_next_state <= RTI_R54;
-			when RTI_R54 =>
-				i_next_state <= RTI_R55;
-			when RTI_R55 =>
-				i_next_state <= RTI_R56;
-			when RTI_R56 =>
-				i_next_state <= RTI_R57;
-			when RTI_R57 =>
-				i_next_state <= R58;
-
-			when GP52 =>
-				i_next_state <= TSL0;
-			when LDx_T1_D00 =>
-				i_next_state <= LDX_D01;
-			when LDX_D01 =>
-				i_next_state <= TSL0_D02;
-			when STx_T1_D00 =>
-				i_next_state <= STx_D01;
-			when STx_D01 =>
-				i_next_state <= STx_D02;
-			when STx_D02 =>
-				i_next_state <= TSL0;
-			when T1_EXT0 =>
-				i_next_state <= EXT1;				
-			when others =>
-				i_next_state <= DIEBAD;
-		end case;
-	end process;
-
-	p_control:process(all)
-	begin
 		i_mux_ABL_INCL	<= '0';
 		i_mux_ABL_PCL		<= '0';
 		i_mux_ABL_SPL		<= '0';
 		i_mux_ABL_ABLI	<= '0';
-		i_mux_OBL_ABL		<= '0';
 		i_mux_OBL_DB		<= '0';
 		i_mux_ABLI_ABL	<= '0';
 		i_mux_ABLI_IXL	<= '0';
@@ -706,7 +624,7 @@ begin
 		i_mux_DB_SWIV		<= '0';
 		i_mux_DB_IRQV		<= '0';
 		i_mux_ABH_T			<= '0';
-		i_mux_ABH_INCH	<= '0';
+		i_mux_ABH_INCH		<= '0';
 		i_mux_ABH_PCH		<= '0';
 		i_mux_ABH_SPH		<= '0';
 		i_mux_ABH_IXH		<= '0';
@@ -732,325 +650,273 @@ begin
 		i_CCR_ld_ALU		<= '0';
 		i_IR_ld_D			<= '0';
 
-		i_INC_src			<= inc;
+		i_INC_L_src			<= inc;
+		i_INC_H_src			<= inc;
 		i_INC_act			<= inc;
 
-		RnW_o					<= '1';
+		i_RnW					<= '1';
 		i_VMA					<= '1';
 
 		case r_state is 
-			when GP58 | RESET =>
-				--this is a hack, should check something else and check for interrupts. order of precedence - check on real chip??
-				if i_IR_Q = x"3F" then
-					i_mux_DB_SWIV <= '1';
-				else
-					i_mux_DB_RESV <= '1';
-				end if;
-				i_mux_OBL_DB <= '1';
-				i_mux_ABH_FF <= '1';
-				-- TODO: set IM
-				if r_state = RESET then
-					i_VMA <= '0';
-				end if;
-				i_INC_src <= db_ah;
-			when R57 =>
-				i_mux_DB_DBI <= '1';
-				i_T_ld_DB <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_mux_ABL_INCL <= '1';
-				i_mux_OBL_ABL <= '1';
-			when R58 =>
-				i_mux_DB_DBI <= '1';
-				i_INC_src <= db_ah;
-				i_mux_ABH_T <= '1';
-				i_mux_OBL_DB <= '1';
-				i_IR_ld_D <= '1';
-			when TSL0 | TSL0_D02 =>
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_mux_OBL_ABL <= '1';
-				i_PCL_ld_INCL <= '1';
-				i_PCH_ld_INCH <= '1';
-
-			when TXS_T1_GP50 =>
-				i_mux_ABLI_IXL <= '1';
-				i_mux_ABL_ABLI <= '1';
-				i_mux_ABH_IXH <= '1';
-				i_INC_src <= al_ah;
-				i_INC_act <= dec;
-				i_VMA <= '0';
-				i_mux_OBL_ABL <= '1';
-			when TXS_GP51 =>
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_SPL_ld_ABL <= '1';
-				i_SPH_ld_ABH <= '1';
-				i_VMA <= '0';
-				i_mux_OBL_ABL <= '1';
-
-			when GP52 =>
-				i_mux_ABL_PCL <= '1';
-				i_mux_ABH_PCH <= '1';
-				i_INC_src <= al_ah;
-				i_IR_ld_D <= '1';
-				i_mux_OBL_ABL <= '1';
-
-			when LDx_T1_D00 =>
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_mux_OBL_ABL <= '1';
-				i_mux_DB_DBI <= '1';
-				if i_IR_Q(6) = '1' then
-					i_IXH_ld_DB <= '1';
-				else
-					i_SPH_ld_DB <= '1';
-				end if;
-				i_mux_ABLI_FF <= '1';
-				-- TODO ALU stuff
-
-			when LDx_D01 =>
-				if i_IR_Q(5 downto 4) = "00" then
-					-- was immediate, keep pc
-					i_mux_ABL_INCL <= '1';
-					i_mux_ABH_INCH <= '1';
-					i_INC_src <= inc;
-				else
-					i_mux_ABL_PCL <= '1';
-					i_mux_ABH_PCH <= '1';
-					i_INC_src <= al_ah;
-				end if;
-				i_mux_OBL_ABL <= '1';
-				i_IR_ld_D <= '1';
-				i_mux_DB_DBI <= '1';
-				if i_IR_Q(6) = '1' then
-					i_IXL_ld_DB <= '1';
-				else
-					i_SPL_ld_DB <= '1';
-				end if;
-				i_mux_ABLI_FF <= '1';
-
-			when STx_T1_D00 =>
-
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_mux_OBL_ABL <= '1';
-				RnW_o <= '0';
-				if i_IR_Q(6) = '1' then
-					i_mux_DB_IXH <= '1';
-				else
-					i_mux_DB_SPH <= '1';
-				end if;
-				i_INC_src <= inc;
-				i_INC_act <= inc;
-
-			when STx_D01 =>
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_mux_OBL_ABL <= '1';
-				RnW_o <= '0';
-				if i_IR_Q(6) = '1' then
-					i_mux_DB_IXL <= '1';
-				else
-					i_mux_DB_SPL <= '1';
-				end if;
-
-			when STx_D02 =>
-				if i_IR_Q(5 downto 4) = "00" then
-					-- was immediate, keep pc
-					i_mux_ABL_INCL <= '1';
-					i_mux_ABH_INCH <= '1';
-					i_INC_src <= inc;
-				else
-					i_mux_ABL_PCL <= '1';
-					i_mux_ABH_PCH <= '1';
-					i_INC_src <= al_ah;
-				end if;
-				i_mux_OBL_ABL <= '1';
-				i_IR_ld_D <= '1';
-				-- TODO: this whole cycle had to be added - I think we need to move writes back a cycle somehow!
-
-			when SWAI_T1_GP50 => 
-				i_mux_ABL_SPL <= '1';
-				i_mux_ABH_SPH <= '1';
-				i_INC_src <= al_ah;
-				i_INC_act <= dec;
-
-				i_mux_OBL_ABL <= '1';
-				i_mux_DB_PCL <= '1';
-				RnW_o <= '0';
-
-			when SWAI_GP51 => 
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_INC_src <= al_ah;
-				i_INC_act <= dec;
-
-				--TODO: check this against v6502 - the other steps don't or do they?
-				i_SPH_ld_ABH <= '1';
-				i_SPL_ld_ABL <= '1';
-
-				i_mux_OBL_ABL <= '1';
-				i_mux_DB_PCH <= '1';
-				RnW_o <= '0';
-
-			when SWAI_GP52 => 
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_INC_src <= al_ah;
-				i_INC_act <= dec;
-
-				i_mux_OBL_ABL <= '1';
-				i_mux_DB_IXL <= '1';
-				RnW_o <= '0';
-
-			when SWAI_GP53 => 
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_INC_src <= al_ah;
-				i_INC_act <= dec;
-
-				i_mux_OBL_ABL <= '1';
-				i_mux_DB_IXH <= '1';
-				RnW_o <= '0';
-
-			when SWAI_GP54 => 
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_INC_src <= al_ah;
-				i_INC_act <= dec;
-
-				i_mux_OBL_ABL <= '1';
-				i_mux_DB_ACCA <= '1';
-				RnW_o <= '0';
-
-			when SWAI_GP55 => 
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_INC_src <= al_ah;
-				i_INC_act <= dec;
-
-				i_mux_OBL_ABL <= '1';
-				i_mux_DB_ACCB <= '1';
-				RnW_o <= '0';
-
-			when SWAI_GP56 => 
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_INC_src <= al_ah;
-				i_INC_act <= dec;
-
-				i_mux_OBL_ABL <= '1';
-				i_mux_DB_CCR <= '1';
-				RnW_o <= '0';
-
-			when SWAI_GP57 => 
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_INC_src <= al_ah;
-				i_INC_act <= dec;
-				i_SPH_ld_ABH <= '1';
-				i_SPL_ld_ABL <= '1';
-				i_mux_OBL_ABL <= '1';
-				i_VMA <= '0';			
-				-- TODO what is "TIN" on or "T1N" on Fig.2G
-
-			when RTI_T1_GP50 =>
-				i_mux_ABL_SPL <= '1';
-				i_mux_ABH_SPH <= '1';
-				i_INC_src <= al_ah;
-				i_INC_act <= inc;
-
-				i_mux_OBL_ABL <= '1';
-				i_VMA <= '0';
-			when RTI_GP51 =>
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-
-				-- unnecessary?
-				i_SPH_ld_ABH <= '1';
-				i_SPL_ld_ABL <= '1';
-
-				i_mux_OBL_ABL <= '1';
-
-			when RTI_GP52 =>
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-
-				i_mux_DB_DBI <= '1';
-				i_CCR_ld_DB <= '1';
-
-				i_mux_OBL_ABL <= '1';
-
-			when RTI_R53 =>
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-
-				i_mux_DB_DBI <= '1';
-				i_ACCB_ld_DB <= '1';
-
-				i_mux_OBL_ABL <= '1';
-
-			when RTI_R54 =>
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-
-				i_mux_DB_DBI <= '1';
-				i_ACCA_ld_DB <= '1';
-
-				i_mux_OBL_ABL <= '1';
-
-			when RTI_R55 =>
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-
-				i_mux_DB_DBI <= '1';
-				i_IXH_ld_DB <= '1';
-
-				i_mux_OBL_ABL <= '1';
-
-			when RTI_R56 =>
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-
-				i_mux_DB_DBI <= '1';
-				i_IXL_ld_DB <= '1';
-
-				i_mux_OBL_ABL <= '1';
-
-			when RTI_R57 =>
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-
-				i_SPH_ld_ABH <= '1';
-				i_SPL_ld_ABL <= '1';
-
-				i_mux_DB_DBI <= '1';
-				i_T_ld_DB <= '1';
-
-				i_mux_OBL_ABL <= '1';
 
 
-			when T1_EXT0 =>
-				i_mux_DB_DBI <= '1';
-				i_T_ld_DB <= '1';
-				i_mux_ABL_INCL <= '1';
-				i_mux_ABH_INCH <= '1';
-				i_mux_OBL_ABL <= '1';
-			when EXT1 =>
-				i_mux_ABH_T <= '1';
-				i_mux_OBL_DB <= '1';
-				i_mux_ABL_INCL <= '1';
-				i_mux_DB_DBI <= '1';
-				i_INC_src <= db_ah;
-				i_PCH_ld_INCH <= '1';
-				i_PCL_ld_INCL <= '1';
-				if i_IR_Q(2 downto 0) = "111" then
-					-- its a write next
-					i_VMA <= '0';
-					i_INC_act <= hold;
-				else
-					i_VMA <= '1';
-				end if;
+         when EXT1 =>
+            i_mux_ABH_T <= '1';
+            i_INC_H_src <= abh;
+            i_mux_DB_DBI <= '1';
+            i_mux_OBL_DB <= '1';
+            i_INC_L_src <= db;
+            i_PCL_ld_INCL <= '1'; i_PCH_ld_INCH <= '1';
+            if i_IR_Q(2 downto 0) = "111" then
+               -- its a write next
+               i_VMA <= '0';
+               i_INC_act <= hold;
+            end if;
+            i_next_state <= DECODE;
+
+         when GP52 =>
+            i_mux_ABL_PCL <= '1'; i_mux_ABH_PCH <= '1';
+            i_INC_L_src <= abl; i_INC_H_src <= abh;
+            i_IR_ld_D <= '1';
+            i_next_state <= TSL0;
+
+         when LDX_D01 =>
+            if i_IR_Q(5 downto 4) = "00" then
+               -- was immediate, keep pc
+               i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            else
+               i_mux_ABL_PCL <= '1'; i_mux_ABH_PCH <= '1';
+               i_INC_L_src <= abl; i_INC_H_src <= abh;
+            end if;
+            i_mux_DB_DBI <= '1';
+            if i_IR_Q(6) = '1' then
+               i_IXL_ld_DB <= '1';
+            else
+               i_SPL_ld_DB <= '1';
+            end if;
+            i_IR_ld_D <= '1';
+            i_mux_ABLI_FF <= '1';
+            i_next_state <= TSL0_D02;
+
+         when LDx_T1_D00 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_mux_DB_DBI <= '1';
+            if i_IR_Q(6) = '1' then
+               i_IXH_ld_DB <= '1';
+            else
+               i_SPH_ld_DB <= '1';
+            end if;
+            i_mux_ABLI_FF <= '1';
+            i_next_state <= LDX_D01;
+
+         when R57 =>
+            i_mux_DB_DBI <= '1';
+            i_T_ld_DB <= '1';
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_next_state <= R58;
+
+         when R58 =>
+            i_mux_DB_DBI <= '1';
+            i_mux_OBL_DB <= '1';
+            i_INC_L_src <= db;
+            i_mux_ABH_T <= '1';
+            i_INC_H_src <= abh;
+            i_IR_ld_D <= '1';
+            i_next_state <= TSL0;
+
+         when RESET|GP58 =>
+            if i_IR_Q = x"3F" then
+               i_mux_DB_SWIV <= '1';
+            else
+               i_mux_DB_RESV <= '1';
+            end if;
+            i_mux_ABH_FF <= '1';
+            i_INC_H_src <= abh;
+            i_mux_OBL_DB <= '1';
+            i_INC_L_src <= db;
+            if r_state = RESET then
+               i_next_state <= GP58;
+            else
+               i_next_state <= R57;
+            end if;
+
+         when RTI_GP51 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_SPL_ld_ABL <= '1'; i_SPH_ld_ABH <= '1';
+            i_next_state <= RTI_GP52;
+
+         when RTI_GP52 =>
+            i_mux_DB_DBI <= '1';
+            i_CCR_ld_DB <= '1';
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_next_state <= RTI_R53;
+
+         when RTI_R53 =>
+            i_mux_DB_DBI <= '1';
+            i_ACCB_ld_DB <= '1';
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_next_state <= RTI_R54;
+
+         when RTI_R54 =>
+            i_mux_DB_DBI <= '1';
+            i_ACCA_ld_DB <= '1';
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_next_state <= RTI_R55;
+
+         when RTI_R55 =>
+            i_mux_DB_DBI <= '1';
+            i_IXH_ld_DB <= '1';
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_next_state <= RTI_R56;
+
+         when RTI_R56 =>
+            i_mux_DB_DBI <= '1';
+            i_IXL_ld_DB <= '1';
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_next_state <= RTI_R57;
+
+         when RTI_R57 =>
+            i_mux_DB_DBI <= '1';
+            i_T_ld_DB <= '1';
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_next_state <= R58;
+
+         when RTI_T1_GP50 =>
+            i_mux_ABL_SPL <= '1'; i_mux_ABH_SPH <= '1';
+            i_INC_L_src <= abl; i_INC_H_src <= abh;
+            i_VMA <= '0';
+            i_next_state <= RTI_GP51;
+
+         when STx_D01 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            if i_IR_Q(6) = '1' then
+               i_mux_DB_IXL <= '1';
+            else
+               i_mux_DB_SPL <= '1';
+            end if;
+            i_RnW <= '0';
+            i_next_state <= STx_D02;
+
+         when STx_D02 =>
+            -- TODO: this whole cycle had to be added - I think we need to move writes back a cycle somehow!
+            if i_IR_Q(5 downto 4) = "00" then
+               -- was immediate, keep pc
+               i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            else
+               i_mux_ABL_PCL <= '1'; i_mux_ABH_PCH <= '1';
+               i_INC_L_src <= abl; i_INC_H_src <= abh;
+            end if;
+            i_mux_DB_DBI <= '1';
+            if i_IR_Q(6) = '1' then
+               i_IXL_ld_DB <= '1';
+            else
+               i_SPL_ld_DB <= '1';
+            end if;
+            i_IR_ld_D <= '1';
+            i_mux_ABLI_FF <= '1';
+            i_next_state <= TSL0;
+
+         when STx_T1_D00 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            if i_IR_Q(6) = '1' then
+               i_mux_DB_IXH <= '1';
+            else
+               i_mux_DB_SPH <= '1';
+            end if;
+            i_RnW <= '0';
+            i_next_state <= STx_D01;
+
+         when SWAI_GP51 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_mux_DB_PCH <= '1';
+            i_RnW <= '0';
+            i_INC_act <= dec;
+            i_next_state <= SWAI_GP52;
+
+         when SWAI_GP52 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_mux_DB_IXL <= '1';
+            i_RnW <= '0';
+            i_INC_act <= dec;
+            i_next_state <= SWAI_GP53;
+
+         when SWAI_GP53 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_mux_DB_IXH <= '1';
+            i_RnW <= '0';
+            i_INC_act <= dec;
+            i_next_state <= SWAI_GP54;
+
+         when SWAI_GP54 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_mux_DB_ACCA <= '1';
+            i_RnW <= '0';
+            i_INC_act <= dec;
+            i_next_state <= SWAI_GP55;
+
+         when SWAI_GP55 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_mux_DB_ACCB <= '1';
+            i_RnW <= '0';
+            i_INC_act <= dec;
+            i_next_state <= SWAI_GP56;
+
+         when SWAI_GP56 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_mux_DB_CCR <= '1';
+            i_RnW <= '0';
+            i_INC_act <= dec;
+            i_next_state <= SWAI_GP57;
+
+         when SWAI_GP57 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_SPL_ld_ABL <= '1'; i_SPH_ld_ABH <= '1';
+            i_INC_act <= dec;
+            i_VMA <= '0';
+            if i_IR_Q /= x"3E" then -- TODO: better check here!
+               i_next_state <= GP58;
+            else
+               i_next_state <= WAIT_INTER;
+            end if;
+
+         when SWAI_T1_GP50 =>
+            i_mux_ABL_SPL <= '1'; i_mux_ABH_SPH <= '1';
+            i_INC_L_src <= abl; i_INC_H_src <= abh;
+            i_mux_DB_PCL <= '1';
+            i_RnW <= '0';
+            i_INC_act <= dec;
+            i_next_state <= SWAI_GP51;
+
+         when T1_EXT0 =>
+            i_mux_DB_DBI <= '1';
+            i_T_ld_DB <= '1';
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_next_state <= EXT1;
+
+         when TSL0|TSL0_D02 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_PCL_ld_INCL <= '1'; i_PCH_ld_INCH <= '1';
+            i_next_state <= DECODE;
+
+         when TXS_GP51 =>
+            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
+            i_SPL_ld_ABL <= '1'; i_SPH_ld_ABH <= '1';
+            i_VMA <= '0';
+            i_next_state <= GP52;
+
+         when TXS_T1_GP50 =>
+            i_mux_ABLI_IXL <= '1';
+            i_mux_ABL_ABLI <= '1';
+            i_mux_ABH_IXH <= '1';
+            i_INC_L_src <= abl; i_INC_H_src <= abh;
+            i_INC_act <= dec;
+            i_VMA <= '0';
+            i_next_state <= TXS_GP51;
+
+         when WAIT_INTER =>
+            --TODO: this is WAIT's WAIT state...what to do here, BA?
+            i_next_state <= WAIT_INTER;
+
 
 
 
@@ -1068,6 +934,7 @@ begin
 	begin
 		A_o <= ib_ABH & ib_OBL;
 		VMA_o <= i_VMA;
+		RnW_o <= i_RnW;
 	end process;
 
 	BA_o <= '0';

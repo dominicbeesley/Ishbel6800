@@ -1,0 +1,357 @@
+# State machine and instruction decode definitions
+
+========== TRANSFERS ==========
+
+[MUX ABL]
+INCL		{	i_mux_ABL_INCL		<= '1';	}
+PCL		{	i_mux_ABL_PCL		<= '1';	}
+SPL		{	i_mux_ABL_SPL		<= '1';	}
+ABLI		{	i_mux_ABL_ABLI		<= '1';	}
+
+[MUX OBL]
+# ABL implied if not DB
+DB			{	i_mux_OBL_DB		<= '1';	}
+
+[MUX ABLI]
+ABL		{	i_mux_ABLI_ABL		<= '1';	}
+IXL		{	i_mux_ABLI_IXL		<= '1';	}
+ACCA		{	i_mux_ABLI_ACCA	<= '1';	}
+ACCB		{	i_mux_ABLI_ACCB	<= '1';	}
+IXH		{	i_mux_ABLI_IXH		<= '1';	}
+FF			{	i_mux_ABLI_FF		<= '1';	}
+
+[MUX DB]
+T			{	i_mux_DB_T			<= '1';	}
+PCH		{	i_mux_DB_PCH		<= '1';	}
+SPH		{	i_mux_DB_SPH		<= '1';	}
+IXH		{	i_mux_DB_IXH		<= '1';	}
+PCL		{	i_mux_DB_PCL		<= '1';	}
+SPL		{	i_mux_DB_SPL		<= '1';	}
+IXL		{	i_mux_DB_IXL		<= '1';	}
+ACCA		{	i_mux_DB_ACCA		<= '1';	}
+ACCB		{	i_mux_DB_ACCB		<= '1';	}
+CCR		{	i_mux_DB_CCR		<= '1';	}
+SUM		{	i_mux_DB_SUM		<= '1';	}
+DBI		{	i_mux_DB_DBI		<= '1';	}
+RESV		{	i_mux_DB_RESV		<= '1';	}
+NMIV		{	i_mux_DB_NMIV		<= '1';	}
+SWIV		{	i_mux_DB_SWIV		<= '1';	}
+IRQV		{	i_mux_DB_IRQV		<= '1';	}
+
+[MUX ABH]
+T			{	i_mux_ABH_T			<= '1';	}
+INCH		{	i_mux_ABH_INCH		<= '1';	}
+PCH		{	i_mux_ABH_PCH		<= '1';	}
+SPH		{	i_mux_ABH_SPH		<= '1';	}
+IXH		{	i_mux_ABH_IXH		<= '1';	}
+FF			{	i_mux_ABH_FF		<= '1';	}
+
+[MUX AB!ABL,ABH]
+INC		{	i_mux_ABL_INCL		<= '1'; i_mux_ABH_INCH		<= '1';  }
+PC			{	i_mux_ABL_PCL		<= '1'; i_mux_ABH_PCH		<= '1';  }
+SP			{	i_mux_ABL_SPL		<= '1'; i_mux_ABH_SPH		<= '1';  }
+IX			{	i_mux_ABL_IXL		<= '1'; i_mux_ABH_IXH		<= '1';  }
+
+[REG IM]
+1			{	i_reg_IM_set		<= '1';	}
+0			{  i_reg_IM_clr		<= '1';	}
+
+[REG PCL]
+INCL		{	i_PCL_ld_INCL		<= '1';	}
+
+[REG PCH]
+INCH		{	i_PCH_ld_INCH		<= '1';	}
+
+[REG PC!PCL, PCH]
+INC		{	i_PCL_ld_INCL		<= '1';	i_PCH_ld_INCH		<= '1';	}
+
+[REG SPL]
+ABL		{	i_SPL_ld_ABL		<= '1';	}
+DB			{	i_SPL_ld_DB			<= '1';	}
+
+[REG SPH]
+ABH		{	i_SPH_ld_ABH		<= '1';	}
+DB			{	i_SPH_ld_DB			<= '1';	}
+
+[REG SP!SPL, SPH]
+AB			{	i_SPL_ld_ABL		<= '1';	i_SPH_ld_ABH		<= '1';	}
+[REG IXL]
+ABL		{	i_IXL_ld_ABL		<= '1';	}
+DB			{	i_IXL_ld_DB			<= '1';	}
+
+[REG IXH]
+ABH		{	i_IXH_ld_ABH		<= '1';	}
+DB			{	i_IXH_ld_DB			<= '1';	}
+
+[REG IX!IXL, IXL]
+AB			{	i_IXL_ld_ABL		<= '1';	i_IXH_ld_ABH		<= '1';	}
+
+[REG ACCB]
+ABLI		{ i_ACCB_ld_ABLI		<= '1';	}
+DB			{ i_ACCB_ld_DB			<= '1';	}
+
+[REG ACCA]
+ABLI		{	i_ACCA_ld_ABLI		<= '1';	}
+DB			{	i_ACCA_ld_DB		<= '1';	}
+
+[REG T]
+DB			{	i_T_ld_DB			<= '1';	}
+ABH		{	i_T_ld_ABH			<= '1';	}
+
+[REG CCR]
+DB			{ i_CCR_ld_DB			<= '1';	}
+ALU		{ i_CCR_ld_ALU			<= '1';	}
+
+[REG IR]
+D			{ i_IR_ld_D				<= '1';	}
+
+
+[REG INCL]
+ABL		{ i_INC_L_src			<= abl;  }
+DB			{ i_INC_L_src			<= db;  }
+
+[REG INCH]
+ABH		{ i_INC_H_src			<= abh;  }
+
+[REG INC!INCL,INCH]
+AB			{ i_INC_L_src			<= abl; i_INC_H_src			<= abh; }
+
+========== STATEMENTS ===========
+nVMA		{ i_VMA <= '0'; }
+WRITE		{ i_RnW <= '0'; }
+DEC		{ i_INC_act <= dec; }
+HOLD		{ i_INC_act <= hold; }
+
+
+============ STATES =============
+
+[RESET, GP58]
+	{if i_IR_Q = x"3F" then}
+		SWIV->DB
+	{else}
+		RESV->DB
+	{end if;}
+	
+	FF->ABH->INCH
+###	1->IM
+	DB->OBL,INCL
+
+	{if r_state = RESET then}
+		NEXT=GP58
+	{else}
+		NEXT=R57
+	{end if;}
+
+[R57]
+	DBI->DB->T
+	INC->AB
+	NEXT=R58;
+
+[R58]
+	DBI->DB->OBL,INCL
+	T->ABH->INCH
+	D->IR
+	NEXT=TSL0
+
+[TSL0, TSL0_D02]
+	INC->AB,PC
+
+	NEXT=DECODE
+
+[TXS_T1_GP50] 
+	IXL->ABLI->ABL
+	IXH->ABH
+	AB->INC
+	DEC
+	nVMA
+	NEXT=TXS_GP51
+
+[TXS_GP51]
+	INC->AB->SP
+	nVMA
+	NEXT=GP52
+
+[GP52]
+	PC->AB->INC
+	D->IR
+	NEXT=TSL0
+
+[LDx_T1_D00]
+	INC->AB
+	DBI->DB
+
+	{if i_IR_Q(6) = '1' then}
+		DB->IXH
+	{else}
+		DB->SPH
+	{end if;}
+	
+	FF->ABLI
+	NEXT=LDX_D01
+
+[LDX_D01]
+	{if i_IR_Q(5 downto 4) = "00" then}
+		{-- was immediate, keep pc}
+		INC->AB
+	{else}
+		PC->AB
+		AB->INC
+	{end if;}
+
+	DBI->DB
+	{if i_IR_Q(6) = '1' then}
+		DB->IXL
+	{else}
+		DB->SPL
+	{end if;}
+
+	D->IR	
+	FF->ABLI
+
+	NEXT=TSL0_D02
+
+[STx_T1_D00]
+	INC->AB
+	{if i_IR_Q(6) = '1' then}
+		IXH->DB
+	{else}
+		SPH->DB
+	{end if;}
+	WRITE
+	NEXT=STx_D01
+
+[STx_D01]
+	INC->AB
+	{if i_IR_Q(6) = '1' then}
+		IXL->DB
+	{else}
+		SPL->DB
+	{end if;}
+	WRITE
+	NEXT=STx_D02
+
+[STx_D02]
+	{-- TODO: this whole cycle had to be added - I think we need to move writes back a cycle somehow!}
+	{if i_IR_Q(5 downto 4) = "00" then}
+		{-- was immediate, keep pc}
+		INC->AB
+	{else}
+		PC->AB
+		AB->INC
+	{end if;}
+
+	DBI->DB
+	{if i_IR_Q(6) = '1' then}
+		DB->IXL
+	{else}
+		DB->SPL
+	{end if;}
+
+	D->IR	
+	FF->ABLI
+
+	NEXT=TSL0
+
+[SWAI_T1_GP50]
+	SP->AB->INC
+	PCL->DB
+	WRITE
+	DEC
+	NEXT=SWAI_GP51
+[SWAI_GP51]
+	INC->AB
+	PCH->DB
+	WRITE
+	DEC
+	NEXT=SWAI_GP52
+[SWAI_GP52]
+	INC->AB
+	IXL->DB
+	WRITE
+	DEC
+	NEXT=SWAI_GP53
+[SWAI_GP53]
+	INC->AB
+	IXH->DB
+	WRITE
+	DEC
+	NEXT=SWAI_GP54
+[SWAI_GP54]
+	INC->AB
+	ACCA->DB
+	WRITE
+	DEC
+	NEXT=SWAI_GP55
+[SWAI_GP55]
+	INC->AB
+	ACCB->DB
+	WRITE
+	DEC
+	NEXT=SWAI_GP56
+[SWAI_GP56]
+	INC->AB
+	CCR->DB
+	WRITE
+	DEC
+	NEXT=SWAI_GP57
+[SWAI_GP57]
+	INC->AB->SP
+	DEC
+	nVMA
+	{if i_IR_Q /= x"3E" then -- TODO: better check here!}
+		NEXT=GP58
+	{else}
+		NEXT=WAIT_INTER
+	{end if;}
+[WAIT_INTER]	
+	{--TODO: this is WAIT's WAIT state...what to do here, BA?}
+	NEXT=WAIT_INTER			
+
+[RTI_T1_GP50]
+	SP->AB->INC
+	nVMA
+	NEXT=RTI_GP51
+
+[RTI_GP51]
+	INC->AB->SP # load SP unnnecessary here?
+	NEXT=RTI_GP52
+[RTI_GP52]
+	DBI->DB->CCR
+	INC->AB
+	NEXT=RTI_R53
+[RTI_R53]
+	DBI->DB->ACCB
+	INC->AB
+	NEXT=RTI_R54
+[RTI_R54]
+	DBI->DB->ACCA
+	INC->AB
+	NEXT=RTI_R55
+[RTI_R55]
+	DBI->DB->IXH
+	INC->AB
+	NEXT=RTI_R56
+[RTI_R56]
+	DBI->DB->IXL
+	INC->AB
+	NEXT=RTI_R57
+[RTI_R57]
+	DBI->DB->T	#PCH in R58
+	INC->AB
+	NEXT=R58
+
+[T1_EXT0]
+	DBI->DB->T
+	INC->AB
+	NEXT=EXT1
+
+[EXT1]
+	T->ABH->INCH
+	DBI->DB->OBL,INCL
+	INC->PC
+	{if i_IR_Q(2 downto 0) = "111" then}
+		{-- its a write next}
+		nVMA
+		HOLD
+	{end if;}
+	NEXT=DECODE
