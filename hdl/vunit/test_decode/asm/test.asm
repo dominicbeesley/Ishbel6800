@@ -17,9 +17,11 @@ handle_res:	ldx	#0x100
 
 		txs
 		sts 	0x2001
+		swi
+
 		tsx
 		stx	0x1000
-		
+
 		sei
 
 

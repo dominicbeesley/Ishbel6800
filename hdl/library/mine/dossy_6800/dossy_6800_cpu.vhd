@@ -186,6 +186,16 @@ architecture rtl of dossy_6800_cpu is
 
 		GP52,
 
+		-- SWI / WAI
+		SWAI_T1_GP50,
+		SWAI_GP51,
+		SWAI_GP52,
+		SWAI_GP53,
+		SWAI_GP54,
+		SWAI_GP55,
+		SWAI_GP56,
+		SWAI_GP57,
+		GP_58,
 
 		-- generic fetch and set Z?
 		TSL0_D02,
@@ -579,6 +589,8 @@ begin
 			when TSL0 | TSL0_D02 | EXT1 =>
 				if PMATCH(i_IR_Q, "00110101") then
 					i_next_state <= TXS_T1_GP50;
+				elsif PMATCH(i_IR_Q, "00111111") then
+					i_next_state <= SWAI_T1_GP50;
 				elsif PMATCH(i_IR_Q,  "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
 					i_next_state <= T1_EXT0;
 				elsif PMATCH(i_IR_Q, "1---1110") then
@@ -592,6 +604,24 @@ begin
 				i_next_state <= TXS_GP51;
 			when TXS_GP51 =>
 				i_next_state <= GP52;
+
+			when SWAI_T1_GP50 =>
+				i_next_state <= SWAI_GP51;
+			when SWAI_GP51 =>
+				i_next_state <= SWAI_GP52;
+			when SWAI_GP52 =>
+				i_next_state <= SWAI_GP53;
+			when SWAI_GP53 =>
+				i_next_state <= SWAI_GP54;
+			when SWAI_GP54 =>
+				i_next_state <= SWAI_GP55;
+			when SWAI_GP55 =>
+				i_next_state <= SWAI_GP56;
+			when SWAI_GP56 =>
+				i_next_state <= SWAI_GP57;
+			when SWAI_GP57 =>
+				i_next_state <= GP58;
+
 			when GP52 =>
 				i_next_state <= TSL0;
 			when LDx_T1_D00 =>
@@ -677,8 +707,12 @@ begin
 
 		case r_state is 
 			when GP58 | RESET =>
-				--always reset, TODO: other interrupts
-				i_mux_DB_RESV <= '1';
+				--this is a hack, should check something else and check for interrupts. order of precedence - check on real chip??
+				if i_IR_Q = x"3F" then
+					i_mux_DB_SWIV <= '1';
+				else
+					i_mux_DB_RESV <= '1';
+				end if;
 				i_mux_OBL_DB <= '1';
 				i_mux_ABH_FF <= '1';
 				-- TODO: set IM
@@ -802,6 +836,90 @@ begin
 				i_IR_ld_D <= '1';
 				-- TODO: this whole cycle had to be added - I think we need to move writes back a cycle somehow!
 
+			when SWAI_T1_GP50 => 
+				i_mux_ABL_SPL <= '1';
+				i_mux_ABH_SPH <= '1';
+				i_INC_src <= al_ah;
+				i_INC_act <= dec;
+
+				i_mux_OBL_ABL <= '1';
+				i_mux_DB_PCL <= '1';
+				RnW_o <= '0';
+
+			when SWAI_GP51 => 
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_INC_src <= al_ah;
+				i_INC_act <= dec;
+
+				--TODO: check this against v6502 - the other steps don't or do they?
+				i_SPH_ld_ABH <= '1';
+				i_SPL_ld_ABL <= '1';
+
+				i_mux_OBL_ABL <= '1';
+				i_mux_DB_PCH <= '1';
+				RnW_o <= '0';
+
+			when SWAI_GP52 => 
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_INC_src <= al_ah;
+				i_INC_act <= dec;
+
+				i_mux_OBL_ABL <= '1';
+				i_mux_DB_IXL <= '1';
+				RnW_o <= '0';
+
+			when SWAI_GP53 => 
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_INC_src <= al_ah;
+				i_INC_act <= dec;
+
+				i_mux_OBL_ABL <= '1';
+				i_mux_DB_IXH <= '1';
+				RnW_o <= '0';
+
+			when SWAI_GP54 => 
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_INC_src <= al_ah;
+				i_INC_act <= dec;
+
+				i_mux_OBL_ABL <= '1';
+				i_mux_DB_ACCA <= '1';
+				RnW_o <= '0';
+
+			when SWAI_GP55 => 
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_INC_src <= al_ah;
+				i_INC_act <= dec;
+
+				i_mux_OBL_ABL <= '1';
+				i_mux_DB_ACCB <= '1';
+				RnW_o <= '0';
+
+			when SWAI_GP56 => 
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_INC_src <= al_ah;
+				i_INC_act <= dec;
+
+				i_mux_OBL_ABL <= '1';
+				i_mux_DB_CCR <= '1';
+				RnW_o <= '0';
+
+			when SWAI_GP57 => 
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_INC_src <= al_ah;
+				i_INC_act <= dec;
+				i_SPH_ld_ABH <= '1';
+				i_SPL_ld_ABL <= '1';
+				i_mux_OBL_ABL <= '1';
+				i_VMA <= '0';			
+				-- TODO what is "TIN" on or "T1N" on Fig.2G
 
 			when T1_EXT0 =>
 				i_mux_DB_DBI <= '1';
