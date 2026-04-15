@@ -50,13 +50,12 @@ architecture rtl of dossy_6800_cpu is
 	signal	ib_ABL				: std_logic_vector(7 downto 0);
 	signal	ib_ABLI				: std_logic_vector(7 downto 0);
 	signal	ib_ABH				: std_logic_vector(7 downto 0);
-	signal	 ib_OBL				: std_logic_vector(7 downto 0);
+	signal	ib_OBL				: std_logic_vector(7 downto 0);
 
 	-- internal bus mux controls
 	signal	i_mux_ABL_INCL	: std_logic;
 	signal	i_mux_ABL_PCL		: std_logic;
 	signal	i_mux_ABL_SPL		: std_logic;
-	signal	i_mux_ABL_IXL		: std_logic;
 	signal	i_mux_ABL_ABLI	: std_logic;
 
 	signal	i_mux_OBL_ABL		: std_logic;
@@ -219,22 +218,20 @@ begin
 
 	e_bus_mux_ABL:entity dossy_6800.dossy_6800_mux8
 	generic map (
-		WIDTH => 5
+		WIDTH => 4
 	)
 	port map (
 		SEL_i		=> (
 			0 => i_mux_ABL_INCL,
 			1 => i_mux_ABL_PCL,
 			2 => i_mux_ABL_SPL,
-			3 => i_mux_ABL_IXL,
-			4 => i_mux_ABL_ABLI
+			3 => i_mux_ABL_ABLI
 		),
 		D_i		=> (
 			0 => i_INCL_Q,
 			1 => i_PCL_Q,
 			2 => i_SPL_Q,
-			3 => i_IXL_Q,
-			4 => ib_ABLI
+			3 => ib_ABLI
 		),
 		D_o		=> ib_ABL
 	);
@@ -580,7 +577,9 @@ begin
 			when R58 =>
 				i_next_state <= TSL0;
 			when TSL0 | TSL0_D02 | EXT1 =>
-				if PMATCH(i_IR_Q,  "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
+				if PMATCH(i_IR_Q, "00110101") then
+					i_next_state <= TXS_T1_GP50;
+				elsif PMATCH(i_IR_Q,  "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
 					i_next_state <= T1_EXT0;
 				elsif PMATCH(i_IR_Q, "1---1110") then
 					i_next_state <= LDx_T1_D00;
@@ -589,6 +588,12 @@ begin
 				else
 					i_next_state <= DIEBAD;
 				end if;
+			when TXS_T1_GP50 => 
+				i_next_state <= TXS_GP51;
+			when TXS_GP51 =>
+				i_next_state <= GP52;
+			when GP52 =>
+				i_next_state <= TSL0;
 			when LDx_T1_D00 =>
 				i_next_state <= LDX_D01;
 			when LDX_D01 =>
@@ -611,7 +616,6 @@ begin
 		i_mux_ABL_INCL	<= '0';
 		i_mux_ABL_PCL		<= '0';
 		i_mux_ABL_SPL		<= '0';
-		i_mux_ABL_IXL		<= '0';
 		i_mux_ABL_ABLI	<= '0';
 		i_mux_OBL_ABL		<= '0';
 		i_mux_OBL_DB		<= '0';
@@ -700,6 +704,29 @@ begin
 				i_mux_OBL_ABL <= '1';
 				i_PCL_ld_INCL <= '1';
 				i_PCH_ld_INCH <= '1';
+
+			when TXS_T1_GP50 =>
+				i_mux_ABLI_IXL <= '1';
+				i_mux_ABL_ABLI <= '1';
+				i_mux_ABH_IXH <= '1';
+				i_INC_src <= al_ah;
+				i_INC_act <= dec;
+				i_VMA <= '0';
+				i_mux_OBL_ABL <= '1';
+			when TXS_GP51 =>
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+				i_SPL_ld_ABL <= '1';
+				i_SPH_ld_ABH <= '1';
+				i_VMA <= '0';
+				i_mux_OBL_ABL <= '1';
+
+			when GP52 =>
+				i_mux_ABL_PCL <= '1';
+				i_mux_ABH_PCH <= '1';
+				i_INC_src <= al_ah;
+				i_IR_ld_D <= '1';
+				i_mux_OBL_ABL <= '1';
 
 			when LDx_T1_D00 =>
 				i_mux_ABL_INCL <= '1';
