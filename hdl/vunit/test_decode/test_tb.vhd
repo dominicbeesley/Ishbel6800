@@ -157,7 +157,6 @@ begin
 
       while not sim_stop  loop
          wait until falling_edge(i_cpu_clk_phi2);
-         if i_cpu_VMA = '1' then
 
             v_flags := (
                0 => i_cpu_RnW,
@@ -169,7 +168,6 @@ begin
 
             write(dump_file, character'val(to_integer(unsigned(i_cpu_D))));
             write(dump_file, character'val(to_integer(unsigned(v_flags))));
-         end if;
       end loop;
       wait;
 
