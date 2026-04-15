@@ -142,8 +142,6 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_CCR_ld_DB			: std_logic;
 	signal	i_CCR_ld_ALU		: std_logic;
 
-	signal	i_DBI_ld_D			: std_logic;
-
 	signal	i_IR_ld_D			: std_logic;
 
 	-- incrementer
@@ -195,7 +193,17 @@ architecture rtl of dossy_6800_cpu is
 		SWAI_GP55,
 		SWAI_GP56,
 		SWAI_GP57,
-		GP_58,
+
+		-- SWI / WAI
+		RTI_T1_GP50,
+		RTI_GP51, -- SKIPPING THIS FROM Fig.2F seems wrong
+		RTI_GP52,
+		RTI_R53,
+		RTI_R54,
+		RTI_R55,
+		RTI_R56,
+		RTI_R57,
+		
 
 		-- generic fetch and set Z?
 		TSL0_D02,
@@ -592,6 +600,8 @@ begin
 					i_next_state <= TXS_T1_GP50;
 				elsif PMATCH(i_IR_Q, "00111111") then
 					i_next_state <= SWAI_T1_GP50;
+				elsif PMATCH(i_IR_Q, "00111011") then
+					i_next_state <= RTI_T1_GP50;
 				elsif PMATCH(i_IR_Q,  "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
 					i_next_state <= T1_EXT0;
 				elsif PMATCH(i_IR_Q, "1---1110") then
@@ -621,13 +631,30 @@ begin
 			when SWAI_GP56 =>
 				i_next_state <= SWAI_GP57;
 			when SWAI_GP57 =>
-				if i_IR_Q /= x"3F" then -- TODO: better check here!
+				if i_IR_Q /= x"3E" then -- TODO: better check here!
 					i_next_state <= GP58;
 				else
 					i_next_state <= WAIT_INTER;
+				end if;
+			when WAIT_INTER =>	
+				i_next_state <= WAIT_INTER;		-- TODO: this is WAIT's WAIT state...what to do here, BA?
 
-			when WAIT_INTER =>
-				i_next_state <= WAIT_INTER;
+			when RTI_T1_GP50 =>
+				i_next_state <= RTI_GP51;
+			when RTI_GP51 =>
+				i_next_state <= RTI_GP52;
+			when RTI_GP52 =>
+				i_next_state <= RTI_R53;
+			when RTI_R53 =>
+				i_next_state <= RTI_R54;
+			when RTI_R54 =>
+				i_next_state <= RTI_R55;
+			when RTI_R55 =>
+				i_next_state <= RTI_R56;
+			when RTI_R56 =>
+				i_next_state <= RTI_R57;
+			when RTI_R57 =>
+				i_next_state <= R58;
 
 			when GP52 =>
 				i_next_state <= TSL0;
@@ -703,7 +730,6 @@ begin
 		i_IXH_ld_ABH		<= '0';
 		i_CCR_ld_DB			<= '0';
 		i_CCR_ld_ALU		<= '0';
-		i_DBI_ld_D			<= '0';
 		i_IR_ld_D			<= '0';
 
 		i_INC_src			<= inc;
@@ -927,6 +953,82 @@ begin
 				i_mux_OBL_ABL <= '1';
 				i_VMA <= '0';			
 				-- TODO what is "TIN" on or "T1N" on Fig.2G
+
+			when RTI_T1_GP50 =>
+				i_mux_ABL_SPL <= '1';
+				i_mux_ABH_SPH <= '1';
+				i_INC_src <= al_ah;
+				i_INC_act <= inc;
+
+				i_mux_OBL_ABL <= '1';
+				i_VMA <= '0';
+			when RTI_GP51 =>
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+
+				-- unnecessary?
+				i_SPH_ld_ABH <= '1';
+				i_SPL_ld_ABL <= '1';
+
+				i_mux_OBL_ABL <= '1';
+
+			when RTI_GP52 =>
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+
+				i_mux_DB_DBI <= '1';
+				i_CCR_ld_DB <= '1';
+
+				i_mux_OBL_ABL <= '1';
+
+			when RTI_R53 =>
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+
+				i_mux_DB_DBI <= '1';
+				i_ACCB_ld_DB <= '1';
+
+				i_mux_OBL_ABL <= '1';
+
+			when RTI_R54 =>
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+
+				i_mux_DB_DBI <= '1';
+				i_ACCA_ld_DB <= '1';
+
+				i_mux_OBL_ABL <= '1';
+
+			when RTI_R55 =>
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+
+				i_mux_DB_DBI <= '1';
+				i_IXH_ld_DB <= '1';
+
+				i_mux_OBL_ABL <= '1';
+
+			when RTI_R56 =>
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+
+				i_mux_DB_DBI <= '1';
+				i_IXL_ld_DB <= '1';
+
+				i_mux_OBL_ABL <= '1';
+
+			when RTI_R57 =>
+				i_mux_ABL_INCL <= '1';
+				i_mux_ABH_INCH <= '1';
+
+				i_SPH_ld_ABH <= '1';
+				i_SPL_ld_ABL <= '1';
+
+				i_mux_DB_DBI <= '1';
+				i_T_ld_DB <= '1';
+
+				i_mux_OBL_ABL <= '1';
+
 
 			when T1_EXT0 =>
 				i_mux_DB_DBI <= '1';
