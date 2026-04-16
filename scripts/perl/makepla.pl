@@ -2,7 +2,7 @@
 
 use strict;
 use Data::Dumper;
-
+use DateTime;
 
 sub usage($$) {
 	my ($fh, $msg) = @_;
@@ -29,6 +29,10 @@ open(my $fh_in, "<", $fn_in) or usage(*STDERR, "Cannot open \"$fn_in\" for input
 my %xfers = ();
 my %statements = ();
 my %states = ();
+
+use POSIX qw(strftime);
+my $now = time();
+my $nowstr = strftime('%FT%TZ', gmtime($now));
 
 use constant {
 	STATE_XFERS => 0,
@@ -162,7 +166,7 @@ while (<$fh_in>) {
 				} elsif ($l =~ /NEXT\s*=\s*(\w+)/) {
 					push @{$cur_state->{lines}}, {
 						type => "next",
-						vhdl => "i_next_state <= $1;"
+						vhdl => "next_state_o <= $1;"
 					};				
 				} else {
 					# look for a statement
@@ -184,6 +188,213 @@ close $fh_in;
 print Dumper(%states);
 
 open(my $fh_out, ">", $fn_out) or usage(*STDERR, "Cannot open \"$fn_out\" for output : $!");
+
+
+print $fh_out <<'ENDVHDL';
+-- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
+ENDVHDL
+print $fh_out "-- GENERATED : $nowstr\n";
+print $fh_out <<'ENDVHDL';
+-- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
+-- 
+----------------------------------------------------------------------------------
+-- Company:				Dossytronics
+-- Engineer:			Dominic Beesley
+-- 
+-- Create Date:		12/4/2025 
+-- Design Name: 
+-- Module Name:		dossy_6800_ctl_gen
+-- Project Name: 
+-- Target Devices: 
+-- Tool versions: 
+-- Description:		cpu control - generated file
+--
+-- Dependencies: 
+--
+-- Revision: 			GENERATED FILE
+-- Additional Comments: 
+--
+-- Licence: MIT - see file LICENCE.txt
+----------------------------------------------------------------------------------
+
+
+library ieee;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+
+library dossy_6800;
+use dossy_6800.dossy_6800.all;
+
+entity dossy_6800_ctl_gen is
+port
+(
+	state_i			: in	t_cpu_state;
+
+	IR_i				: in	std_logic_vector(7 downto 0);
+
+	next_state_o	: out t_cpu_state;
+
+	mux_ABL_INCL_o	: out	std_logic;
+	mux_ABL_PCL_o	: out	std_logic;
+	mux_ABL_SPL_o	: out	std_logic;
+	mux_ABL_ABLI_o	: out	std_logic;
+	mux_OBL_DB_o	: out	std_logic;
+	mux_ABLI_ABL_o	: out	std_logic;
+	mux_ABLI_IXL_o	: out	std_logic;
+	mux_ABLI_ACCA_o: out	std_logic;
+	mux_ABLI_ACCB_o: out	std_logic;
+	mux_ABLI_IXH_o	: out	std_logic;
+	mux_ABLI_FF_o	: out	std_logic;
+	mux_DB_T_o		: out	std_logic;
+	mux_DB_PCH_o	: out	std_logic;
+	mux_DB_SPH_o	: out	std_logic;
+	mux_DB_IXH_o	: out	std_logic;
+	mux_DB_PCL_o	: out	std_logic;
+	mux_DB_SPL_o	: out	std_logic;
+	mux_DB_IXL_o	: out	std_logic;
+	mux_DB_ACCA_o	: out	std_logic;
+	mux_DB_ACCB_o	: out	std_logic;
+	mux_DB_CCR_o	: out	std_logic;
+	mux_DB_SUM_o	: out	std_logic;
+	mux_DB_DBI_o	: out	std_logic;
+	mux_DB_RESV_o	: out	std_logic;
+	mux_DB_NMIV_o	: out	std_logic;
+	mux_DB_SWIV_o	: out	std_logic;
+	mux_DB_IRQV_o	: out	std_logic;
+	mux_ABH_T_o		: out	std_logic;
+	mux_ABH_INCH_o	: out	std_logic;
+	mux_ABH_PCH_o	: out	std_logic;
+	mux_ABH_SPH_o	: out	std_logic;
+	mux_ABH_IXH_o	: out	std_logic;
+	mux_ABH_FF_o	: out	std_logic;
+
+	PCL_ld_INCL_o	: out	std_logic;
+	SPL_ld_ABL_o	: out	std_logic;
+	SPL_ld_DB_o		: out	std_logic;
+	IXL_ld_ABL_o	: out	std_logic;
+	IXL_ld_DB_o		: out	std_logic;
+	ACCB_ld_ABLI_o	: out	std_logic;
+	ACCB_ld_DB_o	: out	std_logic;
+	ACCA_ld_ABLI_o	: out	std_logic;
+	ACCA_ld_DB_o	: out	std_logic;
+	T_ld_DB_o		: out	std_logic;
+	T_ld_ABH_o		: out	std_logic;
+	PCH_ld_INCH_o	: out	std_logic;
+	SPH_ld_DB_o		: out	std_logic;
+	SPH_ld_ABH_o	: out	std_logic;
+	IXH_ld_DB_o		: out	std_logic;
+	IXH_ld_ABH_o	: out	std_logic;
+	CCR_ld_DB_o		: out	std_logic;
+	CCR_ld_ALU_o	: out	std_logic;
+	IR_ld_D_o		: out	std_logic;
+
+	INC_L_src_o		: out	t_inc_l_src;
+	INC_H_src_o		: out	t_inc_h_src;
+	INC_act_o		: out	t_inc_act;
+
+	RnW_o				: out std_logic;
+	VMA_o				: out std_logic
+
+);
+end;
+
+architecture rtl of dossy_6800_ctl_gen is
+begin
+
+	p_control:process(all)
+		function PMATCH(V: in std_logic_vector; M: in std_logic_vector) return boolean is
+		begin
+			if V ?= M then
+				return true;
+			else
+				return false;
+			end if;			
+		end function;
+
+		impure function DECODE return t_cpu_state is
+		begin
+			if PMATCH(IR_i, "00110101") then
+				return TXS_T1_GP50;
+			elsif PMATCH(IR_i, "00111111") then
+				return SWAI_T1_GP50;
+			elsif PMATCH(IR_i, "00111011") then
+				return RTI_T1_GP50;
+			elsif PMATCH(IR_i,  "1-11----") and (state_i = TSL0 or state_i = TSL0_D02) then
+				return T1_EXT0;
+			elsif PMATCH(IR_i, "1---1110") then
+				return LDx_T1_D00;
+			elsif PMATCH(IR_i, "1---1111") then
+				return STx_T1_D00;
+			else
+				return DIEBAD;
+			end if;
+		end function;
+	begin
+		next_state_o <= DIEBAD;
+
+		mux_ABL_INCL_o		<= '0';
+		mux_ABL_PCL_o		<= '0';
+		mux_ABL_SPL_o		<= '0';
+		mux_ABL_ABLI_o		<= '0';
+		mux_OBL_DB_o		<= '0';
+		mux_ABLI_ABL_o		<= '0';
+		mux_ABLI_IXL_o		<= '0';
+		mux_ABLI_ACCA_o	<= '0';
+		mux_ABLI_ACCB_o	<= '0';
+		mux_ABLI_IXH_o		<= '0';
+		mux_ABLI_FF_o		<= '0';
+		mux_DB_T_o			<= '0';
+		mux_DB_PCH_o		<= '0';
+		mux_DB_SPH_o		<= '0';
+		mux_DB_IXH_o		<= '0';
+		mux_DB_PCL_o		<= '0';
+		mux_DB_SPL_o		<= '0';
+		mux_DB_IXL_o		<= '0';
+		mux_DB_ACCA_o		<= '0';
+		mux_DB_ACCB_o		<= '0';
+		mux_DB_CCR_o		<= '0';
+		mux_DB_SUM_o		<= '0';
+		mux_DB_DBI_o		<= '0';
+		mux_DB_RESV_o		<= '0';
+		mux_DB_NMIV_o		<= '0';
+		mux_DB_SWIV_o		<= '0';
+		mux_DB_IRQV_o		<= '0';
+		mux_ABH_T_o			<= '0';
+		mux_ABH_INCH_o		<= '0';
+		mux_ABH_PCH_o		<= '0';
+		mux_ABH_SPH_o		<= '0';
+		mux_ABH_IXH_o		<= '0';
+		mux_ABH_FF_o		<= '0';
+
+		PCL_ld_INCL_o		<= '0';
+		SPL_ld_ABL_o		<= '0';
+		SPL_ld_DB_o			<= '0';
+		IXL_ld_ABL_o		<= '0';
+		IXL_ld_DB_o			<= '0';
+		ACCB_ld_ABLI_o		<= '0';
+		ACCB_ld_DB_o		<= '0';
+		ACCA_ld_ABLI_o		<= '0';
+		ACCA_ld_DB_o		<= '0';
+		T_ld_DB_o			<= '0';
+		T_ld_ABH_o			<= '0';
+		PCH_ld_INCH_o		<= '0';
+		SPH_ld_DB_o			<= '0';
+		SPH_ld_ABH_o		<= '0';
+		IXH_ld_DB_o			<= '0';
+		IXH_ld_ABH_o		<= '0';
+		CCR_ld_DB_o			<= '0';
+		CCR_ld_ALU_o		<= '0';
+		IR_ld_D_o			<= '0';
+
+		INC_L_src_o			<= inc;
+		INC_H_src_o			<= inc;
+		INC_act_o			<= inc;
+
+		RnW_o					<= '1';
+		VMA_o					<= '1';
+
+		case state_i is 
+ENDVHDL
 
 my $indent;
 
@@ -213,5 +424,13 @@ foreach my $ks (sort keys %states) {
 		print $fh_out "\n";
 	}
 }
+
+print $fh_out <<'ENDVHDL';
+			when others => null;
+		end case;
+	end process;
+
+end rtl;
+ENDVHDL
 
 close $fh_out;

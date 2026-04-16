@@ -41,6 +41,65 @@ package dossy_6800 is
 	type t_inc_h_src	is (inc, abh);
 	type t_inc_act		is (inc, dec, inc_page, hold);
 
+	type t_cpu_state is (
+		RESET,
+		-- prep vector address
+		GP58,
+		-- load first vector address
+		R57,
+		-- load second vector address
+		R58,
+		-- TSL0 fetch
+		TSL0,
+
+		-- load X/Y register
+		LDx_T1_D00,
+		LDx_D01,
+
+		-- store X/Y register
+		STx_T1_D00,
+		STx_D01,
+		STx_D02,
+
+		-- TSX
+		TXS_T1_GP50,
+		TXS_GP51,
+
+		GP52,
+
+		-- SWI / WAI
+		SWAI_T1_GP50,
+		SWAI_GP51,
+		SWAI_GP52,
+		SWAI_GP53,
+		SWAI_GP54,
+		SWAI_GP55,
+		SWAI_GP56,
+		SWAI_GP57,
+
+		-- SWI / WAI
+		RTI_T1_GP50,
+		RTI_GP51, -- SKIPPING THIS FROM Fig.2F seems wrong
+		RTI_GP52,
+		RTI_R53,
+		RTI_R54,
+		RTI_R55,
+		RTI_R56,
+		RTI_R57,
+		
+
+		-- generic fetch and set Z?
+		TSL0_D02,
+
+		-- EXTENDED addressing
+		T1_EXT0,
+		EXT1,
+
+		-- DIE
+		DIEBAD,
+		WAIT_INTER
+		);
+
 end package dossy_6800;
 
 package body dossy_6800 is

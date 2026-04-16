@@ -157,65 +157,7 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_VMA			: std_logic;
 	signal	i_RnW			: std_logic;
 
-	-- state machine
-	type t_cpu_state is (
-		RESET,
-		-- prep vector address
-		GP58,
-		-- load first vector address
-		R57,
-		-- load second vector address
-		R58,
-		-- TSL0 fetch
-		TSL0,
-
-		-- load X/Y register
-		LDx_T1_D00,
-		LDx_D01,
-
-		-- store X/Y register
-		STx_T1_D00,
-		STx_D01,
-		STx_D02,
-
-		-- TSX
-		TXS_T1_GP50,
-		TXS_GP51,
-
-		GP52,
-
-		-- SWI / WAI
-		SWAI_T1_GP50,
-		SWAI_GP51,
-		SWAI_GP52,
-		SWAI_GP53,
-		SWAI_GP54,
-		SWAI_GP55,
-		SWAI_GP56,
-		SWAI_GP57,
-
-		-- SWI / WAI
-		RTI_T1_GP50,
-		RTI_GP51, -- SKIPPING THIS FROM Fig.2F seems wrong
-		RTI_GP52,
-		RTI_R53,
-		RTI_R54,
-		RTI_R55,
-		RTI_R56,
-		RTI_R57,
-		
-
-		-- generic fetch and set Z?
-		TSL0_D02,
-
-		-- EXTENDED addressing
-		T1_EXT0,
-		EXT1,
-
-		-- DIE
-		DIEBAD,
-		WAIT_INTER
-		);
+	
 	signal i_next_state		: t_cpu_state;
 	signal r_state			: t_cpu_state;
 
@@ -565,370 +507,75 @@ begin
 		end if;
 	end process;
 
-	p_control:process(all)
-		function PMATCH(V: in std_logic_vector; M: in std_logic_vector) return boolean is
-		begin
-			if V ?= M then
-				return true;
-			else
-				return false;
-			end if;			
-		end function;
+	e_ctl_gen:entity dossy_6800.dossy_6800_ctl_gen
+	port map (
+		state_i			=> r_state,
+		IR_i				=> i_IR_Q,
+		
+		next_state_o	=> i_next_state,
 
-		impure function DECODE return t_cpu_state is
-		begin
-			if PMATCH(i_IR_Q, "00110101") then
-				return TXS_T1_GP50;
-			elsif PMATCH(i_IR_Q, "00111111") then
-				return SWAI_T1_GP50;
-			elsif PMATCH(i_IR_Q, "00111011") then
-				return RTI_T1_GP50;
-			elsif PMATCH(i_IR_Q,  "1-11----") and (r_state = TSL0 or r_state = TSL0_D02) then
-				return T1_EXT0;
-			elsif PMATCH(i_IR_Q, "1---1110") then
-				return LDx_T1_D00;
-			elsif PMATCH(i_IR_Q, "1---1111") then
-				return STx_T1_D00;
-			else
-				return DIEBAD;
-			end if;
-		end function;
-	begin
-		i_next_state <= DIEBAD;
+		mux_ABL_INCL_o	=> i_mux_ABL_INCL,
+		mux_ABL_PCL_o	=> i_mux_ABL_PCL,
+		mux_ABL_SPL_o	=> i_mux_ABL_SPL,
+		mux_ABL_ABLI_o	=> i_mux_ABL_ABLI,
+		mux_OBL_DB_o	=> i_mux_OBL_DB,
+		mux_ABLI_ABL_o	=> i_mux_ABLI_ABL,
+		mux_ABLI_IXL_o	=> i_mux_ABLI_IXL,
+		mux_ABLI_ACCA_o=> i_mux_ABLI_ACCA,
+		mux_ABLI_ACCB_o=> i_mux_ABLI_ACCB,
+		mux_ABLI_IXH_o	=> i_mux_ABLI_IXH,
+		mux_ABLI_FF_o	=> i_mux_ABLI_FF,
+		mux_DB_T_o		=> i_mux_DB_T,
+		mux_DB_PCH_o	=> i_mux_DB_PCH,
+		mux_DB_SPH_o	=> i_mux_DB_SPH,
+		mux_DB_IXH_o	=> i_mux_DB_IXH,
+		mux_DB_PCL_o	=> i_mux_DB_PCL,
+		mux_DB_SPL_o	=> i_mux_DB_SPL,
+		mux_DB_IXL_o	=> i_mux_DB_IXL,
+		mux_DB_ACCA_o	=> i_mux_DB_ACCA,
+		mux_DB_ACCB_o	=> i_mux_DB_ACCB,
+		mux_DB_CCR_o	=> i_mux_DB_CCR,
+		mux_DB_SUM_o	=> i_mux_DB_SUM,
+		mux_DB_DBI_o	=> i_mux_DB_DBI,
+		mux_DB_RESV_o	=> i_mux_DB_RESV,
+		mux_DB_NMIV_o	=> i_mux_DB_NMIV,
+		mux_DB_SWIV_o	=> i_mux_DB_SWIV,
+		mux_DB_IRQV_o	=> i_mux_DB_IRQV,
+		mux_ABH_T_o		=> i_mux_ABH_T,
+		mux_ABH_INCH_o	=> i_mux_ABH_INCH,
+		mux_ABH_PCH_o	=> i_mux_ABH_PCH,
+		mux_ABH_SPH_o	=> i_mux_ABH_SPH,
+		mux_ABH_IXH_o	=> i_mux_ABH_IXH,
+		mux_ABH_FF_o	=> i_mux_ABH_FF,
 
-		i_mux_ABL_INCL	<= '0';
-		i_mux_ABL_PCL		<= '0';
-		i_mux_ABL_SPL		<= '0';
-		i_mux_ABL_ABLI	<= '0';
-		i_mux_OBL_DB		<= '0';
-		i_mux_ABLI_ABL	<= '0';
-		i_mux_ABLI_IXL	<= '0';
-		i_mux_ABLI_ACCA		<= '0';
-		i_mux_ABLI_ACCB		<= '0';
-		i_mux_ABLI_IXH	<= '0';
-		i_mux_ABLI_FF		<= '0';
-		i_mux_DB_T			<= '0';
-		i_mux_DB_PCH		<= '0';
-		i_mux_DB_SPH		<= '0';
-		i_mux_DB_IXH		<= '0';
-		i_mux_DB_PCL		<= '0';
-		i_mux_DB_SPL		<= '0';
-		i_mux_DB_IXL		<= '0';
-		i_mux_DB_ACCA		<= '0';
-		i_mux_DB_ACCB		<= '0';
-		i_mux_DB_CCR		<= '0';
-		i_mux_DB_SUM		<= '0';
-		i_mux_DB_DBI		<= '0';
-		i_mux_DB_RESV		<= '0';
-		i_mux_DB_NMIV		<= '0';
-		i_mux_DB_SWIV		<= '0';
-		i_mux_DB_IRQV		<= '0';
-		i_mux_ABH_T			<= '0';
-		i_mux_ABH_INCH		<= '0';
-		i_mux_ABH_PCH		<= '0';
-		i_mux_ABH_SPH		<= '0';
-		i_mux_ABH_IXH		<= '0';
-		i_mux_ABH_FF		<= '0';
+		PCL_ld_INCL_o	=> i_PCL_ld_INCL,
+		SPL_ld_ABL_o	=> i_SPL_ld_ABL,
+		SPL_ld_DB_o		=> i_SPL_ld_DB,
+		IXL_ld_ABL_o	=> i_IXL_ld_ABL,
+		IXL_ld_DB_o		=> i_IXL_ld_DB,
+		ACCB_ld_ABLI_o	=> i_ACCB_ld_ABLI,
+		ACCB_ld_DB_o	=> i_ACCB_ld_DB,
+		ACCA_ld_ABLI_o	=> i_ACCA_ld_ABLI,
+		ACCA_ld_DB_o	=> i_ACCA_ld_DB,
+		T_ld_DB_o		=> i_T_ld_DB,
+		T_ld_ABH_o		=> i_T_ld_ABH,
+		PCH_ld_INCH_o	=> i_PCH_ld_INCH,
+		SPH_ld_DB_o		=> i_SPH_ld_DB,
+		SPH_ld_ABH_o	=> i_SPH_ld_ABH,
+		IXH_ld_DB_o		=> i_IXH_ld_DB,
+		IXH_ld_ABH_o	=> i_IXH_ld_ABH,
+		CCR_ld_DB_o		=> i_CCR_ld_DB,
+		CCR_ld_ALU_o	=> i_CCR_ld_ALU,
+		IR_ld_D_o		=> i_IR_ld_D,
 
-		i_PCL_ld_INCL		<= '0';
-		i_SPL_ld_ABL		<= '0';
-		i_SPL_ld_DB			<= '0';
-		i_IXL_ld_ABL		<= '0';
-		i_IXL_ld_DB			<= '0';
-		i_ACCB_ld_ABLI		<= '0';
-		i_ACCB_ld_DB		<= '0';
-		i_ACCA_ld_ABLI		<= '0';
-		i_ACCA_ld_DB		<= '0';
-		i_T_ld_DB			<= '0';
-		i_T_ld_ABH			<= '0';
-		i_PCH_ld_INCH		<= '0';
-		i_SPH_ld_DB			<= '0';
-		i_SPH_ld_ABH		<= '0';
-		i_IXH_ld_DB			<= '0';
-		i_IXH_ld_ABH		<= '0';
-		i_CCR_ld_DB			<= '0';
-		i_CCR_ld_ALU		<= '0';
-		i_IR_ld_D			<= '0';
+		INC_L_src_o		=> i_INC_L_src,
+		INC_H_src_o		=> i_INC_H_src,
+		INC_act_o		=> i_INC_act,
 
-		i_INC_L_src			<= inc;
-		i_INC_H_src			<= inc;
-		i_INC_act			<= inc;
+		RnW_o				=> i_RnW,
+		VMA_o				=> i_VMA
 
-		i_RnW					<= '1';
-		i_VMA					<= '1';
-
-		case r_state is 
-
-
-         when EXT1 =>
-            i_mux_ABH_T <= '1';
-            i_INC_H_src <= abh;
-            i_mux_DB_DBI <= '1';
-            i_mux_OBL_DB <= '1';
-            i_INC_L_src <= db;
-            i_PCL_ld_INCL <= '1'; i_PCH_ld_INCH <= '1';
-            if i_IR_Q(2 downto 0) = "111" then
-               -- its a write next
-               i_VMA <= '0';
-               i_INC_act <= hold;
-            end if;
-            i_next_state <= DECODE;
-
-         when GP52 =>
-            i_mux_ABL_PCL <= '1'; i_mux_ABH_PCH <= '1';
-            i_INC_L_src <= abl; i_INC_H_src <= abh;
-            i_IR_ld_D <= '1';
-            i_next_state <= TSL0;
-
-         when LDX_D01 =>
-            if i_IR_Q(5 downto 4) = "00" then
-               -- was immediate, keep pc
-               i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            else
-               i_mux_ABL_PCL <= '1'; i_mux_ABH_PCH <= '1';
-               i_INC_L_src <= abl; i_INC_H_src <= abh;
-            end if;
-            i_mux_DB_DBI <= '1';
-            if i_IR_Q(6) = '1' then
-               i_IXL_ld_DB <= '1';
-            else
-               i_SPL_ld_DB <= '1';
-            end if;
-            i_IR_ld_D <= '1';
-            i_mux_ABLI_FF <= '1';
-            i_next_state <= TSL0_D02;
-
-         when LDx_T1_D00 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_mux_DB_DBI <= '1';
-            if i_IR_Q(6) = '1' then
-               i_IXH_ld_DB <= '1';
-            else
-               i_SPH_ld_DB <= '1';
-            end if;
-            i_mux_ABLI_FF <= '1';
-            i_next_state <= LDX_D01;
-
-         when R57 =>
-            i_mux_DB_DBI <= '1';
-            i_T_ld_DB <= '1';
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_next_state <= R58;
-
-         when R58 =>
-            i_mux_DB_DBI <= '1';
-            i_mux_OBL_DB <= '1';
-            i_INC_L_src <= db;
-            i_mux_ABH_T <= '1';
-            i_INC_H_src <= abh;
-            i_IR_ld_D <= '1';
-            i_next_state <= TSL0;
-
-         when RESET|GP58 =>
-            if i_IR_Q = x"3F" then
-               i_mux_DB_SWIV <= '1';
-            else
-               i_mux_DB_RESV <= '1';
-            end if;
-            i_mux_ABH_FF <= '1';
-            i_INC_H_src <= abh;
-            i_mux_OBL_DB <= '1';
-            i_INC_L_src <= db;
-            if r_state = RESET then
-               i_next_state <= GP58;
-            else
-               i_next_state <= R57;
-            end if;
-
-         when RTI_GP51 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_SPL_ld_ABL <= '1'; i_SPH_ld_ABH <= '1';
-            i_next_state <= RTI_GP52;
-
-         when RTI_GP52 =>
-            i_mux_DB_DBI <= '1';
-            i_CCR_ld_DB <= '1';
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_next_state <= RTI_R53;
-
-         when RTI_R53 =>
-            i_mux_DB_DBI <= '1';
-            i_ACCB_ld_DB <= '1';
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_next_state <= RTI_R54;
-
-         when RTI_R54 =>
-            i_mux_DB_DBI <= '1';
-            i_ACCA_ld_DB <= '1';
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_next_state <= RTI_R55;
-
-         when RTI_R55 =>
-            i_mux_DB_DBI <= '1';
-            i_IXH_ld_DB <= '1';
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_next_state <= RTI_R56;
-
-         when RTI_R56 =>
-            i_mux_DB_DBI <= '1';
-            i_IXL_ld_DB <= '1';
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_next_state <= RTI_R57;
-
-         when RTI_R57 =>
-            i_mux_DB_DBI <= '1';
-            i_T_ld_DB <= '1';
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_next_state <= R58;
-
-         when RTI_T1_GP50 =>
-            i_mux_ABL_SPL <= '1'; i_mux_ABH_SPH <= '1';
-            i_INC_L_src <= abl; i_INC_H_src <= abh;
-            i_VMA <= '0';
-            i_next_state <= RTI_GP51;
-
-         when STx_D01 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            if i_IR_Q(6) = '1' then
-               i_mux_DB_IXL <= '1';
-            else
-               i_mux_DB_SPL <= '1';
-            end if;
-            i_RnW <= '0';
-            i_next_state <= STx_D02;
-
-         when STx_D02 =>
-            -- TODO: this whole cycle had to be added - I think we need to move writes back a cycle somehow!
-            if i_IR_Q(5 downto 4) = "00" then
-               -- was immediate, keep pc
-               i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            else
-               i_mux_ABL_PCL <= '1'; i_mux_ABH_PCH <= '1';
-               i_INC_L_src <= abl; i_INC_H_src <= abh;
-            end if;
-            i_mux_DB_DBI <= '1';
-            if i_IR_Q(6) = '1' then
-               i_IXL_ld_DB <= '1';
-            else
-               i_SPL_ld_DB <= '1';
-            end if;
-            i_IR_ld_D <= '1';
-            i_mux_ABLI_FF <= '1';
-            i_next_state <= TSL0;
-
-         when STx_T1_D00 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            if i_IR_Q(6) = '1' then
-               i_mux_DB_IXH <= '1';
-            else
-               i_mux_DB_SPH <= '1';
-            end if;
-            i_RnW <= '0';
-            i_next_state <= STx_D01;
-
-         when SWAI_GP51 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_mux_DB_PCH <= '1';
-            i_RnW <= '0';
-            i_INC_act <= dec;
-            i_next_state <= SWAI_GP52;
-
-         when SWAI_GP52 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_mux_DB_IXL <= '1';
-            i_RnW <= '0';
-            i_INC_act <= dec;
-            i_next_state <= SWAI_GP53;
-
-         when SWAI_GP53 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_mux_DB_IXH <= '1';
-            i_RnW <= '0';
-            i_INC_act <= dec;
-            i_next_state <= SWAI_GP54;
-
-         when SWAI_GP54 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_mux_DB_ACCA <= '1';
-            i_RnW <= '0';
-            i_INC_act <= dec;
-            i_next_state <= SWAI_GP55;
-
-         when SWAI_GP55 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_mux_DB_ACCB <= '1';
-            i_RnW <= '0';
-            i_INC_act <= dec;
-            i_next_state <= SWAI_GP56;
-
-         when SWAI_GP56 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_mux_DB_CCR <= '1';
-            i_RnW <= '0';
-            i_INC_act <= dec;
-            i_next_state <= SWAI_GP57;
-
-         when SWAI_GP57 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_SPL_ld_ABL <= '1'; i_SPH_ld_ABH <= '1';
-            i_INC_act <= dec;
-            i_VMA <= '0';
-            if i_IR_Q /= x"3E" then -- TODO: better check here!
-               i_next_state <= GP58;
-            else
-               i_next_state <= WAIT_INTER;
-            end if;
-
-         when SWAI_T1_GP50 =>
-            i_mux_ABL_SPL <= '1'; i_mux_ABH_SPH <= '1';
-            i_INC_L_src <= abl; i_INC_H_src <= abh;
-            i_mux_DB_PCL <= '1';
-            i_RnW <= '0';
-            i_INC_act <= dec;
-            i_next_state <= SWAI_GP51;
-
-         when T1_EXT0 =>
-            i_mux_DB_DBI <= '1';
-            i_T_ld_DB <= '1';
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_next_state <= EXT1;
-
-         when TSL0|TSL0_D02 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_PCL_ld_INCL <= '1'; i_PCH_ld_INCH <= '1';
-            i_next_state <= DECODE;
-
-         when TXS_GP51 =>
-            i_mux_ABL_INCL <= '1'; i_mux_ABH_INCH <= '1';
-            i_SPL_ld_ABL <= '1'; i_SPH_ld_ABH <= '1';
-            i_VMA <= '0';
-            i_next_state <= GP52;
-
-         when TXS_T1_GP50 =>
-            i_mux_ABLI_IXL <= '1';
-            i_mux_ABL_ABLI <= '1';
-            i_mux_ABH_IXH <= '1';
-            i_INC_L_src <= abl; i_INC_H_src <= abh;
-            i_INC_act <= dec;
-            i_VMA <= '0';
-            i_next_state <= TXS_GP51;
-
-         when WAIT_INTER =>
-            --TODO: this is WAIT's WAIT state...what to do here, BA?
-            i_next_state <= WAIT_INTER;
-
-
-
-
-			when others => 
-				null;
-
-		end case;
-
-	end process;
-
-
-
+	);
 
 	p_A:process(all)
 	begin
