@@ -138,10 +138,25 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_IXH_ld_DB			: std_logic;
 	signal	i_IXH_ld_ABH		: std_logic;
 
-	signal	i_CCR_ld_DB			: std_logic;
-	signal	i_CCR_ld_ALU		: std_logic;
+	signal   i_CCR_ld_DB			: std_logic;
+	signal	i_CCR_ld_ALU_Z		: std_logic;
+	signal	i_CCR_ld_AND_ALU_Z: std_logic;
+	signal	i_CCR_ld_ALU_N		: std_logic;
+	signal	i_CCR_ld_ALU_V		: std_logic;
+	signal	i_CCR_ld_ALU_C		: std_logic;
+	signal	i_CCR_ld_ALU_H		: std_logic;
+	signal	i_CCR_ld_SEV		: std_logic;
+	signal	i_CCR_ld_SEC		: std_logic;
+	signal	i_CCR_ld_SEI		: std_logic;
+	signal	i_CCR_ld_CLV		: std_logic;
+	signal	i_CCR_ld_CLC		: std_logic;
+	signal	i_CCR_ld_CLI		: std_logic;
 
 	signal	i_IR_ld_D			: std_logic;
+
+	-- special CCR regs
+	signal	r_CCR					: std_logic_vector(5 downto 0);
+	signal	r_CCR_IM				: std_logic;
 
 	-- incrementer
 	signal	r_incl				: std_logic_vector(7 downto 0);
@@ -388,15 +403,71 @@ begin
 		D_o			=> i_IXH_Q
 	);
 
-	e_reg_ccr:entity dossy_6800.dossy_6800_reg8_2i
-	port map (
-		CLK_i			=> CLK_i,
-		WE_0_i		=> i_CCR_ld_DB,
-		D_0_i			=> ib_DB,
-		WE_1_i		=> i_CCR_ld_ALU,
-		D_1_i			=> i_ALU_CCR_Q,
-		D_o			=> i_ACCB_Q
-	);
+
+	p_reg_ccr:process(CLK_i)
+	begin
+		if rising_edge(CLK_i) then
+			
+			if RST_i = '1' then
+				-- TODO: this is a frig - discover what real CPU does.
+				r_CCR <= "010000";
+			else
+				if i_CCR_ld_ALU_Z = '1' then
+					r_CCR(CCIX_Z) <= i_ALU_CCR_Q(CCIX_Z);
+				elsif i_CCR_ld_AND_ALU_Z = '1' then
+					r_CCR(CCIX_Z) <= r_CCR(CCIX_Z) and i_ALU_CCR_Q(CCIX_Z);
+				elsif i_CCR_ld_DB then
+					r_CCR(CCIX_Z) <= ib_DB(CCIX_Z);
+				end if;
+
+				if i_CCR_ld_ALU_N = '1' then
+					r_CCR(CCIX_N) <= i_ALU_CCR_Q(CCIX_N);
+				elsif i_CCR_ld_DB then
+					r_CCR(CCIX_N) <= ib_DB(CCIX_N);
+				end if;
+
+				if i_CCR_ld_ALU_V = '1' then
+					r_CCR(CCIX_V) <= i_ALU_CCR_Q(CCIX_V);
+				elsif i_CCR_ld_DB then
+					r_CCR(CCIX_V) <= ib_DB(CCIX_V);
+				elsif i_CCR_ld_SEV then
+					r_CCR(CCIX_V) <= '1';
+				elsif i_CCR_ld_CLV then
+					r_CCR(CCIX_V) <= '0';
+				end if;
+
+				if i_CCR_ld_ALU_C = '1' then
+					r_CCR(CCIX_C) <= i_ALU_CCR_Q(CCIX_C);
+				elsif i_CCR_ld_DB then
+					r_CCR(CCIX_C) <= ib_DB(CCIX_C);
+				elsif i_CCR_ld_SEC then
+					r_CCR(CCIX_C) <= '1';
+				elsif i_CCR_ld_CLC then
+					r_CCR(CCIX_C) <= '0';
+				end if;
+
+				if i_CCR_ld_ALU_H = '1' then
+					r_CCR(CCIX_H) <= i_ALU_CCR_Q(CCIX_H);
+				elsif i_CCR_ld_DB then
+					r_CCR(CCIX_H) <= ib_DB(CCIX_H);
+				end if;
+
+				if i_CCR_ld_DB then
+					r_CCR_IM <= ib_DB(CCIX_I);
+					r_CCR(CCIX_I) <= r_CCR(CCIX_I) or ib_DB(CCIX_I) or r_CCR_IM;
+				elsif i_CCR_ld_SEI then
+					r_CCR_IM <= '1';
+					r_CCR(CCIX_I) <= '1';
+				elsif i_CCR_ld_CLI then
+					r_CCR(CCIX_I) <= r_CCR(CCIX_I) or r_CCR_IM;
+					r_CCR_IM <= '0';
+				else
+					r_CCR(CCIX_I) <= r_CCR(CCIX_I) or r_CCR_IM;
+				end if;
+			end if;
+		end if;
+	end process;
+	i_CCR_Q <= "11" & r_CCR;
 
 	e_reg_dbi:entity dossy_6800.dossy_6800_reg8
 	port map (
@@ -564,8 +635,21 @@ begin
 		SPH_ld_ABH_o	=> i_SPH_ld_ABH,
 		IXH_ld_DB_o		=> i_IXH_ld_DB,
 		IXH_ld_ABH_o	=> i_IXH_ld_ABH,
-		CCR_ld_DB_o		=> i_CCR_ld_DB,
-		CCR_ld_ALU_o	=> i_CCR_ld_ALU,
+		
+		CCR_ld_DB_o			=> i_CCR_ld_DB,
+		CCR_ld_ALU_Z_o		=> i_CCR_ld_ALU_Z,
+		CCR_ld_AND_ALU_Z_o=> i_CCR_ld_AND_ALU_Z,
+		CCR_ld_ALU_N_o		=> i_CCR_ld_ALU_N,
+		CCR_ld_ALU_V_o		=> i_CCR_ld_ALU_V,
+		CCR_ld_ALU_C_o		=> i_CCR_ld_ALU_C,
+		CCR_ld_ALU_H_o		=> i_CCR_ld_ALU_H,
+		CCR_ld_SEV_o		=> i_CCR_ld_SEV,
+		CCR_ld_SEC_o		=> i_CCR_ld_SEC,
+		CCR_ld_SEI_o		=> i_CCR_ld_SEI,
+		CCR_ld_CLV_o		=> i_CCR_ld_CLV,
+		CCR_ld_CLC_o		=> i_CCR_ld_CLC,
+		CCR_ld_CLI_o		=> i_CCR_ld_CLI,
+
 		IR_ld_D_o		=> i_IR_ld_D,
 
 		INC_L_src_o		=> i_INC_L_src,

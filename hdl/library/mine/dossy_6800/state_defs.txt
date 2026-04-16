@@ -52,9 +52,23 @@ PC			{	mux_ABL_PCL_o		<= '1'; mux_ABH_PCH_o		<= '1';  }
 SP			{	mux_ABL_SPL_o		<= '1'; mux_ABH_SPH_o		<= '1';  }
 IX			{	mux_ABL_IXL_o		<= '1'; mux_ABH_IXH_o		<= '1';  }
 
-[REG IM]
-1			{	i_reg_IM_set		<= '1';	}
-0			{  i_reg_IM_clr		<= '1';	}
+
+[REG CCR]
+DB			{  CCR_ld_DB_o			<= '1';	}
+ALUZ		{	CCR_ld_ALU_Z_o		<= '1';	}
+ANDALUZ	{	CCR_ld_AND_ALU_Z_o<= '1';	}
+ALUN		{	CCR_ld_ALU_N_o		<= '1';	}
+ALUV		{	CCR_ld_ALU_V_o		<= '1';	}
+ALUC		{	CCR_ld_ALU_C_o		<= '1';	}
+ALUH		{	CCR_ld_ALU_H_o		<= '1';	}
+
+SEV		{	CCR_ld_SEV_o		<= '1';	}
+SEC		{	CCR_ld_SEC_o		<= '1';	}
+SEI		{	CCR_ld_SEI_o		<= '1';	}
+
+CLV		{	CCR_ld_CLV_o		<= '1';	}
+CLC		{	CCR_ld_CLC_o		<= '1';	}
+CLI		{	CCR_ld_CLI_o		<= '1';	}
 
 [REG PCL]
 INCL		{	PCL_ld_INCL_o		<= '1';	}
@@ -98,9 +112,6 @@ DB			{	ACCA_ld_DB_o		<= '1';	}
 DB			{	T_ld_DB_o			<= '1';	}
 ABH		{	T_ld_ABH_o			<= '1';	}
 
-[REG CCR]
-DB			{ CCR_ld_DB_o			<= '1';	}
-ALU		{ CCR_ld_ALU_o			<= '1';	}
 
 [REG IR]
 D			{ IR_ld_D_o				<= '1';	}
@@ -133,7 +144,7 @@ HOLD		{ INC_act_o <= hold; }
 	{end if;}
 	
 	FF->ABH->INCH
-###	1->IM
+	RESET->CCR
 	DB->OBL,INCL
 
 	{if state_i = RESET then}

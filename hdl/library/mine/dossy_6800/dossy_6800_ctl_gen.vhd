@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-16T12:49:20Z
+-- GENERATED : 2026-04-16T14:20:38Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -89,8 +89,19 @@ port
 	SPH_ld_ABH_o	: out	std_logic;
 	IXH_ld_DB_o		: out	std_logic;
 	IXH_ld_ABH_o	: out	std_logic;
-	CCR_ld_DB_o		: out	std_logic;
-	CCR_ld_ALU_o	: out	std_logic;
+	CCR_ld_DB_o 	: out std_logic;
+	CCR_ld_ALU_Z_o : out std_logic;
+	CCR_ld_AND_ALU_Z_o : out std_logic;
+	CCR_ld_ALU_N_o : out std_logic;
+	CCR_ld_ALU_V_o : out std_logic;
+	CCR_ld_ALU_C_o : out std_logic;
+	CCR_ld_ALU_H_o : out std_logic;
+	CCR_ld_SEV_o 	: out std_logic;
+	CCR_ld_SEC_o 	: out std_logic;
+	CCR_ld_SEI_o 	: out std_logic;
+	CCR_ld_CLV_o 	: out std_logic;
+	CCR_ld_CLC_o 	: out std_logic;
+	CCR_ld_CLI_o 	: out std_logic;
 	IR_ld_D_o		: out	std_logic;
 
 	INC_L_src_o		: out	t_inc_l_src;
@@ -187,8 +198,22 @@ begin
 		SPH_ld_ABH_o		<= '0';
 		IXH_ld_DB_o			<= '0';
 		IXH_ld_ABH_o		<= '0';
-		CCR_ld_DB_o			<= '0';
-		CCR_ld_ALU_o		<= '0';
+
+		CCR_ld_DB_o				<= '0';
+		CCR_ld_ALU_Z_o			<= '0';
+		CCR_ld_AND_ALU_Z_o	<= '0';
+		CCR_ld_ALU_N_o			<= '0';
+		CCR_ld_ALU_V_o			<= '0';
+		CCR_ld_ALU_C_o			<= '0';
+		CCR_ld_ALU_H_o			<= '0';
+		CCR_ld_SEV_o			<= '0';
+		CCR_ld_SEC_o			<= '0';
+		CCR_ld_SEI_o			<= '0';
+		CCR_ld_CLV_o			<= '0';
+		CCR_ld_CLC_o			<= '0';
+		CCR_ld_CLI_o			<= '0';
+
+
 		IR_ld_D_o			<= '0';
 
 		INC_L_src_o			<= inc;
@@ -271,6 +296,7 @@ begin
             end if;
             mux_ABH_FF_o <= '1';
             INC_H_src_o <= abh;
+            CCR_ld_SEI_o <= '1';
             mux_OBL_DB_o <= '1';
             INC_L_src_o <= db;
             if state_i = RESET then

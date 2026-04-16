@@ -284,8 +284,19 @@ port
 	SPH_ld_ABH_o	: out	std_logic;
 	IXH_ld_DB_o		: out	std_logic;
 	IXH_ld_ABH_o	: out	std_logic;
-	CCR_ld_DB_o		: out	std_logic;
-	CCR_ld_ALU_o	: out	std_logic;
+	CCR_ld_DB_o 	: out std_logic;
+	CCR_ld_ALU_Z_o : out std_logic;
+	CCR_ld_AND_ALU_Z_o : out std_logic;
+	CCR_ld_ALU_N_o : out std_logic;
+	CCR_ld_ALU_V_o : out std_logic;
+	CCR_ld_ALU_C_o : out std_logic;
+	CCR_ld_ALU_H_o : out std_logic;
+	CCR_ld_SEV_o 	: out std_logic;
+	CCR_ld_SEC_o 	: out std_logic;
+	CCR_ld_SEI_o 	: out std_logic;
+	CCR_ld_CLV_o 	: out std_logic;
+	CCR_ld_CLC_o 	: out std_logic;
+	CCR_ld_CLI_o 	: out std_logic;
 	IR_ld_D_o		: out	std_logic;
 
 	INC_L_src_o		: out	t_inc_l_src;
@@ -382,8 +393,22 @@ begin
 		SPH_ld_ABH_o		<= '0';
 		IXH_ld_DB_o			<= '0';
 		IXH_ld_ABH_o		<= '0';
-		CCR_ld_DB_o			<= '0';
-		CCR_ld_ALU_o		<= '0';
+
+		CCR_ld_DB_o				<= '0';
+		CCR_ld_ALU_Z_o			<= '0';
+		CCR_ld_AND_ALU_Z_o	<= '0';
+		CCR_ld_ALU_N_o			<= '0';
+		CCR_ld_ALU_V_o			<= '0';
+		CCR_ld_ALU_C_o			<= '0';
+		CCR_ld_ALU_H_o			<= '0';
+		CCR_ld_SEV_o			<= '0';
+		CCR_ld_SEC_o			<= '0';
+		CCR_ld_SEI_o			<= '0';
+		CCR_ld_CLV_o			<= '0';
+		CCR_ld_CLC_o			<= '0';
+		CCR_ld_CLI_o			<= '0';
+
+
 		IR_ld_D_o			<= '0';
 
 		INC_L_src_o			<= inc;
