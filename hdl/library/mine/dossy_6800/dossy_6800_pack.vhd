@@ -52,6 +52,9 @@ package dossy_6800 is
 		-- TSL0 fetch
 		TSL0,
 
+		NOP_T1_D00,
+		NOP_TSL0_D01,
+
 		-- load X/Y register
 		LDx_T1_D00,
 		LDx_D01,
@@ -64,6 +67,11 @@ package dossy_6800 is
 		-- TSX
 		TXS_T1_GP50,
 		TXS_GP51,
+
+		-- TXS
+		TSX_T1_GP50,
+		TSX_GP51,
+
 
 		GP52,
 

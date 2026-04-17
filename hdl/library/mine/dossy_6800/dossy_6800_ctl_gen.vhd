@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-16T14:20:38Z
+-- GENERATED : 2026-04-17T12:00:39Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -129,14 +129,18 @@ begin
 
 		impure function DECODE return t_cpu_state is
 		begin
-			if PMATCH(IR_i, "00110101") then
+			if PMATCH(IR_i,  "1-11----") and (state_i = TSL0 or state_i = TSL0_D02 or state_i = NOP_TSL0_D01) then
+				return T1_EXT0;
+			elsif PMATCH(IR_i, "00000001") then
+				return NOP_T1_D00;
+			elsif PMATCH(IR_i, "00110101") then
 				return TXS_T1_GP50;
+			elsif PMATCH(IR_i, "00110000") then
+				return TSX_T1_GP50;
 			elsif PMATCH(IR_i, "00111111") then
 				return SWAI_T1_GP50;
 			elsif PMATCH(IR_i, "00111011") then
 				return RTI_T1_GP50;
-			elsif PMATCH(IR_i,  "1-11----") and (state_i = TSL0 or state_i = TSL0_D02) then
-				return T1_EXT0;
 			elsif PMATCH(IR_i, "1---1110") then
 				return LDx_T1_D00;
 			elsif PMATCH(IR_i, "1---1111") then
@@ -273,6 +277,12 @@ begin
             mux_ABLI_FF_o <= '1';
             next_state_o <= LDX_D01;
 
+         when NOP_T1_D00 =>
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            IR_ld_D_o <= '1';
+            next_state_o <= NOP_TSL0_D01;
+
          when R57 =>
             mux_DB_DBI_o <= '1';
             T_ld_DB_o <= '1';
@@ -344,6 +354,7 @@ begin
             mux_DB_DBI_o <= '1';
             T_ld_DB_o <= '1';
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            SPL_ld_ABL_o <= '1'; SPH_ld_ABH_o <= '1';
             next_state_o <= R58;
 
          when RTI_T1_GP50 =>
@@ -458,10 +469,22 @@ begin
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
             next_state_o <= EXT1;
 
-         when TSL0|TSL0_D02 =>
+         when TSL0|TSL0_D02|NOP_TSL0_D01 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
             PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
             next_state_o <= DECODE;
+
+         when TSX_GP51 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            IXL_ld_ABL_o <= '1'; IXH_ld_ABH_o <= '1';
+            VMA_o <= '0';
+            next_state_o <= GP52;
+
+         when TSX_T1_GP50 =>
+            mux_ABL_SPL_o <= '1'; mux_ABH_SPH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            VMA_o <= '0';
+            next_state_o <= TSX_GP51;
 
          when TXS_GP51 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';

@@ -20,9 +20,30 @@ handle_res:	ldx	#0x100
 		swi
 
 		tsx
+		nop
+		nop
 		stx	0x1000
+		nop
+		nop
+		swi
 
 		sei
+		swi
+		
+		cli
+		swi
+		
+		sev
+		swi
+		
+		clv
+		swi
+
+		sec
+		swi
+		
+		clc
+		swi
 
 
 		ldaa	#0x23

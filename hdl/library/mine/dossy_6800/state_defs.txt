@@ -144,7 +144,7 @@ HOLD		{ INC_act_o <= hold; }
 	{end if;}
 	
 	FF->ABH->INCH
-	RESET->CCR
+	SEI->CCR
 	DB->OBL,INCL
 
 	{if state_i = RESET then}
@@ -164,10 +164,15 @@ HOLD		{ INC_act_o <= hold; }
 	D->IR
 	NEXT=TSL0
 
-[TSL0, TSL0_D02]
+[TSL0, TSL0_D02, NOP_TSL0_D01]
 	INC->AB,PC
 
 	NEXT=DECODE
+
+[NOP_T1_D00]
+	PC->AB->INC
+	D->IR
+	NEXT=NOP_TSL0_D01
 
 [TXS_T1_GP50] 
 	IXL->ABLI->ABL
@@ -181,6 +186,17 @@ HOLD		{ INC_act_o <= hold; }
 	INC->AB->SP
 	nVMA
 	NEXT=GP52
+
+[TSX_T1_GP50] 
+	SP->AB->INC	
+	nVMA
+	NEXT=TSX_GP51
+
+[TSX_GP51]
+	INC->AB->IX
+	nVMA
+	NEXT=GP52
+
 
 [GP52]
 	PC->AB->INC
@@ -348,7 +364,7 @@ HOLD		{ INC_act_o <= hold; }
 	NEXT=RTI_R57
 [RTI_R57]
 	DBI->DB->T	#PCH in R58
-	INC->AB
+	INC->AB->SP
 	NEXT=R58
 
 [T1_EXT0]
