@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-17T12:00:39Z
+-- GENERATED : 2026-04-17T12:25:36Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -129,8 +129,10 @@ begin
 
 		impure function DECODE return t_cpu_state is
 		begin
-			if PMATCH(IR_i,  "1-11----") and (state_i = TSL0 or state_i = TSL0_D02 or state_i = NOP_TSL0_D01) then
+			if PMATCH(IR_i,  "1-11----") and (state_i = TSL0 or state_i = TSL0_D02 or state_i = TSL0_D01) then
 				return T1_EXT0;
+			elsif PMATCH(IR_i, "0000101-") or PMATCH(IR_i, "000011--") then
+				return SEx_T1_D00;
 			elsif PMATCH(IR_i, "00000001") then
 				return NOP_T1_D00;
 			elsif PMATCH(IR_i, "00110101") then
@@ -281,7 +283,7 @@ begin
             mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
             INC_L_src_o <= abl; INC_H_src_o <= abh;
             IR_ld_D_o <= '1';
-            next_state_o <= NOP_TSL0_D01;
+            next_state_o <= TSL0_D01;
 
          when R57 =>
             mux_DB_DBI_o <= '1';
@@ -362,6 +364,26 @@ begin
             INC_L_src_o <= abl; INC_H_src_o <= abh;
             VMA_o <= '0';
             next_state_o <= RTI_GP51;
+
+         when SEx_T1_D00 =>
+            --TODO: decode this stuff and encode flags from IR direct?
+            if IR_i(2 downto 0) = "010" then
+               CCR_ld_CLV_o <= '1';
+            elsif IR_i(2 downto 0) = "011" then
+               CCR_ld_SEV_o <= '1';
+            elsif IR_i(2 downto 0) = "100" then
+               CCR_ld_CLC_o <= '1';
+            elsif IR_i(2 downto 0) = "101" then
+               CCR_ld_SEC_o <= '1';
+            elsif IR_i(2 downto 0) = "110" then
+               CCR_ld_CLI_o <= '1';
+            elsif IR_i(2 downto 0) = "111" then
+               CCR_ld_SEI_o <= '1';
+            end if;
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            IR_ld_D_o <= '1';
+            next_state_o <= TSL0_D01;
 
          when STx_D01 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
@@ -469,7 +491,7 @@ begin
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
             next_state_o <= EXT1;
 
-         when TSL0|TSL0_D02|NOP_TSL0_D01 =>
+         when TSL0|TSL0_D02|TSL0_D01 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
             PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
             next_state_o <= DECODE;

@@ -324,8 +324,10 @@ begin
 
 		impure function DECODE return t_cpu_state is
 		begin
-			if PMATCH(IR_i,  "1-11----") and (state_i = TSL0 or state_i = TSL0_D02 or state_i = NOP_TSL0_D01) then
+			if PMATCH(IR_i,  "1-11----") and (state_i = TSL0 or state_i = TSL0_D02 or state_i = TSL0_D01) then
 				return T1_EXT0;
+			elsif PMATCH(IR_i, "0000101-") or PMATCH(IR_i, "000011--") then
+				return SEx_T1_D00;
 			elsif PMATCH(IR_i, "00000001") then
 				return NOP_T1_D00;
 			elsif PMATCH(IR_i, "00110101") then

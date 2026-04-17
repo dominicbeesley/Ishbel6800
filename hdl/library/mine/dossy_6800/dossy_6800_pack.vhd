@@ -53,7 +53,7 @@ package dossy_6800 is
 		TSL0,
 
 		NOP_T1_D00,
-		NOP_TSL0_D01,
+		TSL0_D01,
 
 		-- load X/Y register
 		LDx_T1_D00,
@@ -72,8 +72,11 @@ package dossy_6800 is
 		TSX_T1_GP50,
 		TSX_GP51,
 
-
 		GP52,
+
+		-- CLx/SEx
+		SEx_T1_D00,
+
 
 		-- SWI / WAI
 		SWAI_T1_GP50,

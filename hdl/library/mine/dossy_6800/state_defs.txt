@@ -164,7 +164,7 @@ HOLD		{ INC_act_o <= hold; }
 	D->IR
 	NEXT=TSL0
 
-[TSL0, TSL0_D02, NOP_TSL0_D01]
+[TSL0, TSL0_D02, TSL0_D01]
 	INC->AB,PC
 
 	NEXT=DECODE
@@ -172,7 +172,26 @@ HOLD		{ INC_act_o <= hold; }
 [NOP_T1_D00]
 	PC->AB->INC
 	D->IR
-	NEXT=NOP_TSL0_D01
+	NEXT=TSL0_D01
+
+[SEx_T1_D00]
+	{--TODO: decode this stuff and encode flags from IR direct?}
+	{if IR_i(2 downto 0) = "010" then}
+		CLV->CCR
+	{elsif IR_i(2 downto 0) = "011" then}
+		SEV->CCR
+	{elsif IR_i(2 downto 0) = "100" then}
+		CLC->CCR
+	{elsif IR_i(2 downto 0) = "101" then}
+		SEC->CCR
+	{elsif IR_i(2 downto 0) = "110" then}
+		CLI->CCR
+	{elsif IR_i(2 downto 0) = "111" then}	
+		SEI->CCR
+	{end if;}
+	PC->AB->INC
+	D->IR
+	NEXT=TSL0_D01
 
 [TXS_T1_GP50] 
 	IXL->ABLI->ABL
