@@ -462,7 +462,7 @@ begin
 					r_CCR(CCIX_I) <= r_CCR(CCIX_I) or r_CCR_IM;
 					r_CCR_IM <= '0';
 				else
-					r_CCR(CCIX_I) <= r_CCR(CCIX_I) or r_CCR_IM;
+					r_CCR(CCIX_I) <= r_CCR_IM;
 				end if;
 			end if;
 		end if;
