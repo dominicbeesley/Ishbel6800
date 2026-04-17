@@ -108,7 +108,8 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_DBI_Q				: std_logic_vector(7 downto 0);
 	signal	i_IR_Q				: std_logic_vector(7 downto 0);
 
-	-- alu outputs
+	-- alu control and outputs
+   signal   i_ALU_op          : t_alu_op;
 	signal	i_ALU_SUM_Q			: std_logic_vector(7 downto 0);
 	signal	i_ALU_CCR_Q			: std_logic_vector(7 downto 0);
 
@@ -165,9 +166,6 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_INC_L_src			: t_inc_l_src;
 	signal	i_INC_act			: t_inc_act;
 
-	-- other inputs to BUS MUXes
-	signal	i_SUM_Q				: std_logic_vector(7 downto 0);
-
 	-- other control signals
 	signal	i_VMA			: std_logic;
 	signal	i_RnW			: std_logic;
@@ -178,15 +176,14 @@ architecture rtl of dossy_6800_cpu is
 
 begin
 
-
 --
--- ###					   #  #	 #	#  #  #
--- #  #					   ####	 #	#  #  #
--- #  #	 #	#	###		   ####	 #	#	##	  ##	###
--- ###	 #	#  #		   #  #	 #	#	##	 #	#  #
--- #  #	 #	#	##		   #  #	 #	#  #  #	 ####	##
--- #  #	 #	#	  #		   #  #	 #	#  #  #	 #		  #
--- ###	  ###  ###		   #  #	  ##   #  #	  ##   ###
+-- ###                     #  #
+-- #  #                    ####
+-- #  #  #  #   ###        ####  #  #  #  #   ##    ###
+-- ###   #  #  #           #  #  #  #  #  #  #  #  #
+-- #  #  #  #   ##         #  #  #  #   ##   ####   ##
+-- #  #  #  #     #        #  #  #  #  #  #  #        #
+-- ###    ###  ###         #  #   ###  #  #   ##   ###
 --
 
 -- TODO: bus muxes should probably surface combinatorial or inconsistent 
@@ -274,7 +271,7 @@ begin
 			7 => i_ACCA_Q,
 			8 => i_ACCB_Q,
 			9 => i_CCR_Q,
-			10=> i_SUM_Q,
+			10=> i_ALU_SUM_Q,
 			11=> i_DBI_Q,
 			12=> x"FE",
 			13=> x"FC",
@@ -309,14 +306,43 @@ begin
 	);
 
 --
--- ###				  #									 ####	#	 ##
--- #  #							  #						 #			  #
--- #  #	  ##	###	 ##		###	 ####	##	 # ##		 #	   ##	  #		##
--- ###	 #	#  #  #	  #	   #	  #	   #  #	 ##			 ###	#	  #	   #  #
--- # #	 ####  #  #	  #		##	  #	   ####	 #			 #		#	  #	   ####
--- #  #	 #		###	  #		  #	  #	   #	 #			 #		#	  #	   #
--- #  #	  ##	  #	 ###   ###	   ##	##	 #			 #	   ###	 ###	##
---				##	
+--  ##   #     #  #
+-- #  #  #     #  #
+-- #  #  #     #  #
+-- ####  #     #  #
+-- #  #  #     #  #
+-- #  #  #     #  #
+-- #  #  ####   ##
+--
+
+   e_alu:entity dossy_6800.dossy_6800_alu
+   port map (   
+      OP_i     => i_ALU_op,
+      C_i      => i_CCR_Q(CCIX_C),
+      A_i      => ib_DB,
+      B_i      => ib_ABLI,
+
+      C_o      => i_ALU_CCR_Q(CCIX_C),
+      H_o      => i_ALU_CCR_Q(CCIX_H),
+      N_o      => i_ALU_CCR_Q(CCIX_N),
+      V_o      => i_ALU_CCR_Q(CCIX_V),
+      Z_o      => i_ALU_CCR_Q(CCIX_Z),
+      SUM_o    => i_ALU_SUM_Q
+   );
+
+   i_ALU_CCR_Q(CCIX_I) <= '1';
+   i_ALU_CCR_Q(7 downto 6) <= "11";
+
+
+--
+-- ###                #                                  ####   #    ##
+-- #  #                           #                      #            #
+-- #  #   ##    ###  ##     ###  ####   ##   # ##        #     ##     #     ##
+-- ###   #  #  #  #   #    #      #    #  #  ##          ###    #     #    #  #
+-- # #   ####  #  #   #     ##    #    ####  #           #      #     #    ####
+-- #  #  #      ###   #       #   #    #     #           #      #     #    #
+-- #  #   ##      #  ###   ###     ##   ##   #           #     ###   ###    ##
+--              ##
 --
 
 	e_reg_pcl:entity dossy_6800.dossy_6800_reg8
@@ -487,12 +513,12 @@ begin
 
 --
 -- ###
---	#												#
---	#	 ###	###	 # ##	##	## #	##	 ###   ####	  ##   # ##
---	#	 #	#  #	 ##	   #  # # # #  #  #	 #	#	#	 #	#  ##
---	#	 #	#  #	 #	   #### # # #  ####	 #	#	#	 ####  #
---	#	 #	#  #	 #	   #	# # #  #	 #	#	#	 #	   #
--- ###	 #	#	###	 #		##	#	#	##	 #	#	 ##	  ##   #
+--  #                                               #
+--  #    ###    ###  # ##   ##  ## #    ##   ###   ####   ##   # ##
+--  #    #  #  #     ##    #  # # # #  #  #  #  #   #    #  #  ##
+--  #    #  #  #     #     #### # # #  ####  #  #   #    ####  #
+--  #    #  #  #     #     #    # # #  #     #  #   #    #     #
+-- ###   #  #   ###  #      ##  #   #   ##   #  #    ##   ##   #
 --
 
 	-- this assumes a 16bit increment can be carried out in one cycle?
@@ -556,16 +582,16 @@ begin
 	i_INCH_Q <= r_inch;
 	i_INCL_Q <= r_incl;
 
+--
+--  ##                                                   #      #
+-- #  #   #           #                                  #
+-- #     ####   ###  ####   ##        ## #    ###   ###  ###   ##    ###    ##
+--  ##    #    #  #   #    #  #       # # #  #  #  #     #  #   #    #  #  #  #
+--    #   #    #  #   #    ####       # # #  #  #  #     #  #   #    #  #  ####
+-- #  #   #    # ##   #    #          # # #  # ##  #     #  #   #    #  #  #
+--  ##     ##   # #    ##   ##        #   #   # #   ###  #  #  ###   #  #   ##
+--
 
---
---	##								   #  #				 #		#
--- #  #	  #			  #				   ####				 #
--- #	 ####	###	 ####	##		   ####	  ###	###	 ###   ##	 ###	##
---	##	  #	   #  #	  #	   #  #		   #  #	 #	#  #	 #	#	#	 #	#  #  #
---	  #	  #	   #  #	  #	   ####		   #  #	 #	#  #	 #	#	#	 #	#  ####
--- #  #	  #	   # ##	  #	   #		   #  #	 # ##  #	 #	#	#	 #	#  #
---	##	   ##	# #	   ##	##		   #  #	  # #	###	 #	#  ###	 #	#	##
---
 
 	p_state_machine:process(CLK_i)
 	begin
@@ -655,6 +681,8 @@ begin
 		INC_L_src_o		=> i_INC_L_src,
 		INC_H_src_o		=> i_INC_H_src,
 		INC_act_o		=> i_INC_act,
+
+      ALU_op_o       => i_ALU_op,
 
 		RnW_o				=> i_RnW,
 		VMA_o				=> i_VMA

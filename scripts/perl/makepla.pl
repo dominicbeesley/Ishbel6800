@@ -303,6 +303,8 @@ port
 	INC_H_src_o		: out	t_inc_h_src;
 	INC_act_o		: out	t_inc_act;
 
+	ALU_op_o			: out t_alu_op;
+
 	RnW_o				: out std_logic;
 	VMA_o				: out std_logic
 
@@ -420,6 +422,8 @@ begin
 		INC_L_src_o			<= inc;
 		INC_H_src_o			<= inc;
 		INC_act_o			<= inc;
+
+		ALU_op_o				<= alu_and;
 
 		RnW_o					<= '1';
 		VMA_o					<= '1';

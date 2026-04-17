@@ -231,8 +231,12 @@ HOLD		{ INC_act_o <= hold; }
 	{else}
 		DB->SPH
 	{end if;}
-	
+
 	FF->ABLI
+	ALUN->CCR
+	ALUZ->CCR
+	CLV->CCR
+	
 	NEXT=LDX_D01
 
 [LDX_D01]
@@ -251,8 +255,10 @@ HOLD		{ INC_act_o <= hold; }
 		DB->SPL
 	{end if;}
 
-	D->IR	
 	FF->ABLI
+	ANDALUZ->CCR
+
+	D->IR	
 
 	NEXT=TSL0_D02
 
@@ -263,6 +269,12 @@ HOLD		{ INC_act_o <= hold; }
 	{else}
 		SPH->DB
 	{end if;}
+
+	FF->ABLI
+	ALUZ->CCR
+	ALUN->CCR
+	CLV->CCR
+
 	WRITE
 	NEXT=STx_D01
 
@@ -274,6 +286,10 @@ HOLD		{ INC_act_o <= hold; }
 		SPL->DB
 	{end if;}
 	WRITE
+
+	FF->ABLI
+	ANDALUZ->CCR
+
 	NEXT=STx_D02
 
 [STx_D02]

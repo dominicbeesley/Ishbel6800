@@ -41,6 +41,8 @@ package dossy_6800 is
 	type t_inc_h_src	is (inc, abh);
 	type t_inc_act		is (inc, dec, inc_page, hold);
 
+	type t_alu_op		is (alu_add, alu_adc, alu_sub, alu_sbc, alu_and, alu_or, alu_eor);
+
 	type t_cpu_state is (
 		RESET,
 		-- prep vector address

@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-17T13:28:09Z
+-- GENERATED : 2026-04-17T15:40:50Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -107,6 +107,8 @@ port
 	INC_L_src_o		: out	t_inc_l_src;
 	INC_H_src_o		: out	t_inc_h_src;
 	INC_act_o		: out	t_inc_act;
+
+	ALU_op_o			: out t_alu_op;
 
 	RnW_o				: out std_logic;
 	VMA_o				: out std_logic
@@ -226,6 +228,8 @@ begin
 		INC_H_src_o			<= inc;
 		INC_act_o			<= inc;
 
+		ALU_op_o				<= alu_and;
+
 		RnW_o					<= '1';
 		VMA_o					<= '1';
 
@@ -264,8 +268,9 @@ begin
             else
                SPL_ld_DB_o <= '1';
             end if;
-            IR_ld_D_o <= '1';
             mux_ABLI_FF_o <= '1';
+            CCR_ld_AND_ALU_Z_o<= '1';
+            IR_ld_D_o <= '1';
             next_state_o <= TSL0_D02;
 
          when LDx_T1_D00 =>
@@ -277,6 +282,9 @@ begin
                SPH_ld_DB_o <= '1';
             end if;
             mux_ABLI_FF_o <= '1';
+            CCR_ld_ALU_N_o <= '1';
+            CCR_ld_ALU_Z_o <= '1';
+            CCR_ld_CLV_o <= '1';
             next_state_o <= LDX_D01;
 
          when NOP_T1_D00 =>
@@ -393,6 +401,8 @@ begin
                mux_DB_SPL_o <= '1';
             end if;
             RnW_o <= '0';
+            mux_ABLI_FF_o <= '1';
+            CCR_ld_AND_ALU_Z_o<= '1';
             next_state_o <= STx_D02;
 
          when STx_D02 =>
@@ -421,6 +431,10 @@ begin
             else
                mux_DB_SPH_o <= '1';
             end if;
+            mux_ABLI_FF_o <= '1';
+            CCR_ld_ALU_Z_o <= '1';
+            CCR_ld_ALU_N_o <= '1';
+            CCR_ld_CLV_o <= '1';
             RnW_o <= '0';
             next_state_o <= STx_D01;
 
