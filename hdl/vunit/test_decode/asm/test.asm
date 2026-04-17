@@ -19,6 +19,13 @@ handle_res:	ldx	#0x100
 		sts 	0x2001
 		swi
 
+		ldx	#0
+		swi
+		ldx	#1
+		swi
+		ldx	#0x8008
+		swi
+
 		tsx
 		nop
 		nop
