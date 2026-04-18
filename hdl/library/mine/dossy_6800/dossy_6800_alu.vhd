@@ -66,8 +66,8 @@ begin
 		variable v_R : unsigned(4 downto 0);
 		begin
 			v_C := (0 => C_i, others => '0');
-			v_R := unsigned(A_i) +
-					 unsigned(B_i) +
+			v_R := ("0" & unsigned(A_i)) +
+					 ("0" & unsigned(B_i)) +
 					 v_C;
 			C_o := v_R(4);
 			R_o := std_logic_vector(v_R(3 downto 0));
@@ -85,8 +85,8 @@ begin
 		variable v_R : unsigned(4 downto 0);
 		begin
 			v_C := (0 => C_i, others => '0');
-			v_R := unsigned(A_i) -
-					 (unsigned(B_i) +
+			v_R := ("0" & unsigned(A_i)) -
+					 (("0" & unsigned(B_i)) +
 					 v_C);
 			C_o := v_R(4);
 			R_o := std_logic_vector(v_R(3 downto 0));

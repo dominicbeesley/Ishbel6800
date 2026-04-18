@@ -75,6 +75,13 @@ handle_res:	ldx	#0x100
 		eora	const_FF
 		swi
 
+		adda	#23
+		swi
+		adca	#23
+		swi
+		adca	#23
+		swi
+
 		staa	0x80
 		swi
 		stab	0x81
