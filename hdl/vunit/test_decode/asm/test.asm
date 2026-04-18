@@ -82,6 +82,14 @@ handle_res:	ldx	#0x100
 		adca	#23
 		swi
 
+		sec
+		suba	const_55
+		swi
+		sbca	const_23
+		swi
+		sbca	const_55
+		swi
+
 		staa	0x80
 		swi
 		stab	0x81
