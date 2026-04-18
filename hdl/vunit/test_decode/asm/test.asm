@@ -52,9 +52,16 @@ handle_res:	ldx	#0x100
 		clc
 		swi
 
-
 		ldaa	#0x23
-		ldab	#0x25
+		swi
+		ldab	#0x85
+		swi
+
+		staa	0x80
+		swi
+		stab	0x81
+		swi
+
 		ldx	#0x6789
 
 here:		

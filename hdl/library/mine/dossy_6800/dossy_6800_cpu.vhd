@@ -108,6 +108,8 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_DBI_Q				: std_logic_vector(7 downto 0);
 	signal	i_IR_Q				: std_logic_vector(7 downto 0);
 
+   signal   i_IR_Q_DBI        : std_logic_vector(7 downto 0); -- this comes from IR unless loading from DBI...TODO: think of a nicer way
+
 	-- alu control and outputs
    signal   i_ALU_op          : t_alu_op;
 	signal	i_ALU_SUM_Q			: std_logic_vector(7 downto 0);
@@ -317,6 +319,8 @@ begin
 
    e_alu:entity dossy_6800.dossy_6800_alu
    port map (   
+      CLK_i    => CLK_i,
+
       OP_i     => i_ALU_op,
       C_i      => i_CCR_Q(CCIX_C),
       A_i      => ib_DB,
@@ -442,49 +446,49 @@ begin
 					r_CCR(CCIX_Z) <= i_ALU_CCR_Q(CCIX_Z);
 				elsif i_CCR_ld_AND_ALU_Z = '1' then
 					r_CCR(CCIX_Z) <= r_CCR(CCIX_Z) and i_ALU_CCR_Q(CCIX_Z);
-				elsif i_CCR_ld_DB then
+				elsif i_CCR_ld_DB = '1' then
 					r_CCR(CCIX_Z) <= ib_DB(CCIX_Z);
 				end if;
 
 				if i_CCR_ld_ALU_N = '1' then
 					r_CCR(CCIX_N) <= i_ALU_CCR_Q(CCIX_N);
-				elsif i_CCR_ld_DB then
+				elsif i_CCR_ld_DB = '1' then
 					r_CCR(CCIX_N) <= ib_DB(CCIX_N);
 				end if;
 
 				if i_CCR_ld_ALU_V = '1' then
 					r_CCR(CCIX_V) <= i_ALU_CCR_Q(CCIX_V);
-				elsif i_CCR_ld_DB then
+				elsif i_CCR_ld_DB = '1' then
 					r_CCR(CCIX_V) <= ib_DB(CCIX_V);
-				elsif i_CCR_ld_SEV then
+				elsif i_CCR_ld_SEV = '1' then
 					r_CCR(CCIX_V) <= '1';
-				elsif i_CCR_ld_CLV then
+				elsif i_CCR_ld_CLV = '1' then
 					r_CCR(CCIX_V) <= '0';
 				end if;
 
 				if i_CCR_ld_ALU_C = '1' then
 					r_CCR(CCIX_C) <= i_ALU_CCR_Q(CCIX_C);
-				elsif i_CCR_ld_DB then
+				elsif i_CCR_ld_DB = '1' then
 					r_CCR(CCIX_C) <= ib_DB(CCIX_C);
-				elsif i_CCR_ld_SEC then
+				elsif i_CCR_ld_SEC = '1' then
 					r_CCR(CCIX_C) <= '1';
-				elsif i_CCR_ld_CLC then
+				elsif i_CCR_ld_CLC = '1' then
 					r_CCR(CCIX_C) <= '0';
 				end if;
 
 				if i_CCR_ld_ALU_H = '1' then
 					r_CCR(CCIX_H) <= i_ALU_CCR_Q(CCIX_H);
-				elsif i_CCR_ld_DB then
+				elsif i_CCR_ld_DB = '1'  then
 					r_CCR(CCIX_H) <= ib_DB(CCIX_H);
 				end if;
 
 				if i_CCR_ld_DB then
 					r_CCR_IM <= ib_DB(CCIX_I);
 					r_CCR(CCIX_I) <= r_CCR(CCIX_I) or ib_DB(CCIX_I) or r_CCR_IM;
-				elsif i_CCR_ld_SEI then
+				elsif i_CCR_ld_SEI = '1' then
 					r_CCR_IM <= '1';
 					r_CCR(CCIX_I) <= '1';
-				elsif i_CCR_ld_CLI then
+				elsif i_CCR_ld_CLI = '1' then
 					r_CCR(CCIX_I) <= r_CCR(CCIX_I) or r_CCR_IM;
 					r_CCR_IM <= '0';
 				else
@@ -503,11 +507,12 @@ begin
 		D_o			=> i_DBI_Q
 	);
 
+   -- TODO: Fig.1 shows this coming from D_i, we have to mux IR with DBI in control
 	e_reg_ir:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
 		WE_i			=> i_IR_ld_D,
-		D_i			=> D_i,
+		D_i			=> i_DBI_Q,
 		D_o			=> i_IR_Q
 	);
 
@@ -604,9 +609,12 @@ begin
 		end if;
 	end process;
 
+   i_IR_Q_DBI <= i_DBI_Q when i_IR_ld_D = '1' else i_IR_Q;
+
 	e_ctl_gen:entity dossy_6800.dossy_6800_ctl_gen
 	port map (
 		state_i			=> r_state,
+      IR_DBI_i       => i_IR_Q_DBI,
 		IR_i				=> i_IR_Q,
 		
 		next_state_o	=> i_next_state,

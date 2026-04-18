@@ -133,6 +133,13 @@ WRITE		{ RnW_o <= '0'; }
 DEC		{ INC_act_o <= dec; }
 HOLD		{ INC_act_o <= hold; }
 
+ALU_ADC	{ ALU_op_o <= alu_adc; }
+ALU_ADD	{ ALU_op_o <= alu_add; }
+ALU_EOR	{ ALU_op_o <= alu_eor; }
+ALU_ORA	{ ALU_op_o <= alu_or; }
+ALU_SBC	{ ALU_op_o <= alu_sbc; }
+ALU_SUB	{ ALU_op_o <= alu_sub; }
+
 
 ============ STATES =============
 
@@ -161,17 +168,73 @@ HOLD		{ INC_act_o <= hold; }
 [R58]
 	DBI->DB->OBL,INCL
 	T->ABH->INCH
-	D->IR
 	NEXT=TSL0
 
 [TSL0, TSL0_D02, TSL0_D01]
 	INC->AB,PC
+	D->IR
+	NEXT=DECODE
 
+[GI_T1_D00]
+	{if IR_i(5 downto 4) = "00" then}
+		{-- was immediate, keep pc}
+		INC->AB
+	{else}
+		PC->AB
+		AB->INC
+	{end if;}
+
+	DBI->DB
+	
+	{if PMATCH(IR_i(3 downto 0), "000-") then }
+		ALU_SUB
+	{elsif PMATCH(IR_i(3 downto 0), "001-") then }
+		ALU_SBC
+	{elsif PMATCH(IR_i(3 downto 0), "1000") then }
+		ALU_EOR
+	{elsif PMATCH(IR_i(3 downto 0), "1001") then }
+		ALU_ADC
+	{elsif PMATCH(IR_i(3 downto 0), "1010") then }
+		ALU_ORA
+	{elsif PMATCH(IR_i(3 downto 0), "1011") then }
+		ALU_ADD
+	{end if;}
+	
+
+	{if IR_i(3 downto 0) = "0110" then}
+		FF->ABLI		#LOAD
+	{elsif IR_i(6) = '1' then}
+		ACCB->ABLI	#ACCB
+	{else}
+		ACCA->ABLI	#ACCA
+	{end if;}
+
+	INC->PC
+	NEXT=GI_TSL0_D01
+
+[GI_TSL0_D01]
+
+	SUM->DB
+	{if IR_i(3) = '1' or IR_i(0) = '0' then}
+		{if IR_i(6) = '1' then}
+			DB->ACCB	#ACCB
+		{else}
+			DB->ACCA	#ACCA
+		{end if;}
+	{end if;}
+
+	ALUZ->CCR
+	ALUN->CCR
+	ALUC->CCR
+	ALUH->CCR
+	ALUV->CCR
+
+	D->IR	
+	INC->AB,PC
 	NEXT=DECODE
 
 [NOP_T1_D00]
 	PC->AB->INC
-	D->IR
 	NEXT=TSL0_D01
 
 [SEx_T1_D00]
@@ -190,7 +253,6 @@ HOLD		{ INC_act_o <= hold; }
 		SEI->CCR
 	{end if;}
 	PC->AB->INC
-	D->IR
 	NEXT=TSL0_D01
 
 [TXS_T1_GP50] 
@@ -219,7 +281,6 @@ HOLD		{ INC_act_o <= hold; }
 
 [GP52]
 	PC->AB->INC
-	D->IR
 	NEXT=TSL0
 
 [LDx_T1_D00]
@@ -233,9 +294,6 @@ HOLD		{ INC_act_o <= hold; }
 	{end if;}
 
 	FF->ABLI
-	ALUN->CCR
-	ALUZ->CCR
-	CLV->CCR
 	
 	NEXT=LDX_D01
 
@@ -256,11 +314,18 @@ HOLD		{ INC_act_o <= hold; }
 	{end if;}
 
 	FF->ABLI
+	ALUN->CCR
+	ALUZ->CCR
+	CLV->CCR
+
+	NEXT=LDX_TSL0_D02
+
+[LDX_TSL0_D02]
+	
 	ANDALUZ->CCR
-
-	D->IR	
-
-	NEXT=TSL0_D02
+	INC->AB,PC
+	D->IR
+	NEXT=DECODE
 
 [STx_T1_D00]
 	INC->AB
@@ -271,9 +336,6 @@ HOLD		{ INC_act_o <= hold; }
 	{end if;}
 
 	FF->ABLI
-	ALUZ->CCR
-	ALUN->CCR
-	CLV->CCR
 
 	WRITE
 	NEXT=STx_D01
@@ -287,8 +349,10 @@ HOLD		{ INC_act_o <= hold; }
 	{end if;}
 	WRITE
 
+	ALUZ->CCR
+	ALUN->CCR
+	CLV->CCR
 	FF->ABLI
-	ANDALUZ->CCR
 
 	NEXT=STx_D02
 
@@ -309,7 +373,7 @@ HOLD		{ INC_act_o <= hold; }
 		DB->SPL
 	{end if;}
 
-	D->IR	
+	ANDALUZ->CCR
 	FF->ABLI
 
 	NEXT=TSL0

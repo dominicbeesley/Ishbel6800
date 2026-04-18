@@ -230,7 +230,8 @@ port
 (
 	state_i			: in	t_cpu_state;
 
-	IR_i				: in	std_logic_vector(7 downto 0);
+	IR_DBI_i			: in  std_logic_vector(7 downto 0); -- used for decode * early
+	IR_i				: in	std_logic_vector(7 downto 0); -- used for executing instruction
 
 	next_state_o	: out t_cpu_state;
 
@@ -326,24 +327,26 @@ begin
 
 		impure function DECODE return t_cpu_state is
 		begin
-			if PMATCH(IR_i,  "1-11----") and (state_i = TSL0 or state_i = TSL0_D02 or state_i = TSL0_D01) then
+			if PMATCH(IR_DBI_i,  "1-11----") and (state_i = TSL0 or state_i = TSL0_D02 or state_i = TSL0_D01 or state_i = LDX_TSL0_D02) then
 				return T1_EXT0;
-			elsif PMATCH(IR_i, "0000101-") or PMATCH(IR_i, "000011--") then
+			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
 				return SEx_T1_D00;
-			elsif PMATCH(IR_i, "00000001") then
+			elsif PMATCH(IR_DBI_i, "00000001") then
 				return NOP_T1_D00;
-			elsif PMATCH(IR_i, "00110101") then
+			elsif PMATCH(IR_DBI_i, "00110101") then
 				return TXS_T1_GP50;
-			elsif PMATCH(IR_i, "00110000") then
+			elsif PMATCH(IR_DBI_i, "00110000") then
 				return TSX_T1_GP50;
-			elsif PMATCH(IR_i, "00111111") then
+			elsif PMATCH(IR_DBI_i, "00111111") then
 				return SWAI_T1_GP50;
-			elsif PMATCH(IR_i, "00111011") then
+			elsif PMATCH(IR_DBI_i, "00111011") then
 				return RTI_T1_GP50;
-			elsif PMATCH(IR_i, "1---1110") then
+			elsif PMATCH(IR_DBI_i, "1---1110") then
 				return LDx_T1_D00;
-			elsif PMATCH(IR_i, "1---1111") then
+			elsif PMATCH(IR_DBI_i, "1---1111") then
 				return STx_T1_D00;
+			elsif PMATCH(IR_DBI_i, "1-------") then
+				return GI_T1_D00;
 			else
 				return DIEBAD;
 			end if;

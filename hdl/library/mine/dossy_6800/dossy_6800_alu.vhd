@@ -29,6 +29,8 @@ use dossy_6800.dossy_6800.all;
 
 entity dossy_6800_alu is
 	port (	
+		CLK_i		: in	std_logic;
+
 		OP_i		: in	t_alu_op;
 		C_i		: in	std_logic;
 		A_i		: in	std_logic_vector(7 downto 0);
@@ -158,7 +160,7 @@ begin
 				sbc_8(v_C_i_masked, A_i, B_i, v_C_o, v_H_o, v_V_o, v_SUM_o);
 				v_N_o := v_SUM_o(7);
 				v_Z_o := not or_reduce(v_SUM_o);
-			when others => 
+			when others => -- AND
 				-- AND is default
 				v_SUM_o := B_i and A_i;
 				v_C_o := C_i;
@@ -169,15 +171,15 @@ begin
 		end case;
 
 
+		if rising_edge(CLK_i) then
+			SUM_o <= v_SUM_o;
 
-		SUM_o <= v_SUM_o;
-
-		C_o	<= v_C_o;
-		H_o	<= v_H_o;
-		V_o	<= v_V_o;
-		N_o	<= v_N_o;
-		Z_o   <= v_Z_o;
-
+			C_o	<= v_C_o;
+			H_o	<= v_H_o;
+			V_o	<= v_V_o;
+			N_o	<= v_N_o;
+			Z_o   <= v_Z_o;
+		end if;
 	end process;
 
 

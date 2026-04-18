@@ -60,6 +60,7 @@ package dossy_6800 is
 		-- load X/Y register
 		LDx_T1_D00,
 		LDx_D01,
+		LDx_TSL0_D02,
 
 		-- store X/Y register
 		STx_T1_D00,
@@ -107,6 +108,10 @@ package dossy_6800 is
 		-- EXTENDED addressing
 		T1_EXT0,
 		EXT1,
+
+		-- GROUP I
+		GI_T1_D00,
+		GI_TSL0_D01,
 
 		-- DIE
 		DIEBAD,
