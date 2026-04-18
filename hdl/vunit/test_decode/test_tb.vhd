@@ -80,7 +80,7 @@ begin
             wait until falling_edge(i_cpu_clk_phi1);
             i_sys_nRES <= '1';
 
-            wait for 200 us;
+            wait for 1000 us;
 
             sim_stop <= true;
 

@@ -33,6 +33,8 @@ entity dossy_6800_alu is
 
 		OP_i		: in	t_alu_op;
 		C_i		: in	std_logic;
+		H_i		: in  std_logic;
+		V_i		: in  std_logic;
 		A_i		: in	std_logic_vector(7 downto 0);
 		B_i		: in	std_logic_vector(7 downto 0);
 
@@ -149,26 +151,31 @@ begin
 	variable v_Z_o				: std_logic;
 	variable v_SUM_o			: std_logic_vector(7 downto 0);
 	begin
+
 		v_C_i_masked  := C_i when OP_i = alu_adc or OP_i = alu_sbc else
 							'0';
+		v_V_o := V_i;
+		v_C_o := C_i;
+		v_H_o	:= H_i;
+
 		case OP_i is
 			when alu_add | alu_adc =>
 				adc_8(v_C_i_masked, A_i, B_i, v_C_o, v_H_o, v_V_o, v_SUM_o);
-				v_N_o := v_SUM_o(7);
-				v_Z_o := not or_reduce(v_SUM_o);
 			when alu_sub | alu_sbc =>
 				sbc_8(v_C_i_masked, A_i, B_i, v_C_o, v_H_o, v_V_o, v_SUM_o);
-				v_N_o := v_SUM_o(7);
-				v_Z_o := not or_reduce(v_SUM_o);
+			when alu_or =>
+				v_V_o := '0';
+				v_SUM_o := A_i or B_i;
+			when alu_eor =>
+				v_V_o := '0';
+				v_SUM_o := A_i xor B_i;
 			when others => -- AND
 				-- AND is default
-				v_SUM_o := B_i and A_i;
-				v_C_o := C_i;
-				v_H_o := '0';
-				v_N_o := v_SUM_o(7);
 				v_V_o := '0';
-				v_Z_o := not or_reduce(v_SUM_o);
+				v_SUM_o := B_i and A_i;
 		end case;
+		v_N_o := v_SUM_o(7);
+		v_Z_o := not or_reduce(v_SUM_o);
 
 
 		if rising_edge(CLK_i) then

@@ -323,6 +323,8 @@ begin
 
       OP_i     => i_ALU_op,
       C_i      => i_CCR_Q(CCIX_C),
+      H_i      => i_CCR_Q(CCIX_H),
+      V_i      => i_CCR_Q(CCIX_V),
       A_i      => ib_DB,
       B_i      => ib_ABLI,
 

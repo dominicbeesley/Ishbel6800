@@ -7,10 +7,16 @@ handle_swi:	rti
 handle_nmi:	rti
 
 
+const_AA:	.byte	0xAA
+const_55:	.byte	0x55
+const_23:	.byte	0x23
+const_01:	.byte	0x01
+const_FF:	.byte	0xFF
+
 handle_res:	ldx	#0x100
 		lds	#0x1234
-		ldx	0xF004
-		lds	0xF006
+		ldx	handle_res + 1
+		lds	handle_res + 3
 
 		stx 	0x1000
 		sts 	0x1002
@@ -55,6 +61,18 @@ handle_res:	ldx	#0x100
 		ldaa	#0x23
 		swi
 		ldab	#0x85
+		swi
+		
+		eora 	#0x55
+		swi
+
+		oraa 	#0x01
+		swi
+
+		anda	const_23
+		swi
+
+		eora	const_FF
 		swi
 
 		staa	0x80
