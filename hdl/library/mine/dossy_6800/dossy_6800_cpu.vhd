@@ -90,6 +90,7 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_mux_ABH_SPH		: std_logic;
 	signal	i_mux_ABH_IXH		: std_logic;
 	signal	i_mux_ABH_FF		: std_logic;
+   signal   i_mux_ABH_0       : std_logic;
 
 	-- register file register values
 	signal	i_INCL_Q				: std_logic_vector(7 downto 0);
@@ -285,7 +286,7 @@ begin
 
 	e_bus_mux_ABH:entity dossy_6800.dossy_6800_mux8
 	generic map (
-		WIDTH => 6
+		WIDTH => 7
 	)
 	port map (
 		SEL_i		=> (
@@ -294,7 +295,8 @@ begin
 			2 => i_mux_ABH_PCH,
 			3 => i_mux_ABH_SPH,
 			4 => i_mux_ABH_IXH,
-			5 => i_mux_ABH_FF
+			5 => i_mux_ABH_FF,
+         6 => i_mux_ABH_0
 		),
 		D_i		=> (
 			0 => i_T_Q,
@@ -302,7 +304,8 @@ begin
 			2 => i_PCH_Q,
 			3 => i_SPH_Q,
 			4 => i_IXH_Q,
-			5 => x"FF"
+			5 => x"FF",
+         6 => x"00"
 		),
 		D_o		=> ib_ABH
 	);
@@ -654,6 +657,7 @@ begin
 		mux_ABH_SPH_o	=> i_mux_ABH_SPH,
 		mux_ABH_IXH_o	=> i_mux_ABH_IXH,
 		mux_ABH_FF_o	=> i_mux_ABH_FF,
+      mux_ABH_0_o    => i_mux_ABH_0,
 
 		PCL_ld_INCL_o	=> i_PCL_ld_INCL,
 		SPL_ld_ABL_o	=> i_SPL_ld_ABL,

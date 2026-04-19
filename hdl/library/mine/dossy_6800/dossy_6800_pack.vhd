@@ -57,16 +57,7 @@ package dossy_6800 is
 		NOP_T1_D00,
 		TSL0_D01,
 
-		-- load X/Y register
-		LDx_T1_D00,
-		LDx_D01,
-		LDx_TSL0_D02,
-
-		-- store X/Y register
-		STx_T1_D00,
-		STx_D01,
-		STx_D02,
-
+		
 		-- TSX
 		TXS_T1_GP50,
 		TXS_GP51,
@@ -109,10 +100,29 @@ package dossy_6800 is
 		T1_EXT0,
 		EXT1,
 
+		-- DIRECT addressing
+		T1_DIR,
+
 		-- GROUP I
+		-- load X/Y register
+		LDx_T1_D00,
+		LDx_D01,
+		LDx_TSL0_D02,
+
+		-- store X/Y register
+		STx_T1_D00,
+		STx_D01,
+		STx_D02,
+		
+		-- store accumulator (A or B)
+		GI_STA_T1_D00,
+		GI_STA_TSL0_D01,
+
+		-- logical op
 		GI_T1_D00,
 		GI_TSL0_D01,
 
+		-- MISC / BAD
 		-- DIE
 		DIEBAD,
 		WAIT_INTER

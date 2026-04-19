@@ -268,6 +268,7 @@ port
 	mux_ABH_SPH_o	: out	std_logic;
 	mux_ABH_IXH_o	: out	std_logic;
 	mux_ABH_FF_o	: out	std_logic;
+	mux_ABH_0_o		: out	std_logic;
 
 	PCL_ld_INCL_o	: out	std_logic;
 	SPL_ld_ABL_o	: out	std_logic;
@@ -326,9 +327,13 @@ begin
 		end function;
 
 		impure function DECODE return t_cpu_state is
+		variable firstdecode : boolean;	-- A bodge to differentiate between first pass include addressing mode
 		begin
-			if PMATCH(IR_DBI_i,  "1-11----") and (state_i = TSL0 or state_i = TSL0_D02 or state_i = TSL0_D01 or state_i = LDX_TSL0_D02) then
+			firstdecode := (state_i = TSL0 or state_i = TSL0_D02 or state_i = TSL0_D01 or state_i = LDX_TSL0_D02);
+			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
 				return T1_EXT0;
+			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
+				return T1_DIR;
 			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
 				return SEx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "00000001") then
@@ -345,6 +350,8 @@ begin
 				return LDx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1---1111") then
 				return STx_T1_D00;
+			elsif PMATCH(IR_DBI_i, "1---0111") then
+				return GI_STA_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1-------") then
 				return GI_T1_D00;
 			else
@@ -387,6 +394,7 @@ begin
 		mux_ABH_SPH_o		<= '0';
 		mux_ABH_IXH_o		<= '0';
 		mux_ABH_FF_o		<= '0';
+		mux_ABH_0_o			<= '0';
 
 		PCL_ld_INCL_o		<= '0';
 		SPL_ld_ABL_o		<= '0';

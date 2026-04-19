@@ -45,6 +45,7 @@ PCH		{	mux_ABH_PCH_o		<= '1';	}
 SPH		{	mux_ABH_SPH_o		<= '1';	}
 IXH		{	mux_ABH_IXH_o		<= '1';	}
 FF			{	mux_ABH_FF_o		<= '1';	}
+0			{	mux_ABH_0_o			<= '1';	}
 
 [MUX AB!ABL,ABH]
 INC		{	mux_ABL_INCL_o		<= '1'; mux_ABH_INCH_o		<= '1';  }
@@ -233,6 +234,32 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	INC->AB,PC
 	NEXT=DECODE
 
+[GI_STA_T1_D00]
+	INC->AB
+	{if IR_i(6) = '1' then}
+		ACCB->DB
+	{else}
+		ACCA->DB
+	{end if;}
+
+	FF->ABLI
+
+	WRITE
+	NEXT=GI_STA_TSL0_D01
+
+[GI_STA_TSL0_D01]
+
+	PC->AB->INC
+
+	ALUZ->CCR
+	ALUN->CCR
+	CLV->CCR
+	FF->ABLI
+
+	NEXT=TSL0
+
+
+
 [NOP_T1_D00]
 	PC->AB->INC
 	NEXT=TSL0_D01
@@ -374,6 +401,8 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	{end if;}
 
 	ANDALUZ->CCR
+	ALUN->CCR
+	CLV->CCR
 	FF->ABLI
 
 	NEXT=TSL0
@@ -474,6 +503,17 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 [EXT1]
 	T->ABH->INCH
 	DBI->DB->OBL,INCL
+	INC->PC
+	{if IR_i(2 downto 0) = "111" then}
+		{-- its a write next}
+		nVMA
+		HOLD
+	{end if;}
+	NEXT=DECODE
+
+[T1_DIR]
+	DBI->DB->OBL,INCL
+	0->ABH->INCH
 	INC->PC
 	{if IR_i(2 downto 0) = "111" then}
 		{-- its a write next}

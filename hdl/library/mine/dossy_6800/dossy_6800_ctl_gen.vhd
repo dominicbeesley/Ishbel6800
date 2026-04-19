@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-18T16:40:40Z
+-- GENERATED : 2026-04-18T19:56:44Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -73,6 +73,7 @@ port
 	mux_ABH_SPH_o	: out	std_logic;
 	mux_ABH_IXH_o	: out	std_logic;
 	mux_ABH_FF_o	: out	std_logic;
+	mux_ABH_0_o		: out	std_logic;
 
 	PCL_ld_INCL_o	: out	std_logic;
 	SPL_ld_ABL_o	: out	std_logic;
@@ -131,9 +132,13 @@ begin
 		end function;
 
 		impure function DECODE return t_cpu_state is
+		variable firstdecode : boolean;	-- A bodge to differentiate between first pass include addressing mode
 		begin
-			if PMATCH(IR_DBI_i,  "1-11----") and (state_i = TSL0 or state_i = TSL0_D02 or state_i = TSL0_D01 or state_i = LDX_TSL0_D02) then
+			firstdecode := (state_i = TSL0 or state_i = TSL0_D02 or state_i = TSL0_D01 or state_i = LDX_TSL0_D02);
+			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
 				return T1_EXT0;
+			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
+				return T1_DIR;
 			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
 				return SEx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "00000001") then
@@ -150,6 +155,8 @@ begin
 				return LDx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1---1111") then
 				return STx_T1_D00;
+			elsif PMATCH(IR_DBI_i, "1---0111") then
+				return GI_STA_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1-------") then
 				return GI_T1_D00;
 			else
@@ -192,6 +199,7 @@ begin
 		mux_ABH_SPH_o		<= '0';
 		mux_ABH_IXH_o		<= '0';
 		mux_ABH_FF_o		<= '0';
+		mux_ABH_0_o			<= '0';
 
 		PCL_ld_INCL_o		<= '0';
 		SPL_ld_ABL_o		<= '0';
@@ -250,6 +258,26 @@ begin
                INC_act_o <= hold;
             end if;
             next_state_o <= DECODE;
+
+         when GI_STA_T1_D00 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            if IR_i(6) = '1' then
+               mux_DB_ACCB_o <= '1';
+            else
+               mux_DB_ACCA_o <= '1';
+            end if;
+            mux_ABLI_FF_o <= '1';
+            RnW_o <= '0';
+            next_state_o <= GI_STA_TSL0_D01;
+
+         when GI_STA_TSL0_D01 =>
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            CCR_ld_ALU_Z_o <= '1';
+            CCR_ld_ALU_N_o <= '1';
+            CCR_ld_CLV_o <= '1';
+            mux_ABLI_FF_o <= '1';
+            next_state_o <= TSL0;
 
          when GI_T1_D00 =>
             if IR_i(5 downto 4) = "00" then
@@ -478,6 +506,8 @@ begin
                SPL_ld_DB_o <= '1';
             end if;
             CCR_ld_AND_ALU_Z_o<= '1';
+            CCR_ld_ALU_N_o <= '1';
+            CCR_ld_CLV_o <= '1';
             mux_ABLI_FF_o <= '1';
             next_state_o <= TSL0;
 
@@ -552,6 +582,20 @@ begin
             RnW_o <= '0';
             INC_act_o <= dec;
             next_state_o <= SWAI_GP51;
+
+         when T1_DIR =>
+            mux_DB_DBI_o <= '1';
+            mux_OBL_DB_o <= '1';
+            INC_L_src_o <= db;
+            mux_ABH_0_o <= '1';
+            INC_H_src_o <= abh;
+            PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
+            if IR_i(2 downto 0) = "111" then
+               -- its a write next
+               VMA_o <= '0';
+               INC_act_o <= hold;
+            end if;
+            next_state_o <= DECODE;
 
          when T1_EXT0 =>
             mux_DB_DBI_o <= '1';
