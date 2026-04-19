@@ -103,6 +103,53 @@ handle_res:	ldx	#0x100
 		inx
 		swi
 
+		lda	#0xFF
+		tap
+		swi
+		lda	#0x00
+		tap
+		swi
+
+		tpa
+		swi
+
+		lda	#0x74
+		adca	#0x7F
+		tpa
+		swi
+
+		ldx	#0xF8
+		ldaa	#23
+		staa	0, X
+		inx
+		ldaa	#56
+		staa	7, X
+		dex
+
+		lda	0xF8
+		lda	0x100
+
+		lda	0,X
+		inx
+		inx
+		inx
+		inx
+		inx
+		inx
+		inx
+		inx
+		lda	0,X
+
+		sts	0
+		ins
+		sts	0
+		lds	#1
+		sts	0
+		des
+
+		lds	#0x1FF
+		swi
+
 here:		
 		swi
 

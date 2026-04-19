@@ -55,6 +55,8 @@ package dossy_6800 is
 		TSL0,
 
 		NOP_T1_D00,
+		TAP_T1_D00,
+		TPA_T1_D00,
 		TSL0_D01,
 
 		
@@ -72,11 +74,13 @@ package dossy_6800 is
 		SEx_T1_D00,
 
 		-- INX/DEX
-		INx_T1_D00,
-		INx_D01,
-		INx_D02,
-		INx_TSL0,
+		INXDEX_T1_D00,
+		INXDEX_D01,
+		INXDEX_D02,
+		INXDEX_TSL0,
 
+		-- INS/DES
+		INSDES_T1_GP50,
 
 		-- SWI / WAI
 		SWAI_T1_GP50,
@@ -106,7 +110,12 @@ package dossy_6800 is
 		EXT1,
 
 		-- DIRECT addressing
-		T1_DIR,
+		T1_DIR0,
+
+		-- INDEX addressing
+		T1_IDX0,
+		DX1,
+		DX2,
 
 		-- GROUP I
 		-- load X/Y register

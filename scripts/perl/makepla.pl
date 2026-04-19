@@ -232,6 +232,7 @@ port
 
 	IR_DBI_i			: in  std_logic_vector(7 downto 0); -- used for decode * early
 	IR_i				: in	std_logic_vector(7 downto 0); -- used for executing instruction
+	ALU_CC_i			: in  std_logic_vector(7 downto 0); -- registered ALU output flags
 
 	next_state_o	: out t_cpu_state;
 
@@ -334,25 +335,39 @@ begin
 				state_i = TSL0_D02 or 
 				state_i = TSL0_D01 or 
 				state_i = LDX_TSL0_D02 or
-				state_i = INx_TSL0);
+				state_i = INXDEX_TSL0 or
+				state_i = GI_TSL0_D01);
 			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
 				return T1_EXT0;
 			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
-				return T1_DIR;
-			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
-				return SEx_T1_D00;
-			elsif PMATCH(IR_DBI_i, "0000100-") then
-				return INx_T1_D00;
+				return T1_DIR0;
+			elsif PMATCH(IR_DBI_i,  "1-10----") and firstdecode then
+				return T1_IDX0;
+
 			elsif PMATCH(IR_DBI_i, "00000001") then
 				return NOP_T1_D00;
-			elsif PMATCH(IR_DBI_i, "00110101") then
-				return TXS_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00000110") then
+				return TAP_T1_D00;
+			elsif PMATCH(IR_DBI_i, "00000111") then
+				return TPA_T1_D00;
+			elsif PMATCH(IR_DBI_i, "0000100-") then
+				return INXDEX_T1_D00;
+			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
+				return SEx_T1_D00;
+
 			elsif PMATCH(IR_DBI_i, "00110000") then
 				return TSX_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00110001") or PMATCH(IR_DBI_i, "00110100") then
+				return INSDES_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00110000") then
+				return TSX_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00110101") then
+				return TXS_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00111111") then
 				return SWAI_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00111011") then
 				return RTI_T1_GP50;
+
 			elsif PMATCH(IR_DBI_i, "1---1110") then
 				return LDx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1---1111") then

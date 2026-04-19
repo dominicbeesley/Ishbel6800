@@ -621,6 +621,7 @@ begin
 		state_i			=> r_state,
       IR_DBI_i       => i_IR_Q_DBI,
 		IR_i				=> i_IR_Q,
+      ALU_CC_i       => i_ALU_CCR_Q,
 		
 		next_state_o	=> i_next_state,
 

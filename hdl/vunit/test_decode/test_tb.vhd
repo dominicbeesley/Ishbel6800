@@ -128,16 +128,16 @@ begin
       nOE         => i_per_nRD
    );
 
-   i_RAM0_nCS <= '0' when i_cpu_A(15 downto 8) = x"00" and i_cpu_VMA = '1' else '1';
+   i_RAM0_nCS <= '0' when i_cpu_A(15 downto 10) = "000000" and i_cpu_VMA = '1' else '1';
    i_RAM0_nWE <= '0' when i_cpu_RnW = '0' and i_cpu_clk_phi2 = '1' else '1';
 
 
    e_ram:entity work.RAM_tb 
    generic map (
-      size => 256
+      size => 1024
    )
    port map (
-      A           => i_cpu_A(7 downto 0),
+      A           => i_cpu_A(9 downto 0),
       D           => i_cpu_D,
       nCS         => i_RAM0_nCS,
       nOE         => i_per_nRD,

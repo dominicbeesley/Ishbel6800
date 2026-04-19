@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-19T16:39:35Z
+-- GENERATED : 2026-04-19T18:35:36Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -37,6 +37,7 @@ port
 
 	IR_DBI_i			: in  std_logic_vector(7 downto 0); -- used for decode * early
 	IR_i				: in	std_logic_vector(7 downto 0); -- used for executing instruction
+	ALU_CC_i			: in  std_logic_vector(7 downto 0); -- registered ALU output flags
 
 	next_state_o	: out t_cpu_state;
 
@@ -139,25 +140,39 @@ begin
 				state_i = TSL0_D02 or 
 				state_i = TSL0_D01 or 
 				state_i = LDX_TSL0_D02 or
-				state_i = INx_TSL0);
+				state_i = INXDEX_TSL0 or
+				state_i = GI_TSL0_D01);
 			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
 				return T1_EXT0;
 			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
-				return T1_DIR;
-			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
-				return SEx_T1_D00;
-			elsif PMATCH(IR_DBI_i, "0000100-") then
-				return INx_T1_D00;
+				return T1_DIR0;
+			elsif PMATCH(IR_DBI_i,  "1-10----") and firstdecode then
+				return T1_IDX0;
+
 			elsif PMATCH(IR_DBI_i, "00000001") then
 				return NOP_T1_D00;
-			elsif PMATCH(IR_DBI_i, "00110101") then
-				return TXS_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00000110") then
+				return TAP_T1_D00;
+			elsif PMATCH(IR_DBI_i, "00000111") then
+				return TPA_T1_D00;
+			elsif PMATCH(IR_DBI_i, "0000100-") then
+				return INXDEX_T1_D00;
+			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
+				return SEx_T1_D00;
+
 			elsif PMATCH(IR_DBI_i, "00110000") then
 				return TSX_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00110001") or PMATCH(IR_DBI_i, "00110100") then
+				return INSDES_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00110000") then
+				return TSX_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00110101") then
+				return TXS_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00111111") then
 				return SWAI_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00111011") then
 				return RTI_T1_GP50;
+
 			elsif PMATCH(IR_DBI_i, "1---1110") then
 				return LDx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1---1111") then
@@ -252,6 +267,28 @@ begin
 		VMA_o					<= '1';
 
 		case state_i is 
+         when DX1 =>
+            mux_DB_SUM_o <= '1';
+            mux_OBL_DB_o <= '1';
+            INC_L_src_o <= db;
+            mux_ABH_INCH_o <= '1';
+            if ALU_CC_i(CCIX_C) = '1' then
+               INC_act_o <= inc_page;
+            else
+               INC_act_o <= hold;
+            end if;
+            VMA_o <= '0';
+            next_state_o <= DX2;
+
+         when DX2 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            if IR_i(2 downto 0) = "111" then
+               -- its a write next
+               VMA_o <= '0';
+               INC_act_o <= hold;
+            end if;
+            next_state_o <= DECODE;
+
          when EXT1 =>
             mux_ABH_T_o <= '1';
             INC_H_src_o <= abh;
@@ -342,22 +379,31 @@ begin
             INC_L_src_o <= abl; INC_H_src_o <= abh;
             next_state_o <= TSL0;
 
-         when INx_D01 =>
+         when INSDES_T1_GP50 =>
+            mux_ABL_SPL_o <= '1'; mux_ABH_SPH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            if IR_i(0) = '0' then
+               INC_act_o <= dec;
+            end if;
+            VMA_o <= '0';
+            next_state_o <= TXS_GP51;
+
+         when INXDEX_D01 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
             IXL_ld_ABL_o <= '1'; IXH_ld_ABH_o <= '1';
             mux_ABLI_IXL_o <= '1';
             mux_DB_IXH_o <= '1';
             VMA_o <= '0';
-            next_state_o <= INx_D02;
+            next_state_o <= INXDEX_D02;
 
-         when INx_D02 =>
+         when INXDEX_D02 =>
             mux_ABLI_IXL_o <= '1';
             mux_DB_IXH_o <= '1';
             mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
             INC_L_src_o <= abl; INC_H_src_o <= abh;
-            next_state_o <= INx_TSL0;
+            next_state_o <= INXDEX_TSL0;
 
-         when INx_T1_D00 =>
+         when INXDEX_T1_D00 =>
             mux_ABH_IXH_o <= '1';
             INC_H_src_o <= abh;
             mux_ABLI_IXL_o <= '1';
@@ -367,10 +413,11 @@ begin
                INC_act_o <= dec;
             end if;
             VMA_o <= '0';
-            next_state_o <= INx_D01;
+            next_state_o <= INXDEX_D01;
 
-         when INx_TSL0 =>
+         when INXDEX_TSL0 =>
             CCR_ld_ALU_Z_o <= '1';
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
             INC_L_src_o <= abl; INC_H_src_o <= abh;
             PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
             IR_ld_D_o <= '1';
@@ -622,7 +669,7 @@ begin
             INC_act_o <= dec;
             next_state_o <= SWAI_GP51;
 
-         when T1_DIR =>
+         when T1_DIR0 =>
             mux_DB_DBI_o <= '1';
             mux_OBL_DB_o <= '1';
             INC_L_src_o <= db;
@@ -641,6 +688,33 @@ begin
             T_ld_DB_o <= '1';
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
             next_state_o <= EXT1;
+
+         when T1_IDX0 =>
+            PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
+            INC_act_o <= hold;
+            mux_DB_DBI_o <= '1';
+            T_ld_DB_o <= '1';
+            mux_ABLI_IXL_o <= '1';
+            mux_ABL_ABLI_o <= '1';
+            mux_ABH_IXH_o <= '1';
+            INC_H_src_o <= abh;
+            ALU_op_o <= alu_add;
+            VMA_o <= '0';
+            next_state_o <= DX1;
+
+         when TAP_T1_D00 =>
+            mux_DB_ACCA_o <= '1';
+            CCR_ld_DB_o <= '1';
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            next_state_o <= TSL0_D01;
+
+         when TPA_T1_D00 =>
+            mux_DB_CCR_o <= '1';
+            ACCA_ld_DB_o <= '1';
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            next_state_o <= TSL0_D01;
 
          when TSL0|TSL0_D02|TSL0_D01 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';

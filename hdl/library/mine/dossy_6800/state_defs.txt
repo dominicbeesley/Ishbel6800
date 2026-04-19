@@ -133,6 +133,7 @@ nVMA		{ VMA_o <= '0'; }
 WRITE		{ RnW_o <= '0'; }
 DEC		{ INC_act_o <= dec; }
 HOLD		{ INC_act_o <= hold; }
+HINC		{ INC_act_o <= inc_page; }
 
 ALU_ADC	{ ALU_op_o <= alu_adc; }
 ALU_ADD	{ ALU_op_o <= alu_add; }
@@ -258,7 +259,17 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 
 	NEXT=TSL0
 
+[TAP_T1_D00]
+	# simplifier cf Fig.2J
+	ACCA->DB->CCR	
+	PC->AB->INC
+	NEXT=TSL0_D01
 
+[TPA_T1_D00]
+	# simplifier cf Fig.2J
+	CCR->DB->ACCA
+	PC->AB->INC
+	NEXT=TSL0_D01
 
 [NOP_T1_D00]
 	PC->AB->INC
@@ -282,35 +293,42 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	PC->AB->INC
 	NEXT=TSL0_D01
 
-[INx_T1_D00]
+[INXDEX_T1_D00]
 	IXH->ABH->INCH
 	IXL->ABLI->ABL->INCL
 	{if IR_i(0) = '1' then}
 		DEC
 	{end if;}
 	nVMA
-	NEXT=INx_D01
+	NEXT=INXDEX_D01
 
-[INx_D01]
+[INXDEX_D01]
 	INC->AB->IX
 	IXL->ABLI
 	IXH->DB
 	nVMA
-	NEXT=INx_D02
+	NEXT=INXDEX_D02
 
-[INx_D02]
+[INXDEX_D02]
 	IXL->ABLI
 	IXH->DB
 	PC->AB->INC
 	#this will and L/H for Z flag in next op
-	NEXT=INx_TSL0
+	NEXT=INXDEX_TSL0
 
-[INx_TSL0]
+[INXDEX_TSL0]
 	ALUZ->CCR
-	AB->INC->PC
+	INC->AB->INC->PC
 	D->IR
 	NEXT=DECODE
 	
+[INSDES_T1_GP50]
+	SP->AB->INC
+	{if IR_i(0) = '0' then}
+		DEC
+	{end if;}
+	nVMA
+	NEXT=TXS_GP51
 
 [TXS_T1_GP50] 
 	IXL->ABLI->ABL
@@ -539,10 +557,40 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	{end if;}
 	NEXT=DECODE
 
-[T1_DIR]
+[T1_DIR0]
 	DBI->DB->OBL,INCL
 	0->ABH->INCH
 	INC->PC
+	{if IR_i(2 downto 0) = "111" then}
+		{-- its a write next}
+		nVMA
+		HOLD
+	{end if;}
+	NEXT=DECODE
+
+[T1_IDX0]
+	INC->PC
+	HOLD
+	DBI->DB->T
+	IXL->ABLI->ABL
+	IXH->ABH->INCH
+	ALU_ADD
+	nVMA
+	NEXT=DX1
+
+[DX1]
+	SUM->DB->OBL,INCL
+	INCH->ABH
+	{ if ALU_CC_i(CCIX_C) = '1' then }
+		HINC
+	{ else }
+		HOLD
+	{ end if; }
+	nVMA
+	NEXT=DX2
+
+[DX2]
+	INC->AB
 	{if IR_i(2 downto 0) = "111" then}
 		{-- its a write next}
 		nVMA
