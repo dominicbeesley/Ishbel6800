@@ -123,7 +123,6 @@ begin
 			B_I : in std_logic_vector(7 downto 0);
 			
 			C_o : out std_logic;
-			H_o : out std_logic;
 			V_o : out std_logic;
 			R_o : out std_logic_vector(7 downto 0)
 		) is
@@ -136,9 +135,8 @@ begin
 			sbc_nyb(v_H, A_i(7 downto 4), B_i(7 downto 4), v_C, v_Rh);
 			
 			C_o := v_C;
-			H_o := v_H;
 			R_o := v_Rh & v_Rl;
-			v_o := (A_i(7) xor v_Rh(3)) and (B_i(7) xor v_Rh(3));
+			v_o := (not(A_i(7)) xor v_Rh(3)) and (B_i(7) xor v_Rh(3));
 
 		end procedure;
 
@@ -162,7 +160,7 @@ begin
 			when alu_add | alu_adc =>
 				adc_8(v_C_i_masked, A_i, B_i, v_C_o, v_H_o, v_V_o, v_SUM_o);
 			when alu_sub | alu_sbc =>
-				sbc_8(v_C_i_masked, A_i, B_i, v_C_o, v_H_o, v_V_o, v_SUM_o);
+				sbc_8(v_C_i_masked, A_i, B_i, v_C_o, v_V_o, v_SUM_o); -- ignore H?
 			when alu_or =>
 				v_V_o := '0';
 				v_SUM_o := A_i or B_i;
