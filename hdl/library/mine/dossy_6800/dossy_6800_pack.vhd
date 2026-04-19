@@ -82,6 +82,11 @@ package dossy_6800 is
 		-- INS/DES
 		INSDES_T1_GP50,
 
+		-- PULa
+		PULA_T1_GP50,
+		PULA_GP51,
+		PULA_GP52,
+
 		-- SWI / WAI
 		SWAI_T1_GP50,
 		SWAI_GP51,

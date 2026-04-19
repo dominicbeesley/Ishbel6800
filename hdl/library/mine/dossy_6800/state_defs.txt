@@ -330,6 +330,25 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	nVMA
 	NEXT=TXS_GP51
 
+[PULA_T1_GP50]
+	SP->AB->INC
+	nVMA
+	NEXT=PULA_GP51
+
+[PULA_GP51]
+	INC->AB->SP
+	NEXT=PULA_GP52
+
+[PULA_GP52]
+	PC->AB->INC
+	DBI->DB
+	{ if IR_i(0) = '1' then }
+		DB->ACCB
+	{ else }
+		DB->ACCA
+	{ end if; }
+	NEXT=TSL0
+
 [TXS_T1_GP50] 
 	IXL->ABLI->ABL
 	IXH->ABH

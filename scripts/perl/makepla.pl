@@ -359,6 +359,8 @@ begin
 				return TSX_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00110001") or PMATCH(IR_DBI_i, "00110100") then
 				return INSDES_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "0011001-") then
+				return PULA_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00110000") then
 				return TSX_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00110101") then
