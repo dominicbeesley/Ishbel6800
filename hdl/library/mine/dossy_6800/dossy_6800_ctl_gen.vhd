@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-18T19:56:44Z
+-- GENERATED : 2026-04-19T16:39:35Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -134,13 +134,20 @@ begin
 		impure function DECODE return t_cpu_state is
 		variable firstdecode : boolean;	-- A bodge to differentiate between first pass include addressing mode
 		begin
-			firstdecode := (state_i = TSL0 or state_i = TSL0_D02 or state_i = TSL0_D01 or state_i = LDX_TSL0_D02);
+			firstdecode := (
+				state_i = TSL0 or 
+				state_i = TSL0_D02 or 
+				state_i = TSL0_D01 or 
+				state_i = LDX_TSL0_D02 or
+				state_i = INx_TSL0);
 			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
 				return T1_EXT0;
 			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
 				return T1_DIR;
 			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
 				return SEx_T1_D00;
+			elsif PMATCH(IR_DBI_i, "0000100-") then
+				return INx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "00000001") then
 				return NOP_T1_D00;
 			elsif PMATCH(IR_DBI_i, "00110101") then
@@ -335,6 +342,40 @@ begin
             INC_L_src_o <= abl; INC_H_src_o <= abh;
             next_state_o <= TSL0;
 
+         when INx_D01 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            IXL_ld_ABL_o <= '1'; IXH_ld_ABH_o <= '1';
+            mux_ABLI_IXL_o <= '1';
+            mux_DB_IXH_o <= '1';
+            VMA_o <= '0';
+            next_state_o <= INx_D02;
+
+         when INx_D02 =>
+            mux_ABLI_IXL_o <= '1';
+            mux_DB_IXH_o <= '1';
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            next_state_o <= INx_TSL0;
+
+         when INx_T1_D00 =>
+            mux_ABH_IXH_o <= '1';
+            INC_H_src_o <= abh;
+            mux_ABLI_IXL_o <= '1';
+            mux_ABL_ABLI_o <= '1';
+            INC_L_src_o <= abl;
+            if IR_i(0) = '1' then
+               INC_act_o <= dec;
+            end if;
+            VMA_o <= '0';
+            next_state_o <= INx_D01;
+
+         when INx_TSL0 =>
+            CCR_ld_ALU_Z_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
+            IR_ld_D_o <= '1';
+            next_state_o <= DECODE;
+
          when LDX_D01 =>
             if IR_i(5 downto 4) = "00" then
                -- was immediate, keep pc
@@ -506,8 +547,6 @@ begin
                SPL_ld_DB_o <= '1';
             end if;
             CCR_ld_AND_ALU_Z_o<= '1';
-            CCR_ld_ALU_N_o <= '1';
-            CCR_ld_CLV_o <= '1';
             mux_ABLI_FF_o <= '1';
             next_state_o <= TSL0;
 

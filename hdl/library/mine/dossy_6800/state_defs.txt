@@ -282,6 +282,36 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	PC->AB->INC
 	NEXT=TSL0_D01
 
+[INx_T1_D00]
+	IXH->ABH->INCH
+	IXL->ABLI->ABL->INCL
+	{if IR_i(0) = '1' then}
+		DEC
+	{end if;}
+	nVMA
+	NEXT=INx_D01
+
+[INx_D01]
+	INC->AB->IX
+	IXL->ABLI
+	IXH->DB
+	nVMA
+	NEXT=INx_D02
+
+[INx_D02]
+	IXL->ABLI
+	IXH->DB
+	PC->AB->INC
+	#this will and L/H for Z flag in next op
+	NEXT=INx_TSL0
+
+[INx_TSL0]
+	ALUZ->CCR
+	AB->INC->PC
+	D->IR
+	NEXT=DECODE
+	
+
 [TXS_T1_GP50] 
 	IXL->ABLI->ABL
 	IXH->ABH
@@ -401,8 +431,6 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	{end if;}
 
 	ANDALUZ->CCR
-	ALUN->CCR
-	CLV->CCR
 	FF->ABLI
 
 	NEXT=TSL0

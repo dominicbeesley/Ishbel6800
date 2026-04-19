@@ -95,7 +95,13 @@ handle_res:	ldx	#0x100
 		stab	0x81
 		swi
 
-		ldx	#0x6789
+		ldx	#0x8000
+		dex
+		swi 
+
+		ldx 	#0xFFFF
+		inx
+		swi
 
 here:		
 		swi

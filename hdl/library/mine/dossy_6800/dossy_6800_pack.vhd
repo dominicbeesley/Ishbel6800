@@ -71,6 +71,12 @@ package dossy_6800 is
 		-- CLx/SEx
 		SEx_T1_D00,
 
+		-- INX/DEX
+		INx_T1_D00,
+		INx_D01,
+		INx_D02,
+		INx_TSL0,
+
 
 		-- SWI / WAI
 		SWAI_T1_GP50,
@@ -93,7 +99,6 @@ package dossy_6800 is
 		RTI_R57,
 		
 
-		-- generic fetch and set Z?
 		TSL0_D02,
 
 		-- EXTENDED addressing

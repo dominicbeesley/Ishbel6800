@@ -329,13 +329,20 @@ begin
 		impure function DECODE return t_cpu_state is
 		variable firstdecode : boolean;	-- A bodge to differentiate between first pass include addressing mode
 		begin
-			firstdecode := (state_i = TSL0 or state_i = TSL0_D02 or state_i = TSL0_D01 or state_i = LDX_TSL0_D02);
+			firstdecode := (
+				state_i = TSL0 or 
+				state_i = TSL0_D02 or 
+				state_i = TSL0_D01 or 
+				state_i = LDX_TSL0_D02 or
+				state_i = INx_TSL0);
 			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
 				return T1_EXT0;
 			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
 				return T1_DIR;
 			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
 				return SEx_T1_D00;
+			elsif PMATCH(IR_DBI_i, "0000100-") then
+				return INx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "00000001") then
 				return NOP_T1_D00;
 			elsif PMATCH(IR_DBI_i, "00110101") then
