@@ -377,9 +377,6 @@ begin
 			elsif PMATCH(IR_DBI_i, "00111111") then
 				return SWAI_T1_GP50;
 
-			elsif PMATCH(IR_DBI_i, "011-1110") then
-				return TSL0;
-
 			elsif PMATCH(IR_DBI_i, "1---1110") then
 				return LDx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1---1111") then
@@ -388,8 +385,9 @@ begin
 				return GI_STA_T1_D00;
 			elsif PMATCH(IR_DBI_i, "100011-1") then
 				return BSR_T1_IDX0;
-			elsif PMATCH(IR_DBI_i, "101-11-1") then
-				return JBSR_T1_GP50;
+			-- JSR is special case at end of EXT/IDX modes
+			--elsif PMATCH(IR_DBI_i, "101-11-1") then
+			--	return JBSR_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "1-------") then
 				return GI_T1_D00;
 			else

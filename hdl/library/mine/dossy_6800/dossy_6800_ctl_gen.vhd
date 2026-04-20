@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-20T17:03:56Z
+-- GENERATED : 2026-04-20T18:07:31Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -182,9 +182,6 @@ begin
 			elsif PMATCH(IR_DBI_i, "00111111") then
 				return SWAI_T1_GP50;
 
-			elsif PMATCH(IR_DBI_i, "011-1110") then
-				return TSL0;
-
 			elsif PMATCH(IR_DBI_i, "1---1110") then
 				return LDx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1---1111") then
@@ -193,8 +190,9 @@ begin
 				return GI_STA_T1_D00;
 			elsif PMATCH(IR_DBI_i, "100011-1") then
 				return BSR_T1_IDX0;
-			elsif PMATCH(IR_DBI_i, "101-11-1") then
-				return JBSR_T1_GP50;
+			-- JSR is special case at end of EXT/IDX modes
+			--elsif PMATCH(IR_DBI_i, "101-11-1") then
+			--	return JBSR_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "1-------") then
 				return GI_T1_D00;
 			else
@@ -333,7 +331,11 @@ begin
                VMA_o <= '0';
                INC_act_o <= hold;
             end if;
-            next_state_o <= DECODE;
+            if PMATCH(IR_i, "101-11-1") or PMATCH(IR_i, "011-1110") then
+               next_state_o <= TSL0;
+            else
+               next_state_o <= DECODE;
+            end if;
 
          when EXT1 =>
             mux_ABH_T_o <= '1';
@@ -347,7 +349,13 @@ begin
                VMA_o <= '0';
                INC_act_o <= hold;
             end if;
-            next_state_o <= DECODE;
+            if PMATCH(IR_i, "011-1110") then
+               next_state_o <= TSL0;
+            elsif PMATCH(IR_i, "101-1101") then
+               next_state_o <= JBSR_T1_GP50;
+            else
+               next_state_o <= DECODE;
+            end if;
 
          when GI_STA_T1_D00 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
@@ -510,6 +518,15 @@ begin
             end if;
 
          when JBSR_IDX_GP53 =>
+            mux_DB_T_o <= '1';
+            mux_ABLI_IXL_o <= '1';
+            mux_ABL_ABLI_o <= '1';
+            mux_ABH_IXH_o <= '1';
+            INC_H_src_o <= abh;
+            INC_act_o <= hold;
+            VMA_o <= '0';
+            ALU_op_o <= alu_add;
+            next_state_o <= DX1;
 
          when JBSR_T1_GP50 =>
             mux_ABL_SPL_o <= '1'; mux_ABH_SPH_o <= '1';
@@ -848,7 +865,11 @@ begin
             INC_H_src_o <= abh;
             ALU_op_o <= alu_add;
             VMA_o <= '0';
-            next_state_o <= DX1;
+            if PMATCH(IR_i, "101-1101") then
+               next_state_o <= JBSR_T1_GP50;
+            else
+               next_state_o <= DX1;
+            end if;
 
          when TAP_T1_D00 =>
             mux_DB_ACCA_o <= '1';

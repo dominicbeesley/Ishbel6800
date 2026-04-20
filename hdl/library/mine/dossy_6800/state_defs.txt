@@ -339,6 +339,13 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	NEXT=TSL0
 
 [JBSR_IDX_GP53]
+	T->DB
+	IXL->ABLI->ABL
+	IXH->ABH->INCH
+	HOLD
+	nVMA
+	ALU_ADD
+	NEXT=DX1
 
 
 [TAP_T1_D00]
@@ -675,12 +682,20 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	T->ABH->INCH
 	DBI->DB->OBL,INCL
 	INC->PC
-	{if IR_i(2 downto 0) = "111" then}
+	{ if IR_i(2 downto 0) = "111" then }
 		{-- its a write next}
 		nVMA
 		HOLD
-	{end if;}
-	NEXT=DECODE
+	{ end if; }
+	{ if PMATCH(IR_i, "011-1110") then }
+		# JMP
+		NEXT=TSL0
+	{ elsif PMATCH(IR_i, "101-1101") then }
+		# JSR
+		NEXT=JBSR_T1_GP50
+	{ else }
+		NEXT=DECODE
+	{ end if; }
 
 [T1_DIR0]
 	DBI->DB->OBL,INCL
@@ -701,7 +716,12 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	IXH->ABH->INCH
 	ALU_ADD
 	nVMA
-	NEXT=DX1
+	{ if PMATCH(IR_i, "101-1101") then}
+		#JSR
+		NEXT=JBSR_T1_GP50
+	{ else }
+		NEXT=DX1
+	{ end if; }
 
 [DX1]
 	SUM->DB->OBL,INCL
@@ -721,4 +741,10 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 		nVMA
 		HOLD
 	{end if;}
-	NEXT=DECODE
+
+	{ if PMATCH(IR_i, "101-11-1") or PMATCH(IR_i, "011-1110") then }
+		# JMP / JSR
+		NEXT=TSL0
+	{ else }
+		NEXT=DECODE
+	{ end if; }
