@@ -80,7 +80,7 @@ begin
             wait until falling_edge(i_cpu_clk_phi1);
             i_sys_nRES <= '1';
 
-            wait for 100 us;
+            wait for 1000 us;
 
             sim_stop <= true;
 
@@ -128,16 +128,16 @@ begin
       nOE         => i_per_nRD
    );
 
-   i_RAM0_nCS <= '0' when i_cpu_A(15 downto 8) = x"00" and i_cpu_VMA = '1' else '1';
+   i_RAM0_nCS <= '0' when i_cpu_A(15 downto 10) = "000000" and i_cpu_VMA = '1' else '1';
    i_RAM0_nWE <= '0' when i_cpu_RnW = '0' and i_cpu_clk_phi2 = '1' else '1';
 
 
    e_ram:entity work.RAM_tb 
    generic map (
-      size => 256
+      size => 1024
    )
    port map (
-      A           => i_cpu_A(7 downto 0),
+      A           => i_cpu_A(9 downto 0),
       D           => i_cpu_D,
       nCS         => i_RAM0_nCS,
       nOE         => i_per_nRD,
@@ -151,14 +151,23 @@ begin
    p_dumper:process
       type dump_file_type is file of character;
       file dump_file : dump_file_type;
+      variable v_flags : std_logic_vector(7 downto 0);
    begin
       file_open(dump_file, dump_file_name, write_mode);
 
       while not sim_stop  loop
          wait until falling_edge(i_cpu_clk_phi2);
-         if i_cpu_VMA = '1' then
+
+            v_flags := (
+               0 => i_cpu_RnW,
+               1 => i_cpu_VMA,
+               2 => i_cpu_ba,
+               6 => i_sys_nRES,
+               others => '0'
+               );
+
             write(dump_file, character'val(to_integer(unsigned(i_cpu_D))));
-         end if;
+            write(dump_file, character'val(to_integer(unsigned(v_flags))));
       end loop;
       wait;
 
