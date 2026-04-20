@@ -365,10 +365,12 @@ begin
 				return TXS_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "0011011-") then
 				return PSHA_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00111111") then
-				return SWAI_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00111001") then
+				return RTS_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00111011") then
 				return RTI_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00111111") then
+				return SWAI_T1_GP50;
 
 			elsif PMATCH(IR_DBI_i, "1---1110") then
 				return LDx_T1_D00;

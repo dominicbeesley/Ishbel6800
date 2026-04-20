@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-19T19:04:32Z
+-- GENERATED : 2026-04-20T12:05:45Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -170,10 +170,12 @@ begin
 				return TXS_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "0011011-") then
 				return PSHA_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00111111") then
-				return SWAI_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00111001") then
+				return RTS_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00111011") then
 				return RTI_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "00111111") then
+				return SWAI_T1_GP50;
 
 			elsif PMATCH(IR_DBI_i, "1---1110") then
 				return LDx_T1_D00;
@@ -586,6 +588,18 @@ begin
             INC_L_src_o <= abl; INC_H_src_o <= abh;
             VMA_o <= '0';
             next_state_o <= RTI_GP51;
+
+         when RTS_GP51 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            SPL_ld_ABL_o <= '1'; SPH_ld_ABH_o <= '1';
+            next_state_o <= RTI_R57;
+
+         when RTS_T1_GP50 =>
+            mux_ABL_SPL_o <= '1'; mux_ABH_SPH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            VMA_o <= '0';
+            next_state_o <= RTS_GP51;
 
          when SEx_T1_D00 =>
             --TODO: decode this stuff and encode flags from IR direct?

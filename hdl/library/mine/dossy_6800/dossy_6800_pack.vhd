@@ -54,11 +54,15 @@ package dossy_6800 is
 		-- TSL0 fetch
 		TSL0,
 
+		-- NOP
 		NOP_T1_D00,
+
+		-- TAP
 		TAP_T1_D00,
+
+		-- TPA
 		TPA_T1_D00,
 		TSL0_D01,
-
 		
 		-- TSX
 		TXS_T1_GP50,
@@ -70,6 +74,20 @@ package dossy_6800 is
 
 		GP52,
 
+		-- RTS
+		RTS_T1_GP50,
+		RTS_GP51,
+
+		-- RTI
+		RTI_T1_GP50,
+		RTI_GP51, -- SKIPPING THIS FROM Fig.2F seems wrong
+		RTI_GP52,
+		RTI_R53,
+		RTI_R54,
+		RTI_R55,
+		RTI_R56,
+		RTI_R57,
+		
 		-- CLx/SEx
 		SEx_T1_D00,
 
@@ -101,16 +119,6 @@ package dossy_6800 is
 		SWAI_GP56,
 		SWAI_GP57,
 
-		-- SWI / WAI
-		RTI_T1_GP50,
-		RTI_GP51, -- SKIPPING THIS FROM Fig.2F seems wrong
-		RTI_GP52,
-		RTI_R53,
-		RTI_R54,
-		RTI_R55,
-		RTI_R56,
-		RTI_R57,
-		
 
 		TSL0_D02,
 

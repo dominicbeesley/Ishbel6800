@@ -392,6 +392,15 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	PC->AB->INC
 	NEXT=TSL0
 
+[RTS_T1_GP50]
+	SP->AB->INC
+	nVMA
+	NEXT=RTS_GP51
+
+[RTS_GP51]
+	INC->AB->INC,SP
+	NEXT=RTI_R57
+
 [LDx_T1_D00]
 	INC->AB
 	DBI->DB

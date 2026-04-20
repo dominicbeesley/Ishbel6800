@@ -162,8 +162,17 @@ handle_res:	ldx	#0x100
 		swi
 
 
+		lda	#<here
+		psha
+		lda	#>here
+		psha
 
-here:		
+		nop
+		nop
+		rts
+
+here:		nop
+		nop
 		swi
 
 		inca
