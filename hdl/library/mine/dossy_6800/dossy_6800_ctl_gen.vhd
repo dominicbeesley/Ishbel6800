@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-19T18:51:41Z
+-- GENERATED : 2026-04-19T19:04:32Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -166,10 +166,10 @@ begin
 				return INSDES_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "0011001-") then
 				return PULA_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00110000") then
-				return TSX_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00110101") then
 				return TXS_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "0011011-") then
+				return PSHA_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00111111") then
 				return SWAI_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00111011") then
@@ -467,6 +467,24 @@ begin
             mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
             INC_L_src_o <= abl; INC_H_src_o <= abh;
             next_state_o <= TSL0_D01;
+
+         when PSHA_GP51 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            SPL_ld_ABL_o <= '1'; SPH_ld_ABH_o <= '1';
+            VMA_o <= '0';
+            next_state_o <= GP52;
+
+         when PSHA_T1_GP50 =>
+            mux_ABL_SPL_o <= '1'; mux_ABH_SPH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            if IR_i(0) = '1' then
+               mux_DB_ACCB_o <= '1';
+            else
+               mux_DB_ACCA_o <= '1';
+            end if;
+            RnW_o <= '0';
+            INC_act_o <= dec;
+            next_state_o <= PSHA_GP51;
 
          when PULA_GP51 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';

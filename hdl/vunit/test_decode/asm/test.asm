@@ -156,6 +156,13 @@ handle_res:	ldx	#0x100
 		swi
 		pula
 
+		lda	#0x22
+		psha
+		ldb	0x200
+		swi
+
+
+
 here:		
 		swi
 

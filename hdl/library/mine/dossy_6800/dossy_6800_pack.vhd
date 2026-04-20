@@ -87,6 +87,10 @@ package dossy_6800 is
 		PULA_GP51,
 		PULA_GP52,
 
+		-- PULa
+		PSHA_T1_GP50,
+		PSHA_GP51,
+
 		-- SWI / WAI
 		SWAI_T1_GP50,
 		SWAI_GP51,

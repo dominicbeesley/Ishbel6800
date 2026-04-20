@@ -372,6 +372,21 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	nVMA
 	NEXT=GP52
 
+[PSHA_T1_GP50]
+	SP->AB->INC
+	{ if IR_i(0) = '1' then }
+		ACCB->DB
+	{ else }
+		ACCA->DB
+	{ end if; }
+	WRITE
+	DEC
+	NEXT=PSHA_GP51
+
+[PSHA_GP51]
+	INC->AB->SP
+	nVMA
+	NEXT=GP52
 
 [GP52]
 	PC->AB->INC

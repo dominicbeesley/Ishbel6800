@@ -361,10 +361,10 @@ begin
 				return INSDES_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "0011001-") then
 				return PULA_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00110000") then
-				return TSX_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00110101") then
 				return TXS_T1_GP50;
+			elsif PMATCH(IR_DBI_i, "0011011-") then
+				return PSHA_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00111111") then
 				return SWAI_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00111011") then
