@@ -12,7 +12,6 @@ lib = vu.add_library("dossy_6800")
 
 # Add all files ending in .vhd in current working directory to library
 lib.add_source_files("./*.vhd")
-lib.add_source_files("../../library/3rdparty/JohnKent/cpu68_dom.vhd")
 lib.add_source_files("../../library/mine/*.vhd")
 lib.add_source_files("../../library/mine/dossy_6800/*.vhd")
 lib.add_source_files("../../cards/*.vhd")
