@@ -174,6 +174,13 @@ handle_res:	ldx	#0x100
 here:		nop
 		nop
 		swi
+		
+		jmp 	there
+		nop 
+		nop
+
+there:		nop
+		nop
 
 		inca
 		incb

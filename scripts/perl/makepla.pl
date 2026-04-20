@@ -343,6 +343,10 @@ begin
 				return T1_DIR0;
 			elsif PMATCH(IR_DBI_i,  "1-10----") and firstdecode then
 				return T1_IDX0;
+			elsif PMATCH(IR_DBI_i,  "0111----") and firstdecode then
+				return T1_EXT0;
+			elsif PMATCH(IR_DBI_i,  "0110----") and firstdecode then
+				return T1_IDX0;
 
 			elsif PMATCH(IR_DBI_i, "00000001") then
 				return NOP_T1_D00;
@@ -371,6 +375,9 @@ begin
 				return RTI_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "00111111") then
 				return SWAI_T1_GP50;
+
+			elsif PMATCH(IR_DBI_i, "011-1110") then
+				return TSL0;
 
 			elsif PMATCH(IR_DBI_i, "1---1110") then
 				return LDx_T1_D00;
