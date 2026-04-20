@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-20T14:14:58Z
+-- GENERATED : 2026-04-20T15:21:29Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -190,6 +190,10 @@ begin
 				return STx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1---0111") then
 				return GI_STA_T1_D00;
+			elsif PMATCH(IR_DBI_i, "100011-1") then
+				return BSR_T1_IDX0;
+			elsif PMATCH(IR_DBI_i, "101-11-1") then
+				return JBSR_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "1-------") then
 				return GI_T1_D00;
 			else
@@ -278,6 +282,15 @@ begin
 		VMA_o					<= '1';
 
 		case state_i is 
+         when BSR_T1_IDX0 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
+            INC_act_o <= hold;
+            VMA_o <= '0';
+            mux_DB_DBI_o <= '1';
+            T_ld_DB_o <= '1';
+            next_state_o <= JBSR_T1_GP50;
+
          when DX1 =>
             mux_DB_SUM_o <= '1';
             mux_OBL_DB_o <= '1';
@@ -433,6 +446,48 @@ begin
             PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
             IR_ld_D_o <= '1';
             next_state_o <= DECODE;
+
+         when JBSR_BSR_GP53 =>
+
+         when JBSR_EXT_GP53 =>
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            INC_act_o <= dec;
+            VMA_o <= '0';
+            next_state_o <= JBSR_EXT_GP54;
+
+         when JBSR_EXT_GP54 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            next_state_o <= R58;
+
+         when JBSR_GP51 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            mux_DB_PCH_o <= '1';
+            RnW_o <= '0';
+            INC_act_o <= dec;
+            next_state_o <= JBSR_GP52;
+
+         when JBSR_GP52 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            SPL_ld_ABL_o <= '1'; SPH_ld_ABH_o <= '1';
+            VMA_o <= '0';
+            if PMATCH(IR_DBI_i, "1-11----") then
+               next_state_o <= JBSR_EXT_GP53;
+            elsif PMATCH(IR_DBI_i, "1-10----") then
+               next_state_o <= JBSR_IDX_GP53;
+            else
+               next_state_o <= JBSR_BSR_GP53;
+            end if;
+
+         when JBSR_IDX_GP53 =>
+
+         when JBSR_T1_GP50 =>
+            mux_ABL_SPL_o <= '1'; mux_ABH_SPH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            mux_DB_PCL_o <= '1';
+            RnW_o <= '0';
+            INC_act_o <= dec;
+            next_state_o <= JBSR_GP51;
 
          when LDX_D01 =>
             if IR_i(5 downto 4) = "00" then

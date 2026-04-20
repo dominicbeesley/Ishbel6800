@@ -182,6 +182,20 @@ here:		nop
 there:		nop
 		nop
 
+		jsr	test_routine
+		dex
+		dex
+		swi 
+		bsr	test_routine
+		dex
+		dex
+		swi
+
+		ldx	#test_routine-10
+		jsr	10,X
+
+
+
 		inca
 		incb
 		inx
@@ -189,6 +203,14 @@ there:		nop
 		staa	0xEFFF		; debug / stop
 		wai
 
+
+
+test_routine:	inx
+		rts
+
+one:		bra two
+two:		bra two
+three:		bra two
 
 		.org 0xFFF8
 hw_irq:		.word	handle_irq

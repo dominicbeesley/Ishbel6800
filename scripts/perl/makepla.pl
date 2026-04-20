@@ -385,6 +385,10 @@ begin
 				return STx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1---0111") then
 				return GI_STA_T1_D00;
+			elsif PMATCH(IR_DBI_i, "100011-1") then
+				return BSR_T1_IDX0;
+			elsif PMATCH(IR_DBI_i, "101-11-1") then
+				return JBSR_T1_GP50;
 			elsif PMATCH(IR_DBI_i, "1-------") then
 				return GI_T1_D00;
 			else

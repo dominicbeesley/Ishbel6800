@@ -153,6 +153,16 @@ package dossy_6800 is
 		GI_T1_D00,
 		GI_TSL0_D01,
 
+		-- BSR / JSR
+		BSR_T1_IDX0,
+		JBSR_T1_GP50,
+		JBSR_GP51,
+		JBSR_GP52,
+		JBSR_EXT_GP53,
+		JBSR_EXT_GP54,
+		JBSR_BSR_GP53,
+		JBSR_IDX_GP53,
+
 		-- MISC / BAD
 		-- DIE
 		DIEBAD,

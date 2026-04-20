@@ -259,6 +259,62 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 
 	NEXT=TSL0
 
+[BSR_T1_IDX0]
+	# I can't tell where this is on the Fig.2 sheets
+	INC->AB,PC
+	HOLD
+	nVMA
+	DBI->DB->T
+	NEXT=JBSR_T1_GP50
+
+[JBSR_T1_GP50]
+	## either a BSR or JSR depending on mode
+	## BSR T will contain offset, EXT T wil contain H of subroutine addr
+	SP->AB->INC
+	PCL->DB
+	WRITE
+	DEC
+	NEXT=JBSR_GP51
+
+[JBSR_GP51]
+	INC->AB
+	PCH->DB
+	WRITE
+	DEC
+	NEXT=JBSR_GP52
+
+[JBSR_GP52]
+	INC->AB->SP
+	nVMA
+	{ if PMATCH(IR_DBI_i, "1-11----") then }
+		#EXT
+		NEXT=JBSR_EXT_GP53
+	{ elsif PMATCH(IR_DBI_i,  "1-10----") then }
+		#IDX
+		NEXT=JBSR_IDX_GP53
+	{ else }
+		#BSR
+		NEXT=JBSR_BSR_GP53
+	{ end if;}
+
+[JBSR_EXT_GP53]
+	PC->AB->INC
+	DEC
+	nVMA
+	#ABLI->ABL -- on Fig.2B but seems wrong
+	#T->DB -- on Fig.2B not sure it will do anything?
+	NEXT=JBSR_EXT_GP54
+
+[JBSR_EXT_GP54]
+	INC->AB
+	NEXT=R58
+
+[JBSR_BSR_GP53]
+
+
+[JBSR_IDX_GP53]
+
+
 [TAP_T1_D00]
 	# simplifier cf Fig.2J
 	ACCA->DB->CCR	
