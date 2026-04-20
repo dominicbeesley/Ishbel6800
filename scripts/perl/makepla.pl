@@ -233,6 +233,7 @@ port
 	IR_DBI_i			: in  std_logic_vector(7 downto 0); -- used for decode * early
 	IR_i				: in	std_logic_vector(7 downto 0); -- used for executing instruction
 	ALU_CC_i			: in  std_logic_vector(7 downto 0); -- registered ALU output flags
+	T_Q_i				: in  std_logic_vector(7 downto 0); -- used for branch page carries : TODO: think of cheaper way
 
 	next_state_o	: out t_cpu_state;
 

@@ -39,7 +39,7 @@ package dossy_6800 is
 
 	type t_inc_l_src	is (inc, abl, db);
 	type t_inc_h_src	is (inc, abh);
-	type t_inc_act		is (inc, dec, inc_page, hold);
+	type t_inc_act		is (inc, dec, inc_page, dec_page, hold);
 
 	type t_alu_op		is (alu_add, alu_adc, alu_sub, alu_sbc, alu_and, alu_or, alu_eor);
 
@@ -162,6 +162,9 @@ package dossy_6800 is
 		JBSR_EXT_GP54,
 		JBSR_BSR_GP53,
 		JBSR_IDX_GP53,
+
+		BRA_DX1,
+		BRA_DX2,
 
 		-- MISC / BAD
 		-- DIE

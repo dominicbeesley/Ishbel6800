@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-20T15:21:29Z
+-- GENERATED : 2026-04-20T17:03:56Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -38,6 +38,7 @@ port
 	IR_DBI_i			: in  std_logic_vector(7 downto 0); -- used for decode * early
 	IR_i				: in	std_logic_vector(7 downto 0); -- used for executing instruction
 	ALU_CC_i			: in  std_logic_vector(7 downto 0); -- registered ALU output flags
+	T_Q_i				: in  std_logic_vector(7 downto 0); -- used for branch page carries : TODO: think of cheaper way
 
 	next_state_o	: out t_cpu_state;
 
@@ -282,6 +283,27 @@ begin
 		VMA_o					<= '1';
 
 		case state_i is 
+         when BRA_DX1 =>
+            mux_DB_SUM_o <= '1';
+            mux_OBL_DB_o <= '1';
+            INC_L_src_o <= db;
+            mux_ABH_INCH_o <= '1';
+            if ALU_CC_i(CCIX_C) = '1' and T_Q_i(7) = '0' then
+               INC_act_o <= inc_page;
+            elsif ALU_CC_i(CCIX_C) = '0' and T_Q_i(7) = '1' then
+               INC_act_o <= dec_page;
+            else
+               INC_act_o <= hold;
+            end if;
+            VMA_o <= '0';
+            next_state_o <= BRA_DX2;
+
+         when BRA_DX2 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            next_state_o <= TSL0;
+
          when BSR_T1_IDX0 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
             PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
@@ -448,6 +470,14 @@ begin
             next_state_o <= DECODE;
 
          when JBSR_BSR_GP53 =>
+            mux_DB_T_o <= '1';
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            mux_ABLI_ABL_o <= '1';
+            ALU_op_o <= alu_add;
+            INC_act_o <= hold;
+            VMA_o <= '0';
+            next_state_o <= BRA_DX1;
 
          when JBSR_EXT_GP53 =>
             mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';

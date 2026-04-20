@@ -134,6 +134,7 @@ WRITE		{ RnW_o <= '0'; }
 DEC		{ INC_act_o <= dec; }
 HOLD		{ INC_act_o <= hold; }
 HINC		{ INC_act_o <= inc_page; }
+HDEC		{ INC_act_o <= dec_page; }
 
 ALU_ADC	{ ALU_op_o <= alu_adc; }
 ALU_ADD	{ ALU_op_o <= alu_add; }
@@ -310,7 +311,32 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	NEXT=R58
 
 [JBSR_BSR_GP53]
+	T->DB
+	PC->AB->INC
+	ABL->ABLI
+	ALU_ADD
+	HOLD
+	nVMA
+	NEXT=BRA_DX1
 
+[BRA_DX1]
+	SUM->DB->OBL,INCL
+	INCH->ABH
+	{ if ALU_CC_i(CCIX_C) = '1' and T_Q_i(7) = '0' then }
+		HINC
+	{ elsif ALU_CC_i(CCIX_C) = '0' and T_Q_i(7) = '1' then }
+		HDEC
+	{ else }
+		HOLD
+	{ end if; }
+	nVMA
+	NEXT=BRA_DX2
+
+[BRA_DX2]
+	INC->AB
+	#TODO: branch check logic
+	INC->AB->INC
+	NEXT=TSL0
 
 [JBSR_IDX_GP53]
 

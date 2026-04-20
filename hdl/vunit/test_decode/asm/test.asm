@@ -2,6 +2,7 @@
 
 
 		.org 0xF000
+
 handle_irq:	rti
 handle_swi:	rti
 handle_nmi:	rti
@@ -12,6 +13,9 @@ const_55:	.byte	0x55
 const_23:	.byte	0x23
 const_01:	.byte	0x01
 const_FF:	.byte	0xFF
+
+rtn_low:		inx
+		rts
 
 handle_res:	ldx	#0x100
 		lds	#0x1234
@@ -182,14 +186,8 @@ here:		nop
 there:		nop
 		nop
 
-		jsr	test_routine
-		dex
-		dex
-		swi 
-		bsr	test_routine
-		dex
-		dex
-		swi
+		jsr	test_bsr_back
+
 
 		ldx	#test_routine-10
 		jsr	10,X
@@ -204,9 +202,22 @@ there:		nop
 		wai
 
 
-
+		.align	8
+		.skip	0x99
+test_routine4:	rts
 test_routine:	inx
+		bsr	test_routine2
+		bsr	test_routine3
+		bsr	test_routine4
+test_routine2:	rts
+		.align	6
+test_bsr_back:	bsr	test_routine
+		inx
 		rts
+test_routine3:	inx
+		rts
+
+
 
 one:		bra two
 two:		bra two
