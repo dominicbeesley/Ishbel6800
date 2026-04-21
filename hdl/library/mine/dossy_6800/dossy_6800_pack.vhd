@@ -199,6 +199,8 @@ package dossy_6800 is
 		-- Group IV
 		xBA_T1_D00,
 		xBA_TSL0_D01,
+		Txx_T1_D00,
+		Txx_TSL0_D01,
 
 		-- MISC / BAD
 		-- DIE

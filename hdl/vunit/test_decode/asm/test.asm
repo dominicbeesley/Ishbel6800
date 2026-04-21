@@ -525,6 +525,26 @@ there:		nop
 		swi
 
 
+		tab
+		swi
+		sec
+		lda	#0x23
+		ldb	#0x70
+		swi
+		tba
+		swi
+
+		clc
+		lda	#0x23
+		ldb	#0x80
+		swi
+		tab
+		swi
+		lda	#0x23
+		ldb	#0x80
+		tba
+		swi
+
 
 		staa	0xEFFF		; debug / stop
 		wai

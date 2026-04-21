@@ -304,7 +304,7 @@ ALU_LSR	{ ALU_op_o <= alu_lsr; }
 		0->ABLI
 		ALU_INC
 	{ elsif IR_i(3 downto 0) = x"F" then }
-		0->ABLI
+		0->ABLI		
 	{ else }
 		FF->ABLI
 	{ end if; }
@@ -324,7 +324,11 @@ ALU_LSR	{ ALU_op_o <= alu_lsr; }
 	ALUZ->CCR
 	ALUN->CCR
 	ALUV->CCR
-	ALUC->CCR
+	{ if IR_i(3 downto 0) = x"F" or IR_i(3 downto 0) = x"D" then }
+		CLC->CCR
+	{ else }
+		ALUC->CCR
+	{ end if;}
 
 	NEXT=DECODE
 
@@ -371,7 +375,11 @@ ALU_LSR	{ ALU_op_o <= alu_lsr; }
 	ALUZ->CCR
 	ALUN->CCR
 	ALUV->CCR
-	ALUC->CCR
+	{ if IR_i(3 downto 0) = x"F" or IR_i(3 downto 0) = x"D" then }
+		CLC->CCR
+	{ else }
+		ALUC->CCR
+	{ end if;}
 	{ if IR_i(3 downto 0) = x"D" then }
 		nVMA
 	{ end if; }
@@ -829,6 +837,29 @@ ALU_LSR	{ ALU_op_o <= alu_lsr; }
 	INC->AB,PC
 	NEXT=DECODE
 
+[Txx_T1_D00]
+	{ if IR_i(0) = '1' then }
+		ACCB->DB
+	{ else }
+		ACCA->DB
+	{ end if; }
+	FF->ABLI
+	PC->AB->INC
+	NEXT=Txx_TSL0_D01
+
+[Txx_TSL0_D01]
+	SUM->DB
+	{ if IR_i(0) = '1' then }
+		DB->ACCA
+	{ else }
+		DB->ACCB
+	{ end if; }
+	ALUZ->CCR
+	ALUN->CCR
+	ALUV->CCR
+	D->IR
+	INC->AB,PC
+	NEXT=DECODE
 
 [T1_EXT0]
 	DBI->DB->T

@@ -192,7 +192,6 @@ begin
 			when others => -- AND
 				-- AND is default
 				v_V_o := '0';
-				v_C_o := '0';
 				v_SUM_o := B_i and A_i;
 		end case;
 		v_N_o := v_SUM_o(7);

@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-21T22:43:02Z
+-- GENERATED : 2026-04-21T23:01:57Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -171,6 +171,8 @@ begin
 
 			elsif PMATCH(IR_DBI_i, "0001000-") then
 				return xBA_T1_D00;
+			elsif PMATCH(IR_DBI_i, "0001011-") then
+				return Txx_T1_D00;
 
 			elsif PMATCH(IR_DBI_i, "0010----") then
 				return BRA_T1_IDX0;
@@ -442,7 +444,11 @@ begin
             CCR_ld_ALU_Z_o <= '1';
             CCR_ld_ALU_N_o <= '1';
             CCR_ld_ALU_V_o <= '1';
-            CCR_ld_ALU_C_o <= '1';
+            if IR_i(3 downto 0) = x"F" or IR_i(3 downto 0) = x"D" then
+               CCR_ld_CLC_o <= '1';
+            else
+               CCR_ld_ALU_C_o <= '1';
+            end if;
             next_state_o <= DECODE;
 
          when GII_MEM_D01 =>
@@ -452,7 +458,11 @@ begin
             CCR_ld_ALU_Z_o <= '1';
             CCR_ld_ALU_N_o <= '1';
             CCR_ld_ALU_V_o <= '1';
-            CCR_ld_ALU_C_o <= '1';
+            if IR_i(3 downto 0) = x"F" or IR_i(3 downto 0) = x"D" then
+               CCR_ld_CLC_o <= '1';
+            else
+               CCR_ld_ALU_C_o <= '1';
+            end if;
             if IR_i(3 downto 0) = x"D" then
                VMA_o <= '0';
             end if;
@@ -1057,6 +1067,32 @@ begin
             INC_act_o <= dec;
             VMA_o <= '0';
             next_state_o <= TXS_GP51;
+
+         when Txx_T1_D00 =>
+            if IR_i(0) = '1' then
+               mux_DB_ACCB_o <= '1';
+            else
+               mux_DB_ACCA_o <= '1';
+            end if;
+            mux_ABLI_FF_o <= '1';
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            next_state_o <= Txx_TSL0_D01;
+
+         when Txx_TSL0_D01 =>
+            mux_DB_SUM_o <= '1';
+            if IR_i(0) = '1' then
+               ACCA_ld_DB_o <= '1';
+            else
+               ACCB_ld_DB_o <= '1';
+            end if;
+            CCR_ld_ALU_Z_o <= '1';
+            CCR_ld_ALU_N_o <= '1';
+            CCR_ld_ALU_V_o <= '1';
+            IR_ld_D_o <= '1';
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
+            next_state_o <= DECODE;
 
          when WAIT_INTER =>
             --TODO: this is WAIT's WAIT state...what to do here, BA?
