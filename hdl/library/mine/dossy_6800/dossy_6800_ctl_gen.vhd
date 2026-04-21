@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-21T21:34:37Z
+-- GENERATED : 2026-04-21T21:56:23Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -388,11 +388,63 @@ begin
                next_state_o <= DECODE;
             end if;
 
+         when GII_ACC_T1_D00 =>
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            if IR_i(4) = '1' then
+               mux_DB_ACCB_o <= '1';
+            else
+               mux_DB_ACCA_o <= '1';
+            end if;
+            if IR_i(3 downto 0) = x"0" then
+               mux_ABLI_00_o <= '1';
+               ALU_op_o <= alu_neg;
+            elsif IR_i(3 downto 0) = x"3" then
+               mux_ABLI_00_o <= '1';
+               ALU_op_o <= alu_com;
+            elsif IR_i(3 downto 0) = x"4" then
+               ALU_op_o <= alu_lsr;
+            elsif IR_i(3 downto 0) = x"6" then
+               ALU_op_o <= alu_ror;
+            elsif IR_i(3 downto 0) = x"7" then
+               ALU_op_o <= alu_asr;
+            elsif IR_i(3 downto 0) = x"8" then
+               ALU_op_o <= alu_asl;
+            elsif IR_i(3 downto 0) = x"9" then
+               ALU_op_o <= alu_rol;
+            elsif IR_i(3 downto 0) = x"A" then
+               mux_ABLI_FF_o <= '1';
+               ALU_op_o <= alu_dec;
+            elsif IR_i(3 downto 0) = x"C" then
+               mux_ABLI_00_o <= '1';
+               ALU_op_o <= alu_inc;
+            elsif IR_i(3 downto 0) = x"F" then
+               mux_ABLI_00_o <= '1';
+            else
+               mux_ABLI_FF_o <= '1';
+            end if;
+            next_state_o <= GII_ACC_TSL0_D01;
+
+         when GII_ACC_TSL0_D01 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
+            IR_ld_D_o <= '1';
+            if IR_i(4) = '1' then
+               ACCB_ld_DB_o <= '1';
+            else
+               ACCA_ld_DB_o <= '1';
+            end if;
+            mux_DB_SUM_o <= '1';
+            CCR_ld_ALU_Z_o <= '1';
+            CCR_ld_ALU_N_o <= '1';
+            CCR_ld_ALU_V_o <= '1';
+            CCR_ld_ALU_C_o <= '1';
+            next_state_o <= DECODE;
+
          when GII_MEM_D01 =>
             RnW_o <= '0';
             mux_DB_SUM_o <= '1';
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
-            next_state_o <= GII_MEM_D02;
             CCR_ld_ALU_Z_o <= '1';
             CCR_ld_ALU_N_o <= '1';
             CCR_ld_ALU_V_o <= '1';
@@ -400,6 +452,7 @@ begin
             if IR_i(3 downto 0) = x"D" then
                VMA_o <= '0';
             end if;
+            next_state_o <= GII_MEM_D02;
 
          when GII_MEM_D02 =>
             mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';

@@ -224,6 +224,7 @@ there:		nop
 		ble	@nok3
 @ok3:
 		
+		;;;;; GROUP II MEM TESTS ;;;;;
 
 
 		lda	#0x7E
@@ -372,9 +373,140 @@ there:		nop
 		lda	TESTEXT1
 
 
+		;;;;;;;; GROUP II ACC tests ;;;;;;;;;;
+
+		lda	#0x7E
 		inca
+		swi
+		inca
+		swi
+		inca
+		swi
+		deca
+		swi
+		deca
+		swi
+		deca
+		swi
+
+		ldb	#0x02
+		decb
+		swi
+		decb
+		swi
+		decb
+		swi
 		incb
-		inx
+		swi
+		incb
+		swi
+		incb
+		swi
+
+		lda	#0x80
+		rola
+		swi
+		rola
+		swi
+		rola
+		swi
+		rora
+		swi
+		rora
+		swi
+		rora
+		swi
+
+		asla
+		swi
+		asla
+		swi
+		asla
+		swi
+
+		lda	#0x80
+		clc
+		asra
+		swi
+		asra
+		swi
+		asra
+		asra
+		asra
+		asra
+		asra
+		swi
+		asra
+		swi			
+		asra
+		swi			
+		
+
+		lda	#0x00
+		clc
+		sev
+		coma
+		swi
+		coma
+		swi
+
+		lda	#0x23
+		coma
+		swi
+		coma
+		swi
+
+		lda	#0x88
+		coma
+		swi
+		coma
+		swi
+
+		ldb	#0xFF
+		comb
+		swi
+		comb
+		swi
+
+		lda	#0x00
+		clc
+		sev
+		nega
+		swi
+		nega
+		swi
+
+		lda	#0x23
+		nega
+		swi
+		nega
+		swi
+
+		lda	#0x88
+		nega
+		swi
+		nega
+		swi
+
+		lda	#0xFF
+		nega
+		swi
+		nega
+		swi
+
+
+		lda	#0xFF
+		tsta
+		swi
+
+		clra
+		tsta
+		swi
+
+
+
+
+
 
 		staa	0xEFFF		; debug / stop
 		wai
