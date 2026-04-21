@@ -624,6 +624,7 @@ begin
       IR_DBI_i       => i_IR_Q_DBI,
 		IR_i				=> i_IR_Q,
       ALU_CC_i       => i_ALU_CCR_Q,
+      CCR_i				=> i_CCR_Q,
       T_Q_i				=> i_T_Q,
 		
 		next_state_o	=> i_next_state,

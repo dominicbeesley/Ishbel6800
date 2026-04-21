@@ -233,6 +233,7 @@ port
 	IR_DBI_i			: in  std_logic_vector(7 downto 0); -- used for decode * early
 	IR_i				: in	std_logic_vector(7 downto 0); -- used for executing instruction
 	ALU_CC_i			: in  std_logic_vector(7 downto 0); -- registered ALU output flags
+	CCR_i				: in  std_logic_vector(7 downto 0); -- registered CPU status flags
 	T_Q_i				: in  std_logic_vector(7 downto 0); -- used for branch page carries : TODO: think of cheaper way
 
 	next_state_o	: out t_cpu_state;
@@ -359,6 +360,9 @@ begin
 				return INXDEX_T1_D00;
 			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
 				return SEx_T1_D00;
+
+			elsif PMATCH(IR_DBI_i, "0010----") then
+				return BRA_T1_IDX0;
 
 			elsif PMATCH(IR_DBI_i, "00110000") then
 				return TSX_T1_GP50;

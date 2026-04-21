@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-20T18:07:31Z
+-- GENERATED : 2026-04-21T12:25:36Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -38,6 +38,7 @@ port
 	IR_DBI_i			: in  std_logic_vector(7 downto 0); -- used for decode * early
 	IR_i				: in	std_logic_vector(7 downto 0); -- used for executing instruction
 	ALU_CC_i			: in  std_logic_vector(7 downto 0); -- registered ALU output flags
+	CCR_i				: in  std_logic_vector(7 downto 0); -- registered CPU status flags
 	T_Q_i				: in  std_logic_vector(7 downto 0); -- used for branch page carries : TODO: think of cheaper way
 
 	next_state_o	: out t_cpu_state;
@@ -164,6 +165,9 @@ begin
 				return INXDEX_T1_D00;
 			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
 				return SEx_T1_D00;
+
+			elsif PMATCH(IR_DBI_i, "0010----") then
+				return BRA_T1_IDX0;
 
 			elsif PMATCH(IR_DBI_i, "00110000") then
 				return TSX_T1_GP50;
@@ -297,10 +301,25 @@ begin
             next_state_o <= BRA_DX2;
 
          when BRA_DX2 =>
-            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
-            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
-            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            if CONDCHECK(IR_i, CCR_i) then
+               mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+               INC_L_src_o <= abl; INC_H_src_o <= abh;
+            else
+               mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+               INC_L_src_o <= abl; INC_H_src_o <= abh;
+            end if;
             next_state_o <= TSL0;
+
+         when BRA_T1_IDX0 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
+            mux_ABLI_ABL_o <= '1';
+            mux_DB_DBI_o <= '1';
+            T_ld_DB_o <= '1';
+            ALU_op_o <= alu_add;
+            INC_act_o <= hold;
+            VMA_o <= '0';
+            next_state_o <= BRA_DX1;
 
          when BSR_T1_IDX0 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';

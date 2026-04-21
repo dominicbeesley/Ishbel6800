@@ -192,6 +192,15 @@ there:		nop
 		ldx	#test_routine-10
 		jsr	10,X
 
+		lda	#0
+		jsr	flags_test
+
+		lda	#0x80
+		jsr	flags_test
+
+		lda	#0xFC
+		tap
+		jsr	flags_test
 
 
 		inca
@@ -222,6 +231,49 @@ test_routine3:	inx
 one:		bra two
 two:		bra two
 three:		bra two
+
+flags_test:	
+		sec
+		sev
+		jsr	flags_test2
+		clc
+		sev
+		jsr	flags_test2
+		sec
+		clv
+		jsr	flags_test2
+		clc
+		clv
+		jsr	flags_test2
+
+		beq	@z
+		bmi	@nzmi
+		swi 
+		rts
+@nzmi:		swi
+		rts
+
+@z:		bmi	@zmi
+		swi
+		rts
+@zmi:		swi
+		rts
+
+
+flags_test2:
+		bcc	@cc
+		bvc	@csvc
+		swi
+		rts
+@csvc:		swi
+		rts
+
+@cc:		bvc	@ccvc
+		swi
+		rts
+
+@ccvc:		swi
+		rts
 
 		.org 0xFFF8
 hw_irq:		.word	handle_irq

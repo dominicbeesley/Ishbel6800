@@ -319,6 +319,16 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	nVMA
 	NEXT=BRA_DX1
 
+[BRA_T1_IDX0]
+	INC->AB,PC
+	ABL->ABLI
+	DBI->DB
+	DB->T			# this is extra for branch carry
+	ALU_ADD
+	HOLD
+	nVMA
+	NEXT=BRA_DX1
+
 [BRA_DX1]
 	SUM->DB->OBL,INCL
 	INCH->ABH
@@ -333,9 +343,11 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	NEXT=BRA_DX2
 
 [BRA_DX2]
-	INC->AB
-	#TODO: branch check logic
-	INC->AB->INC
+	{ if CONDCHECK(IR_i, CCR_i) then }
+		INC->AB->INC
+	{ else }
+		PC->AB->INC
+	{ end if; }
 	NEXT=TSL0
 
 [JBSR_IDX_GP53]

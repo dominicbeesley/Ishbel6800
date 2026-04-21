@@ -163,6 +163,7 @@ package dossy_6800 is
 		JBSR_BSR_GP53,
 		JBSR_IDX_GP53,
 
+		BRA_T1_IDX0,
 		BRA_DX1,
 		BRA_DX2,
 
@@ -172,9 +173,62 @@ package dossy_6800 is
 		WAIT_INTER
 		);
 
+		function CONDCHECK(
+			ir		: in	std_logic_vector(7 downto 0); 
+			ccr	: in  std_logic_vector(7 downto 0)) return boolean;
+
+
 end package dossy_6800;
 
 package body dossy_6800 is
+
+	function CONDCHECK(
+		ir		: in	std_logic_vector(7 downto 0); 
+		ccr	: in  std_logic_vector(7 downto 0)) return boolean is
+	begin
+
+		if ir(7) = '1' then
+			return true;
+		elsif ir(3 downto 0) = x"2" then
+			return not(ccr(CCIX_C) = '1' or ccr(CCIX_Z) = '1');
+		elsif ir(3 downto 0) = x"3" then		
+			return ccr(CCIX_C) = '1' or ccr(CCIX_Z) = '1';
+
+		elsif ir(3 downto 0) = x"4" then
+			return ccr(CCIX_C) = '0';
+		elsif ir(3 downto 0) = x"5" then
+			return ccr(CCIX_C) = '1';
+
+		elsif ir(3 downto 0) = x"6" then
+			return ccr(CCIX_Z) = '0';
+		elsif ir(3 downto 0) = x"7" then
+			return ccr(CCIX_Z) = '1';
+
+		elsif ir(3 downto 0) = x"8" then
+			return ccr(CCIX_V) = '0';
+		elsif ir(3 downto 0) = x"9" then
+			return ccr(CCIX_V) = '1';
+
+		elsif ir(3 downto 0) = x"A" then
+			return ccr(CCIX_N) = '0';
+		elsif ir(3 downto 0) = x"B" then
+			return ccr(CCIX_N) = '1';
+
+		elsif ir(3 downto 0) = x"C" then
+			return not(ccr(CCIX_N) = '1' xor ccr(CCIX_V) = '1');
+		elsif ir(3 downto 0) = x"D" then
+			return ccr(CCIX_N) = '1' xor ccr(CCIX_V) = '1';
+
+		elsif ir(3 downto 0) = x"E" then
+			return not(ccr(CCIX_Z) = '1' or (ccr(CCIX_N) = '1' xor ccr(CCIX_V) = '1'));
+		elsif ir(3 downto 0) = x"F" then
+			return ccr(CCIX_Z) = '1' or (ccr(CCIX_N) = '1' xor ccr(CCIX_V) = '1');
+		else
+			return true;
+		end if;
+
+	end function;
+
 
 end package body dossy_6800;
 
