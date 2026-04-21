@@ -1,4 +1,6 @@
 
+		.equ	TESTEXT1, 0x300
+		.equ	TESTEXT2, 0x380
 
 
 		.org 0xF000
@@ -22,24 +24,24 @@ handle_res:	ldx	#0x100
 		ldx	handle_res + 1
 		lds	handle_res + 3
 
-		stx 	0x1000
-		sts 	0x1002
+		stx 	TESTEXT1
+		sts 	TESTEXT1 + 2
 
 		txs
-		sts 	0x2001
+		sts 	TESTEXT2
 		swi
 
 		ldx	#0
 		swi
 		ldx	#1
 		swi
-		ldx	#0x8008
+		ldx	TESTEXT2
 		swi
 
 		tsx
 		nop
 		nop
-		stx	0x1000
+		stx	TESTEXT1
 		nop
 		nop
 		swi
@@ -221,6 +223,153 @@ there:		nop
 @ok2:		blt	@nok3
 		ble	@nok3
 @ok3:
+		
+
+
+		lda	#0x7E
+		staa	TESTEXT1
+		inc	TESTEXT1
+		swi
+		inc	TESTEXT1
+		swi
+		inc	TESTEXT1
+		swi
+		dec 	TESTEXT1
+		swi
+		dec	TESTEXT1
+		swi
+		dec	TESTEXT1
+		swi
+
+		lda	#0x02
+		staa	TESTEXT2
+		dec	TESTEXT2
+		swi
+		dec	TESTEXT2
+		swi
+		dec	TESTEXT2
+		swi
+		inc	TESTEXT2
+		swi
+		inc	TESTEXT2
+		swi
+		inc	TESTEXT2
+		swi
+
+		lda	#0x80
+		staa	TESTEXT2
+		rol	TESTEXT2
+		swi
+		rol	TESTEXT2
+		swi
+		rol	TESTEXT2
+		swi
+		ror	TESTEXT2
+		swi
+		ror	TESTEXT2
+		swi
+		ror	TESTEXT2
+		swi
+
+		asl	TESTEXT2
+		swi
+		asl	TESTEXT2
+		swi
+		asl	TESTEXT2
+		swi
+
+		lda	#0x80
+		staa	TESTEXT2
+		clc
+		asr	TESTEXT2
+		swi
+		asr	TESTEXT2
+		swi
+		asr	TESTEXT2
+		asr	TESTEXT2
+		asr	TESTEXT2
+		asr	TESTEXT2
+		asr	TESTEXT2
+		swi
+		asr	TESTEXT2
+		swi			
+		asr	TESTEXT2
+		swi			
+		
+
+		lda	#0x00
+		staa	TESTEXT1
+		clc
+		sev
+		com	TESTEXT1
+		swi
+		com	TESTEXT1
+		swi
+
+		lda	#0x23
+		staa	TESTEXT1
+		com	TESTEXT1
+		swi
+		com	TESTEXT1
+		swi
+
+		lda	#0x88
+		staa	TESTEXT1
+		com	TESTEXT1
+		swi
+		com	TESTEXT1
+		swi
+
+		lda	#0xFF
+		staa	TESTEXT1
+		com	TESTEXT1
+		swi
+		com	TESTEXT1
+		swi
+
+		lda	#0x00
+		staa	TESTEXT1
+		clc
+		sev
+		neg	TESTEXT1
+		swi
+		neg	TESTEXT1
+		swi
+
+		lda	#0x23
+		staa	TESTEXT1
+		neg	TESTEXT1
+		swi
+		neg	TESTEXT1
+		swi
+
+		lda	#0x88
+		staa	TESTEXT1
+		neg	TESTEXT1
+		swi
+		neg	TESTEXT1
+		swi
+
+		lda	#0xFF
+		staa	TESTEXT1
+		neg	TESTEXT1
+		swi
+		neg	TESTEXT1
+		swi
+
+
+		; test check that it doesn't do write
+		lda	#0xFF
+		staa	TESTEXT1
+		lda	#0
+		tst	TESTEXT1
+		swi
+
+		lda	TESTEXT1
+		swi
+
+		clr	TESTEXT1
+		lda	TESTEXT1
 
 
 		inca

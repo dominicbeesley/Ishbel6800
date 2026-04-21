@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-21T12:25:36Z
+-- GENERATED : 2026-04-21T21:34:37Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -54,6 +54,7 @@ port
 	mux_ABLI_ACCB_o: out	std_logic;
 	mux_ABLI_IXH_o	: out	std_logic;
 	mux_ABLI_FF_o	: out	std_logic;
+	mux_ABLI_00_o	: out	std_logic;
 	mux_DB_T_o		: out	std_logic;
 	mux_DB_PCH_o	: out	std_logic;
 	mux_DB_SPH_o	: out	std_logic;
@@ -143,7 +144,8 @@ begin
 				state_i = TSL0_D01 or 
 				state_i = LDX_TSL0_D02 or
 				state_i = INXDEX_TSL0 or
-				state_i = GI_TSL0_D01);
+				state_i = GI_TSL0_D01 or
+				state_i = GII_ACC_TSL0_D01);
 			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
 				return T1_EXT0;
 			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
@@ -186,6 +188,12 @@ begin
 			elsif PMATCH(IR_DBI_i, "00111111") then
 				return SWAI_T1_GP50;
 
+			-- NOTE: FOR GII JMP is caught at end of EXT/IDX addressing mode
+			elsif PMATCH(IR_DBI_i, "010-----") then
+				return GII_ACC_T1_D00;
+			elsif PMATCH(IR_DBI_i, "011-----") then
+				return GII_MEM_T1_D00;
+
 			elsif PMATCH(IR_DBI_i, "1---1110") then
 				return LDx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1---1111") then
@@ -217,6 +225,7 @@ begin
 		mux_ABLI_ACCB_o	<= '0';
 		mux_ABLI_IXH_o		<= '0';
 		mux_ABLI_FF_o		<= '0';
+		mux_ABLI_00_o		<= '0';
 		mux_DB_T_o			<= '0';
 		mux_DB_PCH_o		<= '0';
 		mux_DB_SPH_o		<= '0';
@@ -363,7 +372,7 @@ begin
             mux_OBL_DB_o <= '1';
             INC_L_src_o <= db;
             PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
-            if IR_i(2 downto 0) = "111" then
+            if PMATCH(IR_i, "1----111") then
                -- its a write next
                VMA_o <= '0';
                INC_act_o <= hold;
@@ -373,8 +382,63 @@ begin
             elsif PMATCH(IR_i, "101-1101") then
                next_state_o <= JBSR_T1_GP50;
             else
+               if PMATCH(IR_i, "01------") then
+                  INC_act_o <= hold;
+               end if;
                next_state_o <= DECODE;
             end if;
+
+         when GII_MEM_D01 =>
+            RnW_o <= '0';
+            mux_DB_SUM_o <= '1';
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            next_state_o <= GII_MEM_D02;
+            CCR_ld_ALU_Z_o <= '1';
+            CCR_ld_ALU_N_o <= '1';
+            CCR_ld_ALU_V_o <= '1';
+            CCR_ld_ALU_C_o <= '1';
+            if IR_i(3 downto 0) = x"D" then
+               VMA_o <= '0';
+            end if;
+
+         when GII_MEM_D02 =>
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            next_state_o <= TSL0;
+
+         when GII_MEM_T1_D00 =>
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            mux_DB_DBI_o <= '1';
+            INC_act_o <= hold;
+            VMA_o <= '0';
+            if IR_i(3 downto 0) = x"0" then
+               mux_ABLI_00_o <= '1';
+               ALU_op_o <= alu_neg;
+            elsif IR_i(3 downto 0) = x"3" then
+               mux_ABLI_00_o <= '1';
+               ALU_op_o <= alu_com;
+            elsif IR_i(3 downto 0) = x"4" then
+               ALU_op_o <= alu_lsr;
+            elsif IR_i(3 downto 0) = x"6" then
+               ALU_op_o <= alu_ror;
+            elsif IR_i(3 downto 0) = x"7" then
+               ALU_op_o <= alu_asr;
+            elsif IR_i(3 downto 0) = x"8" then
+               ALU_op_o <= alu_asl;
+            elsif IR_i(3 downto 0) = x"9" then
+               ALU_op_o <= alu_rol;
+            elsif IR_i(3 downto 0) = x"A" then
+               mux_ABLI_FF_o <= '1';
+               ALU_op_o <= alu_dec;
+            elsif IR_i(3 downto 0) = x"C" then
+               mux_ABLI_00_o <= '1';
+               ALU_op_o <= alu_inc;
+            elsif IR_i(3 downto 0) = x"F" then
+               mux_ABLI_00_o <= '1';
+            else
+               mux_ABLI_FF_o <= '1';
+            end if;
+            next_state_o <= GII_MEM_D01;
 
          when GI_STA_T1_D00 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';

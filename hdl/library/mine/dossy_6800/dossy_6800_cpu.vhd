@@ -53,19 +53,20 @@ architecture rtl of dossy_6800_cpu is
 	signal	ib_OBL				: std_logic_vector(7 downto 0);
 
 	-- internal bus mux controls
-	signal	i_mux_ABL_INCL	: std_logic;
+	signal	i_mux_ABL_INCL		: std_logic;
 	signal	i_mux_ABL_PCL		: std_logic;
 	signal	i_mux_ABL_SPL		: std_logic;
-	signal	i_mux_ABL_ABLI	: std_logic;
+	signal	i_mux_ABL_ABLI		: std_logic;
 
 	signal	i_mux_OBL_DB		: std_logic;
 
-	signal	i_mux_ABLI_ABL	: std_logic;
+	signal	i_mux_ABLI_ABL		: std_logic;
 	signal	i_mux_ABLI_IXL		: std_logic;
-	signal	i_mux_ABLI_ACCA		: std_logic;
-	signal	i_mux_ABLI_ACCB		: std_logic;
-	signal	i_mux_ABLI_IXH	: std_logic;
+	signal	i_mux_ABLI_ACCA	: std_logic;
+	signal	i_mux_ABLI_ACCB	: std_logic;
+	signal	i_mux_ABLI_IXH		: std_logic;
 	signal	i_mux_ABLI_FF		: std_logic;
+	signal	i_mux_ABLI_00		: std_logic;
 
 	signal	i_mux_DB_T			: std_logic;
 	signal	i_mux_DB_PCH		: std_logic;
@@ -217,7 +218,7 @@ begin
 
 	e_bus_mux_ABLI:entity dossy_6800.dossy_6800_mux8
 	generic map (
-		WIDTH => 6
+		WIDTH => 7
 	)
 	port map (
 		SEL_i		=> (
@@ -226,7 +227,8 @@ begin
 			2 => i_mux_ABLI_ACCA,
 			3 => i_mux_ABLI_ACCB,
 			4 => i_mux_ABLI_IXH,
-			5 => i_mux_ABLI_FF
+			5 => i_mux_ABLI_FF,
+			6 => i_mux_ABLI_00
 		),
 		D_i		=> (
 			0 => ib_ABL,
@@ -234,7 +236,8 @@ begin
 			2 => i_ACCA_Q,
 			3 => i_ACCB_Q,
 			4 => i_IXH_Q,
-			5 => x"FF"
+			5 => x"FF",
+			6 => x"00"
 		),
 		D_o		=> ib_ABLI
 	);
@@ -640,6 +643,7 @@ begin
 		mux_ABLI_ACCB_o=> i_mux_ABLI_ACCB,
 		mux_ABLI_IXH_o	=> i_mux_ABLI_IXH,
 		mux_ABLI_FF_o	=> i_mux_ABLI_FF,
+		mux_ABLI_00_o	=> i_mux_ABLI_00,
 		mux_DB_T_o		=> i_mux_DB_T,
 		mux_DB_PCH_o	=> i_mux_DB_PCH,
 		mux_DB_SPH_o	=> i_mux_DB_SPH,

@@ -19,6 +19,7 @@ ACCA		{	mux_ABLI_ACCA_o	<= '1';	}
 ACCB		{	mux_ABLI_ACCB_o	<= '1';	}
 IXH		{	mux_ABLI_IXH_o		<= '1';	}
 FF			{	mux_ABLI_FF_o		<= '1';	}
+0			{	mux_ABLI_00_o		<= '1';	}
 
 [MUX DB]
 T			{	mux_DB_T_o			<= '1';	}
@@ -143,6 +144,17 @@ ALU_ORA	{ ALU_op_o <= alu_or; }
 ALU_SBC	{ ALU_op_o <= alu_sbc; }
 ALU_SUB	{ ALU_op_o <= alu_sub; }
 
+ALU_INC	{ ALU_op_o <= alu_inc; }
+ALU_DEC	{ ALU_op_o <= alu_dec; }
+ALU_NEG	{ ALU_op_o <= alu_neg; }
+ALU_COM	{ ALU_op_o <= alu_com; }
+
+ALU_ASR	{ ALU_op_o <= alu_asr; }
+ALU_ASL	{ ALU_op_o <= alu_asl; }
+ALU_ROR	{ ALU_op_o <= alu_ror; }
+ALU_ROL	{ ALU_op_o <= alu_rol; }
+ALU_LSR	{ ALU_op_o <= alu_lsr; }
+
 
 ============ STATES =============
 
@@ -259,6 +271,61 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	FF->ABLI
 
 	NEXT=TSL0
+
+[GII_MEM_T1_D00]
+	INC->AB
+	DBI->DB
+	HOLD
+	nVMA
+
+	{ if IR_i(3 downto 0) = x"0" then }
+		0->ABLI
+		ALU_NEG
+	{ elsif IR_i(3 downto 0) = x"3" then }
+		0->ABLI
+		ALU_COM
+	{ elsif IR_i(3 downto 0) = x"4" then }
+		ALU_LSR
+	{ elsif IR_i(3 downto 0) = x"6" then }
+		ALU_ROR
+	{ elsif IR_i(3 downto 0) = x"7" then }
+		ALU_ASR
+	{ elsif IR_i(3 downto 0) = x"8" then }
+		ALU_ASL
+	{ elsif IR_i(3 downto 0) = x"9" then }
+		ALU_ROL
+	{ elsif IR_i(3 downto 0) = x"A" then }
+		FF->ABLI
+		ALU_DEC
+	{ elsif IR_i(3 downto 0) = x"C" then }
+		0->ABLI
+		ALU_INC
+	{ elsif IR_i(3 downto 0) = x"F" then }
+		0->ABLI
+	{ else }
+		FF->ABLI
+	{ end if; }
+
+	NEXT=GII_MEM_D01
+
+[GII_MEM_D01]
+	WRITE
+	SUM->DB
+	INC->AB
+	NEXT=GII_MEM_D02
+	ALUZ->CCR
+	ALUN->CCR
+	ALUV->CCR
+	ALUC->CCR
+	{ if IR_i(3 downto 0) = x"D" then }
+		nVMA
+	{ end if; }
+
+[GII_MEM_D02]
+	PC->AB->INC
+	NEXT=TSL0
+
+
 
 [BSR_T1_IDX0]
 	# I can't tell where this is on the Fig.2 sheets
@@ -694,7 +761,7 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	T->ABH->INCH
 	DBI->DB->OBL,INCL
 	INC->PC
-	{ if IR_i(2 downto 0) = "111" then }
+	{ if PMATCH(IR_i, "1----111") then }
 		{-- its a write next}
 		nVMA
 		HOLD
@@ -706,6 +773,9 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 		# JSR
 		NEXT=JBSR_T1_GP50
 	{ else }
+		{ if PMATCH(IR_i, "01------") then }		
+			HOLD
+		{ end if; }
 		NEXT=DECODE
 	{ end if; }
 

@@ -249,6 +249,7 @@ port
 	mux_ABLI_ACCB_o: out	std_logic;
 	mux_ABLI_IXH_o	: out	std_logic;
 	mux_ABLI_FF_o	: out	std_logic;
+	mux_ABLI_00_o	: out	std_logic;
 	mux_DB_T_o		: out	std_logic;
 	mux_DB_PCH_o	: out	std_logic;
 	mux_DB_SPH_o	: out	std_logic;
@@ -338,7 +339,8 @@ begin
 				state_i = TSL0_D01 or 
 				state_i = LDX_TSL0_D02 or
 				state_i = INXDEX_TSL0 or
-				state_i = GI_TSL0_D01);
+				state_i = GI_TSL0_D01 or
+				state_i = GII_ACC_TSL0_D01);
 			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
 				return T1_EXT0;
 			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
@@ -381,6 +383,12 @@ begin
 			elsif PMATCH(IR_DBI_i, "00111111") then
 				return SWAI_T1_GP50;
 
+			-- NOTE: FOR GII JMP is caught at end of EXT/IDX addressing mode
+			elsif PMATCH(IR_DBI_i, "010-----") then
+				return GII_ACC_T1_D00;
+			elsif PMATCH(IR_DBI_i, "011-----") then
+				return GII_MEM_T1_D00;
+
 			elsif PMATCH(IR_DBI_i, "1---1110") then
 				return LDx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "1---1111") then
@@ -412,6 +420,7 @@ begin
 		mux_ABLI_ACCB_o	<= '0';
 		mux_ABLI_IXH_o		<= '0';
 		mux_ABLI_FF_o		<= '0';
+		mux_ABLI_00_o		<= '0';
 		mux_DB_T_o			<= '0';
 		mux_DB_PCH_o		<= '0';
 		mux_DB_SPH_o		<= '0';

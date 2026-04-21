@@ -150,30 +150,66 @@ begin
 	variable v_SUM_o			: std_logic_vector(7 downto 0);
 	begin
 
-		v_C_i_masked  := C_i when OP_i = alu_adc or OP_i = alu_sbc else
-							'0';
+		v_C_i_masked  :=	'0' when	OP_i = alu_add or 
+											OP_i = alu_sub or
+											OP_i = alu_asl or
+											OP_i = alu_lsr or		
+											OP_i = alu_dec or
+											OP_i = alu_neg else
+								'1' when OP_i = alu_inc or
+											OP_i = alu_com else									
+								C_i;
 		v_V_o := V_i;
 		v_C_o := C_i;
 		v_H_o	:= H_i;
 
+		--TODO: VERIFY: Datasheet and decode6502 say different flags for NEG, 
+		--Leventhal and most obvious ALU action say sames as NEG is 0 - A)
+
+
 		case OP_i is
-			when alu_add | alu_adc =>
+			when alu_add | alu_adc | alu_inc | alu_dec =>
 				adc_8(v_C_i_masked, A_i, B_i, v_C_o, v_H_o, v_V_o, v_SUM_o);
-			when alu_sub | alu_sbc =>
+			when alu_sub | alu_sbc | alu_neg | alu_com =>
 				sbc_8(v_C_i_masked, A_i, B_i, v_C_o, v_V_o, v_SUM_o); -- ignore H?
 			when alu_or =>
 				v_V_o := '0';
 				v_SUM_o := A_i or B_i;
+				v_C_o := '0';
 			when alu_eor =>
 				v_V_o := '0';
 				v_SUM_o := A_i xor B_i;
+				v_C_o := '0';
+			when alu_rol | alu_asl =>
+				v_C_o := A_i(7);
+				v_SUM_o := A_i(6 downto 0) & v_C_i_masked;				
+			when alu_ror | alu_lsr =>
+				v_C_o := A_i(0);
+				v_SUM_o := v_C_i_masked & A_i(7 downto 1);
+			when alu_asr =>
+				v_C_o := A_i(0);
+				v_SUM_o := A_i(7) & A_i(7 downto 1);
 			when others => -- AND
 				-- AND is default
 				v_V_o := '0';
+				v_C_o := '0';
 				v_SUM_o := B_i and A_i;
 		end case;
 		v_N_o := v_SUM_o(7);
 		v_Z_o := not or_reduce(v_SUM_o);
+
+		if OP_i = alu_inc or OP_i = alu_dec then
+			v_C_o := C_i;
+			v_H_o := H_i; -- not necessary?
+		end if;
+
+		if OP_i = alu_asl or
+			OP_i = alu_asr or
+			OP_i = alu_rol or
+			OP_i = alu_ror or
+			OP_i = alu_lsr then
+			v_V_o := v_N_o xor v_C_o;
+		end if;
 
 
 		if rising_edge(CLK_i) then

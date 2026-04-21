@@ -41,7 +41,25 @@ package dossy_6800 is
 	type t_inc_h_src	is (inc, abh);
 	type t_inc_act		is (inc, dec, inc_page, dec_page, hold);
 
-	type t_alu_op		is (alu_add, alu_adc, alu_sub, alu_sbc, alu_and, alu_or, alu_eor);
+	type t_alu_op		is (
+		alu_add, 
+		alu_adc, 
+		alu_sub, 
+		alu_sbc, 
+		alu_and, 
+		alu_or, 
+		alu_eor,
+
+		alu_inc,
+		alu_dec,
+		alu_neg,
+		alu_com,
+
+		alu_rol,
+		alu_asl,
+		alu_ror,
+		alu_asr,
+		alu_lsr);
 
 	type t_cpu_state is (
 		RESET,
@@ -152,6 +170,17 @@ package dossy_6800 is
 		-- logical op
 		GI_T1_D00,
 		GI_TSL0_D01,
+
+		-- Group II logical op
+
+		-- accumulator
+		GII_ACC_T1_D00,
+		GII_ACC_TSL0_D01,
+
+		-- mem
+		GII_MEM_T1_D00,
+		GII_MEM_D01,
+		GII_MEM_D02,
 
 		-- BSR / JSR
 		BSR_T1_IDX0,
