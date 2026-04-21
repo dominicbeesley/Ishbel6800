@@ -202,6 +202,26 @@ there:		nop
 		tap
 		jsr	flags_test
 
+		lda	#10
+		cmpa	#10
+		bge	@ok1
+@nok0:		bra	@nok0
+@nok1:		bra 	@nok1
+@nok11:		bra	@nok11		
+@ok1:		bgt	@nok1
+		blt	@nok11
+		ble	@ok11
+
+@ok11:		cmpa	#9
+		bge	@ok2
+		bgt	@ok2
+@nok2:		bra	@nok2		
+@nok3:		bra	@nok3
+
+@ok2:		blt	@nok3
+		ble	@nok3
+@ok3:
+
 
 		inca
 		incb
@@ -246,6 +266,9 @@ flags_test:
 		clv
 		jsr	flags_test2
 
+		jsr	flags_test3
+
+flags_test3:
 		beq	@z
 		bmi	@nzmi
 		swi 
