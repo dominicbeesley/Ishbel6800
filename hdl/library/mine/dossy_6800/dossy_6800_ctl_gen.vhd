@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-21T21:56:23Z
+-- GENERATED : 2026-04-21T22:43:02Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -145,7 +145,8 @@ begin
 				state_i = LDX_TSL0_D02 or
 				state_i = INXDEX_TSL0 or
 				state_i = GI_TSL0_D01 or
-				state_i = GII_ACC_TSL0_D01);
+				state_i = GII_ACC_TSL0_D01 or
+				state_i = xBA_TSL0_D01);
 			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
 				return T1_EXT0;
 			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
@@ -167,6 +168,9 @@ begin
 				return INXDEX_T1_D00;
 			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
 				return SEx_T1_D00;
+
+			elsif PMATCH(IR_DBI_i, "0001000-") then
+				return xBA_T1_D00;
 
 			elsif PMATCH(IR_DBI_i, "0010----") then
 				return BRA_T1_IDX0;
@@ -1057,6 +1061,28 @@ begin
          when WAIT_INTER =>
             --TODO: this is WAIT's WAIT state...what to do here, BA?
             next_state_o <= WAIT_INTER;
+
+         when xBA_T1_D00 =>
+            mux_ABLI_ACCA_o <= '1';
+            mux_DB_ACCB_o <= '1';
+            ALU_op_o <= alu_sub;
+            mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
+            INC_L_src_o <= abl; INC_H_src_o <= abh;
+            next_state_o <= xBA_TSL0_D01;
+
+         when xBA_TSL0_D01 =>
+            mux_DB_SUM_o <= '1';
+            if IR_i(0) = '0' then
+               ACCA_ld_DB_o <= '1';
+            end if;
+            CCR_ld_ALU_Z_o <= '1';
+            CCR_ld_ALU_N_o <= '1';
+            CCR_ld_ALU_V_o <= '1';
+            CCR_ld_ALU_C_o <= '1';
+            IR_ld_D_o <= '1';
+            mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
+            next_state_o <= DECODE;
 
 			when others => null;
 		end case;

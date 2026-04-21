@@ -809,6 +809,27 @@ ALU_LSR	{ ALU_op_o <= alu_lsr; }
 	INC->AB->SP
 	NEXT=R58
 
+[xBA_T1_D00]
+	ACCA->ABLI
+	ACCB->DB
+	ALU_SUB
+	PC->AB->INC
+	NEXT=xBA_TSL0_D01
+
+[xBA_TSL0_D01]
+	SUM->DB
+	{ if IR_i(0) = '0' then }
+		DB->ACCA
+	{ end if; }
+	ALUZ->CCR
+	ALUN->CCR
+	ALUV->CCR
+	ALUC->CCR
+	D->IR
+	INC->AB,PC
+	NEXT=DECODE
+
+
 [T1_EXT0]
 	DBI->DB->T
 	INC->AB

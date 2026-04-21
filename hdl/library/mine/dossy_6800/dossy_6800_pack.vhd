@@ -196,6 +196,10 @@ package dossy_6800 is
 		BRA_DX1,
 		BRA_DX2,
 
+		-- Group IV
+		xBA_T1_D00,
+		xBA_TSL0_D01,
+
 		-- MISC / BAD
 		-- DIE
 		DIEBAD,

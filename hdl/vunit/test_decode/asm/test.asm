@@ -504,7 +504,25 @@ there:		nop
 		swi
 
 
+		lda	#0x23
+		ldb	#0x23
+		sba
+		swi
 
+		lda	#0x23
+		ldb	#0x23
+		cba
+		swi
+
+		lda	#0x23
+		ldb	#0x70
+		sba
+		swi
+
+		lda	#0x23
+		ldb	#0x70
+		cba
+		swi
 
 
 

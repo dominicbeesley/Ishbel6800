@@ -340,7 +340,8 @@ begin
 				state_i = LDX_TSL0_D02 or
 				state_i = INXDEX_TSL0 or
 				state_i = GI_TSL0_D01 or
-				state_i = GII_ACC_TSL0_D01);
+				state_i = GII_ACC_TSL0_D01 or
+				state_i = xBA_TSL0_D01);
 			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
 				return T1_EXT0;
 			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
@@ -362,6 +363,9 @@ begin
 				return INXDEX_T1_D00;
 			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
 				return SEx_T1_D00;
+
+			elsif PMATCH(IR_DBI_i, "0001000-") then
+				return xBA_T1_D00;
 
 			elsif PMATCH(IR_DBI_i, "0010----") then
 				return BRA_T1_IDX0;
