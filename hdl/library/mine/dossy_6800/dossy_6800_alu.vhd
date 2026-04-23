@@ -139,7 +139,37 @@ begin
 			v_o := (not(A_i(7)) xor v_Rh(3)) and (B_i(7) xor v_Rh(3));
 
 		end procedure;
+	
+		-- TODO make this a regular ADD but jam this stuff onto DB
+		procedure daa(
+			C_i : in std_logic;
+			H_i : in std_logic;
+			B_i : in std_logic_vector(7 downto 0);
 
+			C_o : out std_logic;
+			V_o : out std_logic;
+			R_o : out std_logic_vector(7 downto 0)
+			) is
+		variable lngt9 : boolean;
+		variable corr  : std_logic_vector(7 downto 0) := (others => '0');
+		variable C_t	: std_logic;
+		variable H_t	: std_logic;
+		begin
+				lngt9 := unsigned(B_i(3 downto 0)) > 9;
+
+				if H_i = '1' or lngt9 then
+					corr(3 downto 0) := x"6";
+				end if;
+
+				if C_i = '1' or unsigned(B_i(7 downto 4)) > 9 or 
+						(lngt9 and unsigned(B_i(7 downto 4)) > 8) then
+					corr(7 downto 4) := x"6";
+				end if;
+
+				adc_8('0', corr, B_i, C_t, H_t, V_o, R_o);
+
+				C_o := C_t or C_i;
+		end procedure;
 
 	variable v_C_i_masked 	: std_logic;
 	variable v_C_o				: std_logic;
@@ -175,11 +205,9 @@ begin
 			when alu_or =>
 				v_V_o := '0';
 				v_SUM_o := A_i or B_i;
-				v_C_o := '0';
 			when alu_eor =>
 				v_V_o := '0';
 				v_SUM_o := A_i xor B_i;
-				v_C_o := '0';
 			when alu_rol | alu_asl =>
 				v_C_o := A_i(7);
 				v_SUM_o := A_i(6 downto 0) & v_C_i_masked;				
@@ -189,6 +217,8 @@ begin
 			when alu_asr =>
 				v_C_o := A_i(0);
 				v_SUM_o := A_i(7) & A_i(7 downto 1);
+			when alu_daa =>
+				daa(C_i, H_i, B_i, v_C_o, v_V_o, v_SUM_o);
 			when others => -- AND
 				-- AND is default
 				v_V_o := '0';

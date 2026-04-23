@@ -155,6 +155,7 @@ ALU_ROR	{ ALU_op_o <= alu_ror; }
 ALU_ROL	{ ALU_op_o <= alu_rol; }
 ALU_LSR	{ ALU_op_o <= alu_lsr; }
 
+ALU_DAA	{ ALU_op_o <= alu_daa; }
 
 ============ STATES =============
 
@@ -634,6 +635,39 @@ ALU_LSR	{ ALU_op_o <= alu_lsr; }
 	INC->AB->INC,SP
 	NEXT=RTI_R57
 
+[CPX_T1_D00]
+	INC->AB
+	DBI->DB
+	ALU_EOR
+	IXH->ABLI
+	
+	NEXT=CPX_D01
+
+[CPX_D01]
+	{if IR_i(5 downto 4) = "00" then}
+		{-- was immediate, keep pc}
+		INC->AB
+	{else}
+		PC->AB
+		AB->INC
+	{end if;}
+
+	DBI->DB
+	
+	ALUZ->CCR
+
+	IXL->ABLI
+	ALU_EOR
+	NEXT=CPX_TSL0_D02
+
+[CPX_TSL0_D02]
+	
+	ANDALUZ->CCR
+	INC->AB,PC
+	D->IR
+	NEXT=DECODE
+
+
 [LDx_T1_D00]
 	INC->AB
 	DBI->DB
@@ -860,6 +894,24 @@ ALU_LSR	{ ALU_op_o <= alu_lsr; }
 	D->IR
 	INC->AB,PC
 	NEXT=DECODE
+
+[DAA_T1_D00]
+	ACCA->ABLI
+	ALU_DAA
+	PC->AB->INC
+	NEXT=DAA_TSL0_D01
+
+[DAA_TSL0_D01]
+	SUM->DB
+	DB->ACCA
+	ALUZ->CCR
+	ALUN->CCR
+	ALUV->CCR
+	ALUC->CCR
+	D->IR
+	INC->AB,PC
+	NEXT=DECODE
+
 
 [T1_EXT0]
 	DBI->DB->T

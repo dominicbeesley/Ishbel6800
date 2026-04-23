@@ -358,7 +358,6 @@ there:		nop
 		neg	TESTEXT1
 		swi
 
-
 		; test check that it doesn't do write
 		lda	#0xFF
 		staa	TESTEXT1
@@ -494,6 +493,14 @@ there:		nop
 		nega
 		swi
 
+		; 0x80 should be the only value to set V
+		clc
+		clv
+		lda	#0x80
+		swi
+		nega
+		swi
+		
 
 		lda	#0xFF
 		tsta

@@ -59,7 +59,9 @@ package dossy_6800 is
 		alu_asl,
 		alu_ror,
 		alu_asr,
-		alu_lsr);
+		alu_lsr,
+
+		alu_daa);
 
 	type t_cpu_state is (
 		RESET,
@@ -153,6 +155,13 @@ package dossy_6800 is
 		DX2,
 
 		-- GROUP I
+
+		-- compare X register
+		CPX_T1_D00,
+		CPX_D01,
+		CPX_TSL0_D02,
+
+
 		-- load X/Y register
 		LDx_T1_D00,
 		LDx_D01,
@@ -201,6 +210,8 @@ package dossy_6800 is
 		xBA_TSL0_D01,
 		Txx_T1_D00,
 		Txx_TSL0_D01,
+		DAA_T1_D00,
+		DAA_TSL0_D01,
 
 		-- MISC / BAD
 		-- DIE
