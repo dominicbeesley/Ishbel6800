@@ -552,6 +552,26 @@ there:		nop
 		tba
 		swi
 
+		lda	#0xff
+		ldb	#0x01
+		aba
+		swi
+
+		lda	#0x7f
+		ldb	#0x01
+		aba
+		swi
+
+		lda	#0x3f
+		ldb	#0x01
+		aba
+		swi
+
+
+		lda	#0x80
+		ldb	#0x80
+		aba
+		swi
 
 		staa	0xEFFF		; debug / stop
 		wai

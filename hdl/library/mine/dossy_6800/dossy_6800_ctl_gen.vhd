@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-23T11:56:33Z
+-- GENERATED : 2026-04-23T14:35:48Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -179,6 +179,8 @@ begin
 				return Txx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "00011001") then
 				return DAA_T1_D00;
+			elsif PMATCH(IR_DBI_i, "00011011") then
+				return xBA_T1_D00;
 
 			elsif PMATCH(IR_DBI_i, "0010----") then
 				return BRA_T1_IDX0;
@@ -1156,7 +1158,11 @@ begin
          when xBA_T1_D00 =>
             mux_ABLI_ACCA_o <= '1';
             mux_DB_ACCB_o <= '1';
-            ALU_op_o <= alu_sub;
+            if IR_i(3) = '0' then
+               ALU_op_o <= alu_sub;
+            else
+               ALU_op_o <= alu_add;
+            end if;
             mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
             INC_L_src_o <= abl; INC_H_src_o <= abh;
             next_state_o <= xBA_TSL0_D01;
@@ -1165,6 +1171,9 @@ begin
             mux_DB_SUM_o <= '1';
             if IR_i(0) = '0' then
                ACCA_ld_DB_o <= '1';
+            elsif IR_i(3) = '1' then
+               ACCA_ld_DB_o <= '1';
+               CCR_ld_ALU_H_o <= '1';
             end if;
             CCR_ld_ALU_Z_o <= '1';
             CCR_ld_ALU_N_o <= '1';

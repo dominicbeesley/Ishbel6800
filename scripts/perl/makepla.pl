@@ -374,6 +374,8 @@ begin
 				return Txx_T1_D00;
 			elsif PMATCH(IR_DBI_i, "00011001") then
 				return DAA_T1_D00;
+			elsif PMATCH(IR_DBI_i, "00011011") then
+				return xBA_T1_D00;
 
 			elsif PMATCH(IR_DBI_i, "0010----") then
 				return BRA_T1_IDX0;
