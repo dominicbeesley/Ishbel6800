@@ -30,6 +30,7 @@ use dossy_6800.dossy_6800.all;
 entity dossy_6800_cpu is
 	port (	
 		CLK_i:		in	std_logic;
+		CLKEN_i:		in	std_logic;
 		RST_i:		in	std_logic;
 		HALT_i:		in	std_logic;
 		IRQ_i:		in	std_logic;
@@ -326,6 +327,7 @@ begin
    e_alu:entity dossy_6800.dossy_6800_alu
    port map (   
       CLK_i    => CLK_i,
+      CLKEN_i	=> CLKEN_i,
 
       OP_i     => i_ALU_op,
       C_i      => i_CCR_Q(CCIX_C),
@@ -360,6 +362,7 @@ begin
 	e_reg_pcl:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
 		WE_i			=> i_PCL_ld_INCL,
 		D_i			=> i_INCL_Q,
 		D_o			=> i_PCL_Q
@@ -368,6 +371,7 @@ begin
 	e_reg_spl:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
 		WE_0_i		=> i_SPL_ld_ABL,
 		D_0_i			=> ib_ABL,
 		WE_1_i		=> i_SPL_ld_DB,
@@ -378,6 +382,7 @@ begin
 	e_reg_ixl:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
 		WE_0_i		=> i_IXL_ld_ABL,
 		D_0_i			=> ib_ABL,
 		WE_1_i		=> i_IXL_ld_DB,
@@ -388,6 +393,7 @@ begin
 	e_reg_acc_a:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
 		WE_0_i		=> i_ACCA_ld_DB,
 		D_0_i			=> ib_DB,
 		WE_1_i		=> i_ACCA_ld_ABLI,
@@ -398,6 +404,7 @@ begin
 	e_reg_acc_b:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
 		WE_0_i		=> i_ACCB_ld_DB,
 		D_0_i			=> ib_DB,
 		WE_1_i		=> i_ACCB_ld_ABLI,
@@ -408,6 +415,7 @@ begin
 	e_reg_t_b:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
 		WE_i			=> i_T_ld_DB,
 		D_i			=> ib_DB,
 		D_o			=> i_T_Q
@@ -416,6 +424,7 @@ begin
 	e_reg_pch:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
 		WE_i			=> i_PCH_ld_INCH,
 		D_i			=> i_INCH_Q,
 		D_o			=> i_PCH_Q
@@ -424,6 +433,7 @@ begin
 	e_reg_sph:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
 		WE_0_i		=> i_SPH_ld_ABH,
 		D_0_i			=> ib_ABH,
 		WE_1_i		=> i_SPH_ld_DB,
@@ -434,6 +444,7 @@ begin
 	e_reg_ixh:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
 		WE_0_i		=> i_IXH_ld_ABH,
 		D_0_i			=> ib_ABH,
 		WE_1_i		=> i_IXH_ld_DB,
@@ -445,62 +456,64 @@ begin
 	p_reg_ccr:process(CLK_i)
 	begin
 		if rising_edge(CLK_i) then
+			if CLKEN_i = '1' then
 			
-			if RST_i = '1' then
-				-- TODO: this is a frig - discover what real CPU does.
-				r_CCR <= "010000";
-			else
-				if i_CCR_ld_ALU_Z = '1' then
-					r_CCR(CCIX_Z) <= i_ALU_CCR_Q(CCIX_Z);
-				elsif i_CCR_ld_AND_ALU_Z = '1' then
-					r_CCR(CCIX_Z) <= r_CCR(CCIX_Z) and i_ALU_CCR_Q(CCIX_Z);
-				elsif i_CCR_ld_DB = '1' then
-					r_CCR(CCIX_Z) <= ib_DB(CCIX_Z);
-				end if;
-
-				if i_CCR_ld_ALU_N = '1' then
-					r_CCR(CCIX_N) <= i_ALU_CCR_Q(CCIX_N);
-				elsif i_CCR_ld_DB = '1' then
-					r_CCR(CCIX_N) <= ib_DB(CCIX_N);
-				end if;
-
-				if i_CCR_ld_ALU_V = '1' then
-					r_CCR(CCIX_V) <= i_ALU_CCR_Q(CCIX_V);
-				elsif i_CCR_ld_DB = '1' then
-					r_CCR(CCIX_V) <= ib_DB(CCIX_V);
-				elsif i_CCR_ld_SEV = '1' then
-					r_CCR(CCIX_V) <= '1';
-				elsif i_CCR_ld_CLV = '1' then
-					r_CCR(CCIX_V) <= '0';
-				end if;
-
-				if i_CCR_ld_ALU_C = '1' then
-					r_CCR(CCIX_C) <= i_ALU_CCR_Q(CCIX_C);
-				elsif i_CCR_ld_DB = '1' then
-					r_CCR(CCIX_C) <= ib_DB(CCIX_C);
-				elsif i_CCR_ld_SEC = '1' then
-					r_CCR(CCIX_C) <= '1';
-				elsif i_CCR_ld_CLC = '1' then
-					r_CCR(CCIX_C) <= '0';
-				end if;
-
-				if i_CCR_ld_ALU_H = '1' then
-					r_CCR(CCIX_H) <= i_ALU_CCR_Q(CCIX_H);
-				elsif i_CCR_ld_DB = '1'  then
-					r_CCR(CCIX_H) <= ib_DB(CCIX_H);
-				end if;
-
-				if i_CCR_ld_DB then
-					r_CCR_IM <= ib_DB(CCIX_I);
-					r_CCR(CCIX_I) <= r_CCR(CCIX_I) or ib_DB(CCIX_I) or r_CCR_IM;
-				elsif i_CCR_ld_SEI = '1' then
-					r_CCR_IM <= '1';
-					r_CCR(CCIX_I) <= '1';
-				elsif i_CCR_ld_CLI = '1' then
-					r_CCR(CCIX_I) <= r_CCR(CCIX_I) or r_CCR_IM;
-					r_CCR_IM <= '0';
+				if RST_i = '1' then
+					-- TODO: this is a frig - discover what real CPU does.
+					r_CCR <= "010000";
 				else
-					r_CCR(CCIX_I) <= r_CCR_IM;
+					if i_CCR_ld_ALU_Z = '1' then
+						r_CCR(CCIX_Z) <= i_ALU_CCR_Q(CCIX_Z);
+					elsif i_CCR_ld_AND_ALU_Z = '1' then
+						r_CCR(CCIX_Z) <= r_CCR(CCIX_Z) and i_ALU_CCR_Q(CCIX_Z);
+					elsif i_CCR_ld_DB = '1' then
+						r_CCR(CCIX_Z) <= ib_DB(CCIX_Z);
+					end if;
+
+					if i_CCR_ld_ALU_N = '1' then
+						r_CCR(CCIX_N) <= i_ALU_CCR_Q(CCIX_N);
+					elsif i_CCR_ld_DB = '1' then
+						r_CCR(CCIX_N) <= ib_DB(CCIX_N);
+					end if;
+
+					if i_CCR_ld_ALU_V = '1' then
+						r_CCR(CCIX_V) <= i_ALU_CCR_Q(CCIX_V);
+					elsif i_CCR_ld_DB = '1' then
+						r_CCR(CCIX_V) <= ib_DB(CCIX_V);
+					elsif i_CCR_ld_SEV = '1' then
+						r_CCR(CCIX_V) <= '1';
+					elsif i_CCR_ld_CLV = '1' then
+						r_CCR(CCIX_V) <= '0';
+					end if;
+
+					if i_CCR_ld_ALU_C = '1' then
+						r_CCR(CCIX_C) <= i_ALU_CCR_Q(CCIX_C);
+					elsif i_CCR_ld_DB = '1' then
+						r_CCR(CCIX_C) <= ib_DB(CCIX_C);
+					elsif i_CCR_ld_SEC = '1' then
+						r_CCR(CCIX_C) <= '1';
+					elsif i_CCR_ld_CLC = '1' then
+						r_CCR(CCIX_C) <= '0';
+					end if;
+
+					if i_CCR_ld_ALU_H = '1' then
+						r_CCR(CCIX_H) <= i_ALU_CCR_Q(CCIX_H);
+					elsif i_CCR_ld_DB = '1'  then
+						r_CCR(CCIX_H) <= ib_DB(CCIX_H);
+					end if;
+
+					if i_CCR_ld_DB then
+						r_CCR_IM <= ib_DB(CCIX_I);
+						r_CCR(CCIX_I) <= r_CCR(CCIX_I) or ib_DB(CCIX_I) or r_CCR_IM;
+					elsif i_CCR_ld_SEI = '1' then
+						r_CCR_IM <= '1';
+						r_CCR(CCIX_I) <= '1';
+					elsif i_CCR_ld_CLI = '1' then
+						r_CCR(CCIX_I) <= r_CCR(CCIX_I) or r_CCR_IM;
+						r_CCR_IM <= '0';
+					else
+						r_CCR(CCIX_I) <= r_CCR_IM;
+					end if;
 				end if;
 			end if;
 		end if;
@@ -510,6 +523,7 @@ begin
 	e_reg_dbi:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
 		WE_i			=> VMA_o,
 		D_i			=> D_i,
 		D_o			=> i_DBI_Q
@@ -519,6 +533,7 @@ begin
 	e_reg_ir:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
 		WE_i			=> i_IR_ld_D,
 		D_i			=> i_DBI_Q,
 		D_o			=> i_IR_Q
@@ -541,56 +556,56 @@ begin
 	variable v_int	: std_logic_vector(8 downto 0); -- low order with carry
 	begin
 		if rising_edge(CLK_i) then
+			if CLKEN_i = '1' then
 
-			case i_INC_L_src is 
-				when abl =>
-					v_src_l := ib_ABL;
-				when db =>
-					v_src_l := ib_DB;
-				when others =>
-					v_src_l := i_INCL_Q;
-			end case;
+				case i_INC_L_src is 
+					when abl =>
+						v_src_l := ib_ABL;
+					when db =>
+						v_src_l := ib_DB;
+					when others =>
+						v_src_l := i_INCL_Q;
+				end case;
 
-			case i_INC_H_src is 
-				when abh =>
-					v_src_h := ib_ABH;
-				when others =>
-					v_src_h := i_INCH_Q;
-			end case;
+				case i_INC_H_src is 
+					when abh =>
+						v_src_h := ib_ABH;
+					when others =>
+						v_src_h := i_INCH_Q;
+				end case;
 
-			case i_INC_act is
-				when inc => 
-					v_int := std_logic_vector("0" & unsigned(v_src_l) + 1);
-					r_incl <= v_int(7 downto 0);
-				when dec	=> 
-					v_int := std_logic_vector("0" & unsigned(v_src_l) - 1);
-					r_incl <= v_int(7 downto 0);
-				when others =>
-					r_incl <= v_src_l;
-			end case;
+				case i_INC_act is
+					when inc => 
+						v_int := std_logic_vector("0" & unsigned(v_src_l) + 1);
+						r_incl <= v_int(7 downto 0);
+					when dec	=> 
+						v_int := std_logic_vector("0" & unsigned(v_src_l) - 1);
+						r_incl <= v_int(7 downto 0);
+					when others =>
+						r_incl <= v_src_l;
+				end case;
 
-			case i_INC_act is
-				when inc => 
-					if v_int(8) = '1' then
+				case i_INC_act is
+					when inc => 
+						if v_int(8) = '1' then
+							r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
+						else
+							r_inch <= v_src_h;
+						end if;
+					when dec =>
+						if v_int(8) = '1' then
+							r_inch <= std_logic_vector(unsigned(v_src_h) - 1);
+						else
+							r_inch <= v_src_h;
+						end if;
+					when inc_page =>
 						r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
-					else
-						r_inch <= v_src_h;
-					end if;
-				when dec =>
-					if v_int(8) = '1' then
+					when dec_page =>
 						r_inch <= std_logic_vector(unsigned(v_src_h) - 1);
-					else
+					when others =>	
 						r_inch <= v_src_h;
-					end if;
-				when inc_page =>
-					r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
-				when dec_page =>
-					r_inch <= std_logic_vector(unsigned(v_src_h) - 1);
-				when others =>	
-					r_inch <= v_src_h;
-			end case;
-
-
+				end case;
+			end if;
 		end if;
 	end process;
 
@@ -610,11 +625,13 @@ begin
 
 	p_state_machine:process(CLK_i)
 	begin
-		if rising_edge(CLK_i) then
-			if RST_i = '1' then
-				r_state <= RESET;
-			else
-				r_state <= i_next_state;
+		if rising_edge(CLK_i) then		
+			if CLKEN_i = '1' then
+				if RST_i = '1' then
+					r_state <= RESET;
+				else
+					r_state <= i_next_state;
+				end if;
 			end if;
 		end if;
 	end process;

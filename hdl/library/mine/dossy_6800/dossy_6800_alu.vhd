@@ -30,6 +30,7 @@ use dossy_6800.dossy_6800.all;
 entity dossy_6800_alu is
 	port (	
 		CLK_i		: in	std_logic;
+		CLKEN_i	: in  std_logic;
 
 		OP_i		: in	t_alu_op;
 		C_i		: in	std_logic;
@@ -242,13 +243,15 @@ begin
 
 
 		if rising_edge(CLK_i) then
-			SUM_o <= v_SUM_o;
+			if CLKEN_i = '1' then
+				SUM_o <= v_SUM_o;
 
-			C_o	<= v_C_o;
-			H_o	<= v_H_o;
-			V_o	<= v_V_o;
-			N_o	<= v_N_o;
-			Z_o   <= v_Z_o;
+				C_o	<= v_C_o;
+				H_o	<= v_H_o;
+				V_o	<= v_V_o;
+				N_o	<= v_N_o;
+				Z_o   <= v_Z_o;
+			end if;
 		end if;
 	end process;
 
