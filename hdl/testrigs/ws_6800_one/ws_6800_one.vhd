@@ -52,6 +52,9 @@ library dossy_6800;
 use dossy_6800.dossy_6800.all;
 
 entity ws_6800_one is
+	generic (
+		ROOT									: string := "."
+		);
 	port(
 		-- crystal osc 50Mhz - on WS board
 		CLK_50M_i							: in		std_logic;
@@ -63,8 +66,8 @@ entity ws_6800_one is
 		FT245_nWR_o							: out		std_logic;
 		FT245_nRXF_i						: in		std_logic;
 		FT245_nTXE_i						: in		std_logic;
-		FT245_PWR							: out		std_logic;
-		FT245_nRST							: out		std_logic;
+		FT245_PWR_o							: out		std_logic;
+		FT245_nRST_o						: out		std_logic;
 		FT245_D_io							: inout	std_logic_vector(7 downto 0)
 
 	);
@@ -78,7 +81,6 @@ architecture rtl of ws_6800_one is
 	signal	r_clken_ring: std_logic_vector(3 downto 0) := (0 => '1', others => '0');
 
 	signal	i_clken_addr: std_logic;
-	signal	i_clken_mem : std_logic;
 	signal	i_clken_cpu : std_logic;
 
 	signal	i_RDen		: std_logic;
@@ -112,6 +114,9 @@ begin
 	);
 
 	LED_o(0) <= not(i_rst);
+	LED_o(1) <= i_cpu_A(0);
+	LED_o(2) <= i_cpu_A(14);
+	LED_o(3) <= i_cpu_A(15);
 
 	p_reset:process(i_clk_pll, EXT_nRESET_i)
 	variable v_ctr : unsigned(8 downto 0) := (others => '0');
@@ -137,7 +142,6 @@ begin
 		end if;
 	end process;
 
-	i_clken_mem  <= r_clken_ring(2);
 	i_clken_addr <= r_clken_ring(1);
 	i_clken_cpu  <= r_clken_ring(0);
 	i_RDen		 <= '1';
@@ -151,11 +155,11 @@ begin
 			i_CS_FT245_D <= '0';
 			i_CS_FT245_S <= '0';
 		elsif rising_edge(i_clk_pll) then
-			i_CS_RAM <= '0';
-			i_CS_ROM <= '0';
-			i_CS_FT245_D <= '0';
-			i_CS_FT245_S <= '0';
 			if i_clken_addr = '1' then
+				i_CS_RAM <= '0';
+				i_CS_ROM <= '0';
+				i_CS_FT245_D <= '0';
+				i_CS_FT245_S <= '0';
 
 				if i_cpu_A(15 downto 12) = x"F" then
 					i_CS_ROM <= '1';
@@ -192,7 +196,7 @@ begin
 	i_cpu_D_i <= i_ram_D_o 		when i_CS_RAM = '1' else
 					 i_rom_D_o 		when i_CS_ROM = '1' else
 					 FT245_D_io 	when i_CS_FT245_D = '1' else
-					 (0 => FT245_nTXE_i, 1 => FT245_nRXF_i, others => '0') 
+					 (0 => FT245_nRXF_i, 1 => FT245_nTXE_i, others => '0') 
 					 					when i_CS_FT245_S = '1' else
 					 x"FF";
 
@@ -212,17 +216,27 @@ begin
 	i_ram_we <= '1' when i_WRen = '1' and i_cpu_RnW = '0' and i_cpu_VMA = '1' and i_CS_RAM = '1' else
 					'0';
 
-	e_rom:entity work.ROM_syn
+
+	e_rom: ENTITY work.rom
 	generic map (
-		romfile					=> "./asm/rom_monitor/build/rom_monitor.bin",
-		size						=> 4096
+		MIF => ROOT & "/asm/test_monitor/build/test_monitor.mif"
 	)
-	port map (
-		CLK_I			=> i_clk_pll,
-		CLKEN_I		=> '1',
-		A_I			=> i_cpu_A(11 downto 0),
-		D_O			=> i_rom_D_o
+	port map
+	(
+		address		=> i_cpu_A(11 downto 0),
+		clock			=>	i_clk_pll,
+		rden			=> i_clken_addr,
+		q				=> i_rom_D_o
 	);
-		
+
+	FT245_nRST_o <= '1'; --not i_rst;
+	FT245_PWR_o <= '1';
+	FT245_nRD_o <= '0' when i_RDen = '1' and i_cpu_RnW = '1' and i_cpu_VMA = '1' and i_CS_FT245_D = '1' else
+						'1';
+	FT245_nWR_o <= '0' when i_WRen = '1' and i_cpu_RnW = '0' and i_cpu_VMA = '1' and i_CS_FT245_D = '1' else
+						'1';
+
+	FT245_D_io <= 	i_cpu_D_o when i_cpu_RnW = '0' and i_cpu_VMA = '1' and i_CS_FT245_D = '1' else
+						(others => 'Z');
 
 end rtl;

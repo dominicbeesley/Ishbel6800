@@ -61,7 +61,7 @@ output_files/$(PROJECT).map.rpt fit.chg: $(PROJECT).qsf
 	$(QUARTUS_MAP) $(MAP_ARGS) $(PROJECT)
 	$(STAMP) fit.chg
 
-output_files/$(PROJECT).fit.rpt asm.chg: $(PROJECT).qsf output_files/$(PROJECT).map.rpt fit.chg
+output_files/$(PROJECT).fit.rpt asm.chg: $(PROJECT).qsf output_files/$(PROJECT).map.rpt fit.chg asm/test_monitor/build/test_monitor.mif
 	$(QUARTUS_FIT) $(FIT_ARGS) $(PROJECT)
 	$(STAMP) asm.chg
 

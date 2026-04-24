@@ -4,6 +4,7 @@
 *.chg
 **/db
 **/incremental_db
+**/greybox_tmp
 **/output_files
 *.deps
 **/build

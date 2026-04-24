@@ -58,21 +58,21 @@ set_location_assignment	PIN_B10	-to	LED_o[2]
 set_location_assignment	PIN_B7	-to	LED_o[3]
 
 #16I/Os_1
-set_location_assignment	PIN_L6	-to FT245_D_o[0]		# 16I/Os_1_1	   
+set_location_assignment	PIN_L6	-to FT245_D_io[0]		# 16I/Os_1_1	   
 #set_location_assignment	PIN_N8	-to FT245_nc		# 16I/Os_1_2
-set_location_assignment	PIN_P8	-to FT245_D_o[1]		# 16I/Os_1_3
+set_location_assignment	PIN_P8	-to FT245_D_io[1]		# 16I/Os_1_3
 #set_location_assignment	PIN_P6	-to FT245_nc		# 16I/Os_1_4
-set_location_assignment	PIN_N6	-to FT245_D_o[2]		# 16I/Os_1_5
-set_location_assignment	PIN_N5	-to FT245_nRST			# 16I/Os_1_6
-set_location_assignment	PIN_P3	-to FT245_D_o[3]		# 16I/Os_1_7
-set_location_assignment	PIN_N3	-to FT245_PWR			# 16I/Os_1_8
-set_location_assignment	PIN_L4	-to FT245_D_o[4]		# 16I/Os_1_9
-set_location_assignment	PIN_L3	-to FT245_nTXE			# 16I/Os_1_10
-set_location_assignment	PIN_T2	-to FT245_D_o[5]		# 16I/Os_1_11
-set_location_assignment	PIN_R1	-to FT245_nRXF			# 16I/Os_1_12
-set_location_assignment	PIN_P2	-to FT245_D_o[6]		# 16I/Os_1_13
+set_location_assignment	PIN_N6	-to FT245_D_io[2]		# 16I/Os_1_5
+set_location_assignment	PIN_N5	-to FT245_nRST_o		# 16I/Os_1_6
+set_location_assignment	PIN_P3	-to FT245_D_io[3]		# 16I/Os_1_7
+set_location_assignment	PIN_N3	-to FT245_PWR_o			# 16I/Os_1_8
+set_location_assignment	PIN_L4	-to FT245_D_io[4]		# 16I/Os_1_9
+set_location_assignment	PIN_L3	-to FT245_nTXE_i		# 16I/Os_1_10
+set_location_assignment	PIN_T2	-to FT245_D_io[5]		# 16I/Os_1_11
+set_location_assignment	PIN_R1	-to FT245_nRXF_i		# 16I/Os_1_12
+set_location_assignment	PIN_P2	-to FT245_D_io[6]		# 16I/Os_1_13
 set_location_assignment	PIN_P1	-to FT245_nWR_o			# 16I/Os_1_14
-set_location_assignment	PIN_N2	-to FT245_D_o[7]		# 16I/Os_1_15
+set_location_assignment	PIN_N2	-to FT245_D_io[7]		# 16I/Os_1_15
 set_location_assignment	PIN_N1	-to FT245_nRD_o			# 16I/Os_1_16
 
 
@@ -99,3 +99,4 @@ set_global_assignment -name VHDL_FILE ../../library/mine/dossy_6800/dossy_6800_r
 
 
 set_global_assignment -name QIP_FILE main_pll.qip
+set_global_assignment -name QIP_FILE rom.qip
