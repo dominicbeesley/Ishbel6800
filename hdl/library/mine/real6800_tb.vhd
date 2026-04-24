@@ -49,6 +49,9 @@ LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
 
+library dossy_6800;
+use dossy_6800.dossy_6800.all;
+
 ENTITY real_6800_tb IS
 	GENERIC (
 			-- these times are from datasheet for 68B00
@@ -169,7 +172,7 @@ BEGIN
 
 	i_cpu_D_in <= D;
 
-	e_cpu: entity work.dossy_6800_cpu port map (
+	e_cpu: entity dossy_6800.dossy_6800_cpu port map (
 		CLKEN_i		=> '1',
 		CLK_i			=> i_cpu_clk,
 		RST_i			=> i_RESET,
