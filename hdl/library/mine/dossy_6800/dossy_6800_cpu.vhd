@@ -49,6 +49,7 @@ architecture rtl of dossy_6800_cpu is
 	-- internal buses
 	signal	ib_DB					: std_logic_vector(7 downto 0);
 	signal	ib_ABL				: std_logic_vector(7 downto 0);
+	signal	ib_ABL2				: std_logic_vector(7 downto 0);
 	signal	ib_ABLI				: std_logic_vector(7 downto 0);
 	signal	ib_ABH				: std_logic_vector(7 downto 0);
 	signal	ib_OBL				: std_logic_vector(7 downto 0);
@@ -194,6 +195,8 @@ begin
 -- TODO: bus muxes should probably surface combinatorial or inconsistent 
 -- behaviour when there are multiple sources active
 
+-- NOTE: there are two ABL muxes one with, one without ABLI to avoid combinatorial loops
+
 	e_bus_mux_ABL:entity dossy_6800.dossy_6800_mux8
 	generic map (
 		WIDTH => 4
@@ -214,6 +217,25 @@ begin
 		D_o		=> ib_ABL
 	);
 
+	e_bus_mux_ABL2:entity dossy_6800.dossy_6800_mux8
+	generic map (
+		WIDTH => 3
+	)
+	port map (
+		SEL_i		=> (
+			0 => i_mux_ABL_INCL,
+			1 => i_mux_ABL_PCL,
+			2 => i_mux_ABL_SPL
+		),
+		D_i		=> (
+			0 => i_INCL_Q,
+			1 => i_PCL_Q,
+			2 => i_SPL_Q
+		),
+		D_o		=> ib_ABL2
+	);
+
+
 	ib_OBL <= ib_DB when i_mux_OBL_DB = '1' else
 				 ib_ABL;
 
@@ -232,7 +254,7 @@ begin
 			6 => i_mux_ABLI_00
 		),
 		D_i		=> (
-			0 => ib_ABL,
+			0 => ib_ABL2,
 			1 => i_IXL_Q,
 			2 => i_ACCA_Q,
 			3 => i_ACCB_Q,
