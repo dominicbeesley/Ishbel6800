@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-23T14:35:48Z
+-- GENERATED : 2026-04-24T15:05:47Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -127,12 +127,9 @@ begin
 
 	p_control:process(all)
 		function PMATCH(V: in std_logic_vector; M: in std_logic_vector) return boolean is
+		variable ret : boolean;
 		begin
-			if V ?= M then
-				return true;
-			else
-				return false;
-			end if;			
+			return std_match(V, M);
 		end function;
 
 		impure function DECODE return t_cpu_state is

@@ -524,7 +524,7 @@ begin
 	port map (
 		CLK_i			=> CLK_i,
 		CLKEN_i		=> CLKEN_i,
-		WE_i			=> VMA_o,
+		WE_i			=> i_VMA,
 		D_i			=> D_i,
 		D_o			=> i_DBI_Q
 	);

@@ -181,15 +181,19 @@ begin
 	variable v_SUM_o			: std_logic_vector(7 downto 0);
 	begin
 
-		v_C_i_masked  :=	'0' when	OP_i = alu_add or 
-											OP_i = alu_sub or
-											OP_i = alu_asl or
-											OP_i = alu_lsr or		
-											OP_i = alu_dec or
-											OP_i = alu_neg else
-								'1' when OP_i = alu_inc or
-											OP_i = alu_com else									
-								C_i;
+		if 	OP_i = alu_add or 
+				OP_i = alu_sub or
+				OP_i = alu_asl or
+				OP_i = alu_lsr or		
+				OP_i = alu_dec or
+				OP_i = alu_neg then
+			v_C_i_masked := '0';
+		elsif OP_i = alu_inc or
+				OP_i = alu_com then
+			v_C_i_masked := '1';
+		else
+			v_C_i_masked := C_i;
+		end if;
 		v_V_o := V_i;
 		v_C_o := C_i;
 		v_H_o	:= H_i;
