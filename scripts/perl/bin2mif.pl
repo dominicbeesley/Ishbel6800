@@ -90,7 +90,7 @@ printf "-- mif file produced by bin2mif.pl\n";
 printf "WIDTH = 8;\n";
 printf "DEPTH = %d;\n", ($size>0)?$size:$l;
 printf "ADDRESS_RADIX = HEX;\n";
-printf "DATA = HEX;\n";
+printf "DATA_RADIX = HEX;\n";
 printf "CONTENT\n";
 printf "BEGIN\n";
 
