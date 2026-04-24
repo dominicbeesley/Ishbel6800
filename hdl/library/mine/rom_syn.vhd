@@ -55,7 +55,6 @@ entity ROM_syn is
 		CLK_I			: in		std_logic;
 		CLKEN_I		: in		std_logic;
 		A_I			: in		std_logic_vector(numbits(size)-1 downto 0);
-		D_I			: in		std_logic_vector(7 downto 0);
 		D_O			: out		std_logic_vector(7 downto 0)
 	);
 		
@@ -63,7 +62,7 @@ end ROM_syn;
 
 architecture rtl of ROM_syn is
 
-	type		romtype			is array(0 to size) of std_logic_vector(7 downto 0);
+	type		romtype			is array(0 to size-1) of std_logic_vector(7 downto 0);
 	signal	rom				: romtype;
 
 	signal	r_A				: std_logic_vector(numbits(size)-1 downto 0);
@@ -91,13 +90,13 @@ begin
 		wait;
 	end process;
 	
-	D_o <= ram(to_integer(unsigned(r_A)));
+	D_o <= rom(to_integer(unsigned(r_A)));
 
 	p_read:process(CLK_I)
 	begin
 		if rising_edge(CLK_I) then
 			if CLKEN_I = '1' then
-				r_A <= A;
+				r_A <= A_I;
 			end if;
 		end if;
 	end process;

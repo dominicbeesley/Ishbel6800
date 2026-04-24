@@ -49,6 +49,7 @@ use IEEE.NUMERIC_STD.ALL;
 use work.common.all;
 
 entity RAM_syn is
+	generic (
 		size		: integer := 1024
 	);
 	port (
@@ -76,7 +77,7 @@ begin
 	begin
 		if rising_edge(CLK_I) then
 			if CLKEN_I = '1' then
-				r_A <= A;
+				r_A <= A_I;
 			end if;
 		end if;
 	end process;

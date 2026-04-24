@@ -322,12 +322,9 @@ begin
 
 	p_control:process(all)
 		function PMATCH(V: in std_logic_vector; M: in std_logic_vector) return boolean is
+		variable ret : boolean;
 		begin
-			if V ?= M then
-				return true;
-			else
-				return false;
-			end if;			
+			return std_match(V, M);
 		end function;
 
 		impure function DECODE return t_cpu_state is

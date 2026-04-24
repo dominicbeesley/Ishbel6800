@@ -48,6 +48,8 @@ use ieee.numeric_std.all;
 library work;
 use work.common.all;
 
+library dossy_6800;
+use dossy_6800.dossy_6800.all;
 
 entity ws_6800_one is
 	port(
@@ -55,100 +57,172 @@ entity ws_6800_one is
 		CLK_50M_i							: in		std_logic;
 		EXT_nRESET_i						: in		std_logic;								-- WS button
 
-		PHI0_o								: out		std_logic;
-		PHI1_o								: out		std_logic;
-		PHI2_o								: out		std_logic;
-	
-		CPU_VMA_i							: in		std_logic;
-		CPU_BA_i								: in		std_logic;
-		CPU_RnW_i							: in		std_logic;
+		LED_o									: out		std_logic_vector(3 downto 0);
 
-		CPU_nRES_o							: out		std_logic;
-		CPU_nHALT_o							: out    std_logic;
-
-		CPU_D_io								: inout	std_logic_vector(7 downto 0)
+		FT245_nRD_o							: out		std_logic;
+		FT245_nWR_o							: out		std_logic;
+		FT245_nRXF_i						: in		std_logic;
+		FT245_nTXE_i						: in		std_logic;
+		FT245_PWR							: out		std_logic;
+		FT245_nRST							: out		std_logic;
+		FT245_D_io							: inout	std_logic_vector(7 downto 0)
 
 	);
 end ws_6800_one;
 
 architecture rtl of ws_6800_one is
 
-	constant DIV_50_1 : natural := (50/2)-1;
+	signal	i_clk_pll	: std_logic;
+	signal	i_rst			: std_logic;
 
-	signal	r_clkdiv_50_1				: unsigned(numbits(DIV_50_1) downto 0) := to_unsigned(DIV_50_1, numbits(DIV_50_1) + 1); -- 1 bit larger, overflow resets
+	signal	r_clken_ring: std_logic_vector(3 downto 0) := (0 => '1', others => '0');
 
-	signal	r_phi							: std_logic_vector(2 downto 0) := (others => '0');
+	signal	i_clken_addr: std_logic;
+	signal	i_clken_mem : std_logic;
+	signal	i_clken_cpu : std_logic;
 
-	signal	i_phi1						: std_logic;
-	signal	i_phi2						: std_logic;
+	signal	i_RDen		: std_logic;
+	signal	i_WRen		: std_logic;
+
+	signal	i_CS_RAM		: std_logic;
+	signal	i_CS_ROM		: std_logic;
+	signal	i_CS_FT245_D: std_logic;	-- data
+	signal	i_CS_FT245_S: std_logic;	-- status
+
+	signal	i_cpu_RnW	: std_logic;
+	signal	i_cpu_VMA	: std_logic;
+	signal	i_cpu_A		: std_logic_vector(15 downto 0);
+	signal	i_cpu_D_i	: std_logic_vector(7 downto 0);
+	signal	i_cpu_D_o	: std_logic_vector(7 downto 0);
+
+	signal	i_ram_we		: std_logic;
+	signal	i_ram_D_o	: std_logic_vector(7 downto 0);
+	signal	i_rom_D_o	: std_logic_vector(7 downto 0);
 
 begin
 
-	i_phi1 <= not (r_phi(2) or r_phi(1));
-	i_phi2 <= r_phi(2) and r_phi(1);
+	
+	e_main_pll:entity work.main_pll
+	port map
+	(
+		areset	=>	'0',
+		inclk0	=>	CLK_50M_i,
+		c0			=>	i_clk_pll,
+		locked	=>	open
+	);
 
-	PHI0_o <= r_phi(0);
-	PHI1_o <= i_phi1;
-	PHI2_o <= i_phi2;
+	LED_o(0) <= not(i_rst);
 
-	p_clk_div:process(CLK_50M_i)
+	p_reset:process(i_clk_pll, EXT_nRESET_i)
+	variable v_ctr : unsigned(8 downto 0) := (others => '0');
 	begin
-		if rising_edge(CLK_50M_i) then
-			if r_clkdiv_50_1(r_clkdiv_50_1'high) = '1' then
-				r_clkdiv_50_1 <= to_unsigned(DIV_50_1, r_clkdiv_50_1'length);
-				r_phi(0) <= not r_phi(0);
-			else
-				r_clkdiv_50_1 <= r_clkdiv_50_1 - 1;
+		
+		if rising_edge(i_clk_pll) then
+			if EXT_nRESET_i = '0' then
+				v_ctr := (others => '0');
+			elsif v_ctr(v_ctr'high) = '0' then
+				v_ctr := v_ctr + 1;
 			end if;
-			r_phi(r_phi'high downto 1) <= r_phi(r_phi'high-1 downto 0);
+
+			i_rst <= not(v_ctr(v_ctr'high));
 		end if;
 	end process;
 
-
-	b_res:block is
-		signal r_res_ctr : unsigned(5 downto 0) := (others => '0');
+	p_clken:process(i_clk_pll, i_rst)
 	begin
-		p_test_res:process(EXT_nRESET_i, i_phi1)
-		begin
-			if EXT_nRESET_i = '0' then
-				r_res_ctr <= (others => '0');
-			elsif falling_edge(i_phi1) then
-				if r_res_ctr(r_res_ctr'high) = '0' then
-					r_res_ctr <= r_res_ctr + 1;
-				end if;
-			end if;
-		end process;
-		CPU_nRES_o <= r_res_ctr(r_res_ctr'high);
-	end block;
+		if i_rst = '1' then
+			r_clken_ring <= (0 => '1', others => '0');
+		elsif rising_edge(i_clk_pll) then
+			r_clken_ring <= r_clken_ring(r_clken_ring'high-1 downto 0) & r_clken_ring(r_clken_ring'high);
+		end if;
+	end process;
 
+	i_clken_mem  <= r_clken_ring(2);
+	i_clken_addr <= r_clken_ring(1);
+	i_clken_cpu  <= r_clken_ring(0);
+	i_RDen		 <= '1';
+	i_WRen		 <= r_clken_ring(2) or r_clken_ring(3);
 
-	b_halt:block is
-		signal r_h_ctr : unsigned(5 downto 0);		
-		signal r_waiting : std_logic;
+	p_cs:process(i_clk_pll)
 	begin
-		p_halt:process(CPU_nRES_o, i_phi2)
-		begin
-			if CPU_nRES_o = '0' then
-				CPU_nHALT_o <= '0';			
-				r_h_ctr <= (others => '0');
-				r_waiting <= '0';
-			elsif falling_edge(i_phi2) then
-				CPU_nHALT_o <= '0';
-				if CPU_BA_i = '1' then
-					if r_h_ctr(r_h_ctr'high) = '1' and r_waiting = '0' then
-						CPU_nHALT_o <= '1';
-						r_h_ctr <= (others => '0');
-						r_waiting <= '1';
+		if i_rst = '1' then
+			i_CS_RAM <= '0';
+			i_CS_ROM <= '0';
+			i_CS_FT245_D <= '0';
+			i_CS_FT245_S <= '0';
+		elsif rising_edge(i_clk_pll) then
+			i_CS_RAM <= '0';
+			i_CS_ROM <= '0';
+			i_CS_FT245_D <= '0';
+			i_CS_FT245_S <= '0';
+			if i_clken_addr = '1' then
+
+				if i_cpu_A(15 downto 12) = x"F" then
+					i_CS_ROM <= '1';
+				elsif i_cpu_A(15 downto 12) = x"E" then
+					if i_cpu_A(0) = '1' then
+						i_CS_FT245_D <= '1';
 					else
-						r_h_ctr <= r_h_ctr + 1;
+						i_CS_FT245_S <= '1';
 					end if;
-				else
-					r_waiting <= '0';
+				elsif i_cpu_A(15 downto 12) = x"0" then
+					i_CS_RAM <= '1';
 				end if;
+			
 			end if;
-		end process;
-	end block;
+		end if;
+	end process;
 
+	e_cpu:entity dossy_6800.dossy_6800_cpu
+	port map (	
+		CLK_i		=> i_clk_pll,
+		CLKEN_i	=> i_clken_cpu,
+		RST_i		=> i_rst,
+		HALT_i	=> '0',
+		IRQ_i		=>	'1',
+		NMI_i		=>	'1',
+		RnW_o		=>	i_cpu_RnW,
+		VMA_o		=>	i_cpu_VMA,
+		BA_o		=>	open,
+		A_o		=> i_cpu_A,
+	   D_i		=>	i_cpu_D_i,
+	   D_o		=> i_cpu_D_o
+	);
 
-	CPU_D_io <= x"01" when CPU_RnW_i = '1' else (others => 'H');
+	i_cpu_D_i <= i_ram_D_o 		when i_CS_RAM = '1' else
+					 i_rom_D_o 		when i_CS_ROM = '1' else
+					 FT245_D_io 	when i_CS_FT245_D = '1' else
+					 (0 => FT245_nTXE_i, 1 => FT245_nRXF_i, others => '0') 
+					 					when i_CS_FT245_S = '1' else
+					 x"FF";
+
+	e_ram:entity work.RAM_syn
+	generic map (
+		size		=> 4096
+	)
+	port map (
+		CLK_I			=> i_clk_pll,
+		CLKEN_I		=> '1',
+		A_I			=> i_cpu_A(11 downto 0),
+		D_I			=> i_cpu_D_o,
+		D_O			=> i_ram_D_o,
+		WE_I			=> i_ram_we
+	);
+
+	i_ram_we <= '1' when i_WRen = '1' and i_cpu_RnW = '0' and i_cpu_VMA = '1' and i_CS_RAM = '1' else
+					'0';
+
+	e_rom:entity work.ROM_syn
+	generic map (
+		romfile					=> "./asm/rom_monitor/build/rom_monitor.bin",
+		size						=> 4096
+	)
+	port map (
+		CLK_I			=> i_clk_pll,
+		CLKEN_I		=> '1',
+		A_I			=> i_cpu_A(11 downto 0),
+		D_O			=> i_rom_D_o
+	);
+		
+
 end rtl;
