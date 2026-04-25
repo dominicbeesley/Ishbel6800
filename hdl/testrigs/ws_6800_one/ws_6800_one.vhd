@@ -182,17 +182,17 @@ begin
 
 			if i_cpu_VMA = '1' then
 
-				if i_cpu_A(15 downto 12) = x"F" then
+				if i_cpu_A(15 downto 13) = "111" then
 					i_CS_ROM <= '1';
-				elsif i_cpu_A(15 downto 8) = x"E0" then
+				elsif i_cpu_A(15 downto 8) = x"80" then
 					if i_cpu_A(0) = '1' then
 						i_CS_FT245_D <= '1';
 					else
 						i_CS_FT245_S <= '1';
 					end if;
-				elsif i_cpu_A(15 downto 8) = x"E1" then
+				elsif i_cpu_A(15 downto 8) = x"81" then
 					i_CS_LCD32 <= '1';
-				elsif i_cpu_A(15 downto 12) = x"0" then
+				elsif i_cpu_A(15) = '0' then
 					i_CS_RAM <= '1';
 				end if;
 			end if;
@@ -226,12 +226,12 @@ begin
 
 	e_ram:entity work.RAM_syn
 	generic map (
-		size		=> 4096
+		size		=> 32768
 	)
 	port map (
 		CLK_I			=> i_clk_pll,
 		CLKEN_I		=> '1',
-		A_I			=> i_cpu_A(11 downto 0),
+		A_I			=> i_cpu_A(14 downto 0),
 		D_I			=> i_cpu_D_o,
 		D_O			=> i_ram_D_o,
 		WE_I			=> i_ram_we
@@ -243,11 +243,11 @@ begin
 
 	e_rom: ENTITY work.rom
 	generic map (
-		MIF => ROOT & "/asm/test_monitor/build/test_monitor.mif"
+		MIF => ROOT & "/asm/smithbug/build/V2_Ishbel.mif"
 	)
 	port map
 	(
-		address		=> i_cpu_A(11 downto 0),
+		address		=> i_cpu_A(12 downto 0),
 		clock			=>	i_clk_pll,
 		rden			=> i_clken_addr,
 		q				=> i_rom_D_o

@@ -1,9 +1,4 @@
 
-		.equ	ZP_SENDXX, 0
-		.equ	ZP_SENDXV, 2
-
-		.equ	ZP_LPCTR,  4
-
 		.equ FT245_STAT,	0x8000
 		.equ FT245_DATA,	0x8001
 
@@ -13,19 +8,14 @@
 		.equ LCD32_REG, 	0x8100
 		.equ LCD32_DATA, 	0x8102
 
-		.org 0xE000
 
-handle_irq:	rti
-handle_swi:	rti
-handle_nmi:	rti
-
-str:		.byte "Hello Dossytronics", 0
-
-handle_res:	lds	#0x1FF
-
-		inc	ZP_LPCTR
+		.dpage
+ZP_SENDXX:	.word	0
 
 
+		.text
+START:
+		lds	#STACK
 		ldx	#lcd32_init0
 		jsr	lcd32sendXregs
 		ldx	#200
@@ -63,7 +53,7 @@ handle_res:	lds	#0x1FF
 		ldab	#0x22
 		staa	LCD32_REG	; index MSB
 		stab	LCD32_REG+1	; index LSB	
-		lda	ZP_LPCTR	
+		clra
 		clrb
 lp11:		staa	LCD32_DATA	
 		stab	LCD32_DATA+1
@@ -73,32 +63,8 @@ lp11:		staa	LCD32_DATA
 sk11:		dex
 		bne 	lp11
 
+		swi
 
-
-
-		ldx	#4000
-		jsr	delayXms
-
-		ldx	#str
-		jsr	send_strX
-		jmp	handle_res
-
-
-send_strX:
-.0:		ldaa	0,X
-		beq	.2
-		jsr	send_charA
-		inx
-		bra	.0
-.2:		rts
-
-send_charA:	psha
-		ldab	#FT245_TXE
-.1:		bitb	FT245_STAT	
-		bne	.1
-		staa	FT245_DATA
-		pulb
-		rts
 
 	; need ~ 2500 cycles
 delay1ms:	psha		;4
@@ -141,7 +107,7 @@ lcd32sendXregs:
 		.byte	\index
 		.word	\value
 	.endm
-
+		.data
 lcd32_init0:
         LCD32REGVAL	0xE5, 0x78F0	; /* set SRAM internal timing */
         LCD32REGVAL	0x01, 0x0100	; /* set Driver Output Control */
@@ -214,8 +180,5 @@ lcd32_init4:
         LCD32REGVAL	0x07, 0x0133	; /* 262K color and display ON */
 			.byte 0xFF
 
-		.org 0xFFF8
-hw_irq:		.word	handle_irq
-hw_swi:		.word	handle_swi
-hw_nmi:		.word	handle_nmi
-hw_res:		.word	handle_res
+HERE:
+	.equ	STACK, HERE + 0x100

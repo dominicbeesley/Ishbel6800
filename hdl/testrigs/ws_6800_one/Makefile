@@ -7,6 +7,8 @@
 	QUARTUS_PGM=quartus_pgm.exe
 	QUARTUS_CPF=quartus_cpf.exe
 
+FIRMWARE=asm/smithbug/build/V2_Ishbel.mif
+
 
 ###################################################################
 # Project Configuration: 
@@ -55,12 +57,13 @@ ASM_ARGS =
 
 STAMP = echo done >
 
-.PHONY:	asm/test_monitor/build/test_monitor.mif
 
-asm/test_monitor/build/test_monitor.mif:
-	make -C asm/test_monitor
+.PHONY:	$(FIRMWARE)
 
-output_files/$(PROJECT).map.rpt fit.chg: $(PROJECT).qsf  asm/test_monitor/build/test_monitor.mif
+$(FIRMWARE):
+	make -C asm/smithbug
+
+output_files/$(PROJECT).map.rpt fit.chg: $(PROJECT).qsf $(FIRMWARE)
 	$(QUARTUS_MAP) $(MAP_ARGS) $(PROJECT)
 	$(STAMP) fit.chg
 
