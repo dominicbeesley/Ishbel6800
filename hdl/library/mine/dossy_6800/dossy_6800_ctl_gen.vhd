@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-24T15:05:47Z
+-- GENERATED : 2026-04-25T16:31:54Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -659,6 +659,7 @@ begin
             mux_DB_IXH_o <= '1';
             mux_ABL_PCL_o <= '1'; mux_ABH_PCH_o <= '1';
             INC_L_src_o <= abl; INC_H_src_o <= abh;
+            ALU_op_o <= alu_or;
             next_state_o <= INXDEX_TSL0;
 
          when INXDEX_T1_D00 =>

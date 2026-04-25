@@ -547,7 +547,8 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	IXL->ABLI
 	IXH->DB
 	PC->AB->INC
-	#this will and L/H for Z flag in next op
+	ALU_ORA
+	#this will OR L/H for Z flag in next op
 	NEXT=INXDEX_TSL0
 
 [INXDEX_TSL0]
