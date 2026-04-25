@@ -75,6 +75,34 @@ set_location_assignment	PIN_P1	-to FT245_nWR_o			# 16I/Os_1_14
 set_location_assignment	PIN_N2	-to FT245_D_io[7]		# 16I/Os_1_15
 set_location_assignment	PIN_N1	-to FT245_nRD_o			# 16I/Os_1_16
 
+set_location_assignment PIN_R11 -to lcd32_D_io[0]		# 32I/Os_2_1	   
+set_location_assignment PIN_N12 -to lcd32_D_io[1]		# 32I/Os_2_2
+set_location_assignment PIN_P11 -to lcd32_D_io[2]		# 32I/Os_2_3
+set_location_assignment PIN_N11 -to lcd32_D_io[3]		# 32I/Os_2_4
+set_location_assignment PIN_P9 	-to lcd32_D_io[4]		# 32I/Os_2_5
+set_location_assignment PIN_N9 	-to lcd32_D_io[5]		# 32I/Os_2_6
+set_location_assignment PIN_R10 -to lcd32_D_io[6]		# 32I/Os_2_7
+set_location_assignment PIN_T11 -to lcd32_D_io[7]		# 32I/Os_2_8
+set_location_assignment PIN_R9 	-to lcd32_D_io[8]		# 32I/Os_2_9
+set_location_assignment PIN_T10 -to lcd32_D_io[9]		# 32I/Os_2_10
+set_location_assignment PIN_R8 	-to lcd32_D_io[10]		# 32I/Os_2_11
+set_location_assignment PIN_T9 	-to lcd32_D_io[11]		# 32I/Os_2_12
+set_location_assignment PIN_R7 	-to lcd32_D_io[12]		# 32I/Os_2_13
+set_location_assignment PIN_T8 	-to lcd32_D_io[13]		# 32I/Os_2_14
+set_location_assignment PIN_R6 	-to lcd32_D_io[14]		# 32I/Os_2_15
+set_location_assignment PIN_T7 	-to lcd32_D_io[15]		# 32I/Os_2_16
+
+set_location_assignment PIN_R5 	-to lcd32_nCS_o			# 32I/Os_2_17	   
+set_location_assignment PIN_T6 	-to lcd32_RS_o			# 32I/Os_2_18
+set_location_assignment PIN_R4 	-to lcd32_nWR_o			# 32I/Os_2_19
+set_location_assignment PIN_T5 	-to lcd32_nRD_o			# 32I/Os_2_20
+set_location_assignment PIN_R3 	-to lcd32_nRESET_o		# 32I/Os_2_21
+set_location_assignment PIN_T4 	-to touch_irq_i			# 32I/Os_2_22
+set_location_assignment PIN_M9 	-to touch_nCS_o			# 32I/Os_2_23
+set_location_assignment PIN_T3 	-to touch_SCLK_o		# 32I/Os_2_24
+set_location_assignment PIN_K9 	-to touch_MOSI_o		# 32I/Os_2_25
+set_location_assignment PIN_L9 	-to touch_MISO_i		# 32I/Os_2_26
+
 
 set_global_assignment -name RESERVE_DCLK_AFTER_CONFIGURATION "USE AS REGULAR IO"
 set_global_assignment -name RESERVE_DATA0_AFTER_CONFIGURATION "USE AS REGULAR IO"
@@ -83,7 +111,6 @@ set_global_assignment -name RESERVE_FLASH_NCE_AFTER_CONFIGURATION "USE AS REGULA
 
 
 
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 
 set_global_assignment -name VHDL_FILE ws_6800_one.vhd
 set_global_assignment -name VHDL_FILE ../../library/mine/common.vhd
@@ -100,3 +127,5 @@ set_global_assignment -name VHDL_FILE ../../library/mine/dossy_6800/dossy_6800_r
 
 set_global_assignment -name QIP_FILE main_pll.qip
 set_global_assignment -name QIP_FILE rom.qip
+set_global_assignment -name SDC_FILE ws_6800_one.sdc
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

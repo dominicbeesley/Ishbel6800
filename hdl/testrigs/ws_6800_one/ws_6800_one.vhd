@@ -68,7 +68,20 @@ entity ws_6800_one is
 		FT245_nTXE_i						: in		std_logic;
 		FT245_PWR_o							: out		std_logic;
 		FT245_nRST_o						: out		std_logic;
-		FT245_D_io							: inout	std_logic_vector(7 downto 0)
+		FT245_D_io							: inout	std_logic_vector(7 downto 0);
+
+		lcd32_D_io							: inout	std_logic_vector(15 downto 0);
+		lcd32_nCS_o							: out		std_logic;
+		lcd32_RS_o							: out		std_logic;
+		lcd32_nWR_o							: out		std_logic;
+		lcd32_nRD_o							: out		std_logic;
+		lcd32_nRESET_o						: out		std_logic;
+		
+		touch_irq_i							: in		std_logic;
+		touch_nCS_o							: out		std_logic;
+		touch_SCLK_o						: out		std_logic;
+		touch_MOSI_o						: out		std_logic;
+		touch_MISO_i						: in		std_logic
 
 	);
 end ws_6800_one;
@@ -81,6 +94,7 @@ architecture rtl of ws_6800_one is
 	signal	r_clken_ring: std_logic_vector(3 downto 0) := (0 => '1', others => '0');
 
 	signal	i_clken_addr: std_logic;
+	signal	i_clken_mems: std_logic; -- memory transfer start
 	signal	i_clken_cpu : std_logic;
 
 	signal	i_RDen		: std_logic;
@@ -90,6 +104,7 @@ architecture rtl of ws_6800_one is
 	signal	i_CS_ROM		: std_logic;
 	signal	i_CS_FT245_D: std_logic;	-- data
 	signal	i_CS_FT245_S: std_logic;	-- status
+	signal	i_CS_LCD32	: std_logic;
 
 	signal	i_cpu_RnW	: std_logic;
 	signal	i_cpu_VMA	: std_logic;
@@ -100,6 +115,8 @@ architecture rtl of ws_6800_one is
 	signal	i_ram_we		: std_logic;
 	signal	i_ram_D_o	: std_logic_vector(7 downto 0);
 	signal	i_rom_D_o	: std_logic_vector(7 downto 0);
+
+	signal	r_lcd_lat	: std_logic_vector(7 downto 0); -- latches 16 bit data see
 
 begin
 
@@ -143,36 +160,41 @@ begin
 	end process;
 
 	i_clken_addr <= r_clken_ring(1);
+	i_clken_mems <= r_clken_ring(2);
 	i_clken_cpu  <= r_clken_ring(0);
-	i_RDen		 <= '1';
+	i_RDen		 <= r_clken_ring(2) or r_clken_ring(3) or r_clken_ring(0);
 	i_WRen		 <= r_clken_ring(2) or r_clken_ring(3);
 
-	p_cs:process(i_clk_pll)
+	p_cs:process(all)
 	begin
 		if i_rst = '1' then
 			i_CS_RAM <= '0';
 			i_CS_ROM <= '0';
 			i_CS_FT245_D <= '0';
 			i_CS_FT245_S <= '0';
-		elsif rising_edge(i_clk_pll) then
-			if i_clken_addr = '1' then
-				i_CS_RAM <= '0';
-				i_CS_ROM <= '0';
-				i_CS_FT245_D <= '0';
-				i_CS_FT245_S <= '0';
+			i_CS_LCD32 <= '0';
+		else
+			i_CS_RAM <= '0';
+			i_CS_ROM <= '0';
+			i_CS_FT245_D <= '0';
+			i_CS_FT245_S <= '0';
+			i_CS_LCD32 <= '0';
+
+			if i_cpu_VMA = '1' then
 
 				if i_cpu_A(15 downto 12) = x"F" then
 					i_CS_ROM <= '1';
-				elsif i_cpu_A(15 downto 12) = x"E" then
+				elsif i_cpu_A(15 downto 8) = x"E0" then
 					if i_cpu_A(0) = '1' then
 						i_CS_FT245_D <= '1';
 					else
 						i_CS_FT245_S <= '1';
 					end if;
+				elsif i_cpu_A(15 downto 8) = x"E1" then
+					i_CS_LCD32 <= '1';
 				elsif i_cpu_A(15 downto 12) = x"0" then
 					i_CS_RAM <= '1';
 				end if;
-			
 			end if;
 		end if;
 	end process;
@@ -198,6 +220,8 @@ begin
 					 FT245_D_io 	when i_CS_FT245_D = '1' else
 					 (0 => FT245_nRXF_i, 1 => FT245_nTXE_i, others => '0') 
 					 					when i_CS_FT245_S = '1' else
+					 lcd32_D_io(15 downto 8) when i_CS_LCD32 = '1' and i_cpu_A(0) = '0' else
+					 r_lcd_lat when i_CS_LCD32 = '1' and i_cpu_A(0) = '1' else
 					 x"FF";
 
 	e_ram:entity work.RAM_syn
@@ -213,7 +237,7 @@ begin
 		WE_I			=> i_ram_we
 	);
 
-	i_ram_we <= '1' when i_WRen = '1' and i_cpu_RnW = '0' and i_cpu_VMA = '1' and i_CS_RAM = '1' else
+	i_ram_we <= '1' when i_WRen = '1' and i_cpu_RnW = '0' and i_CS_RAM = '1' else
 					'0';
 
 
@@ -231,12 +255,68 @@ begin
 
 	FT245_nRST_o <= '1'; --not i_rst;
 	FT245_PWR_o <= '1';
-	FT245_nRD_o <= '0' when i_RDen = '1' and i_cpu_RnW = '1' and i_cpu_VMA = '1' and i_CS_FT245_D = '1' else
+	FT245_nRD_o <= '0' when i_RDen = '1' and i_cpu_RnW = '1' and i_CS_FT245_D = '1' else
 						'1';
-	FT245_nWR_o <= '0' when i_WRen = '1' and i_cpu_RnW = '0' and i_cpu_VMA = '1' and i_CS_FT245_D = '1' else
+	FT245_nWR_o <= '0' when i_WRen = '1' and i_cpu_RnW = '0'  and i_CS_FT245_D = '1' else
 						'1';
 
-	FT245_D_io <= 	i_cpu_D_o when i_cpu_RnW = '0' and i_cpu_VMA = '1' and i_CS_FT245_D = '1' else
+	FT245_D_io <= 	i_cpu_D_o when i_cpu_RnW = '0'  and i_CS_FT245_D = '1' else
 						(others => 'Z');
+
+	lcd32_nRESET_o <= not i_rst;
+
+	p_lcd_ctl:process(i_clk_pll)
+	begin
+		
+		if i_rst = '1' then
+			lcd32_nCS_o <= '1';
+			lcd32_RS_o <= '1';
+			lcd32_nRD_o <= '1';
+			lcd32_nWR_o <= '1';
+			r_lcd_lat <= (others => '0');
+			lcd32_D_io <= (others => 'Z');
+		elsif rising_edge(i_clk_pll) then
+			if i_clken_addr = '1' then
+					lcd32_nCS_o <= '1';
+					lcd32_RS_o <= '1';
+					lcd32_nRD_o <= '1';
+					lcd32_nWR_o <= '1';
+					lcd32_D_io <= (others => 'Z');
+				if i_CS_LCD32 = '1' then
+					if i_cpu_RnW = '0' then
+						if i_cpu_A(0) = '0' then
+							-- MSB writes - latch
+							r_lcd_lat <= i_cpu_D_o;
+						else
+							-- LSB write - write both
+							lcd32_D_io <= r_lcd_lat & i_cpu_D_o;
+							lcd32_RS_o <= i_cpu_A(1);
+							lcd32_nCS_o <= '0';
+						end if;
+					else -- reads
+						if i_cpu_A(0) = '0' then
+							lcd32_RS_o <= i_cpu_A(1);
+							lcd32_nCS_o <= '0';
+						end if;
+					end if;
+				end if;
+			elsif i_clken_mems = '1' then
+				if i_CS_LCD32 = '1' then
+					if i_cpu_RnW = '0' and i_cpu_A(0) = '1' then
+						lcd32_nWR_o <= '0'; -- initiate write
+					elsif i_cpu_RnW = '1' and i_cpu_A(0) = '0' then
+						lcd32_nRD_o <= '0'; -- initiate read
+					end if;
+				end if;
+			elsif i_clken_cpu = '1' then
+				lcd32_nWR_o <= '1'; -- end write
+				if i_CS_LCD32 = '1' then
+					if i_cpu_RnW = '1' and i_cpu_A(0) = '0' then
+						r_lcd_lat <= lcd32_D_io(7 downto 0); -- do read, nRD will deassert later
+					end if;
+				end if;				
+			end if;
+		end if;
+	end process;
 
 end rtl;

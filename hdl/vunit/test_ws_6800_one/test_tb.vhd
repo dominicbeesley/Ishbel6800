@@ -20,6 +20,8 @@ architecture rtl of test_tb is
 
    signal   i_clk_50M:           std_logic;
 
+   signal   i_nTXE:              std_logic;
+
 begin
 
 
@@ -45,7 +47,7 @@ begin
 
          if run("test") then
          
-            wait for 200 us;
+            wait for 5000 us;
 
          end if;
 
@@ -70,11 +72,34 @@ begin
       FT245_nRD_o                   => open,
       FT245_nWR_o                   => open,
       FT245_nRXF_i                  => '1',
-      FT245_nTXE_i                  => '0',
+      FT245_nTXE_i                  => i_nTXE,
       FT245_PWR_o                   => open,
       FT245_nRST_o                  => open,
-      FT245_D_io                    => open
+      FT245_D_io                    => open,
+
+      lcd32_D_io                    => open,
+      lcd32_nCS_o                   => open,
+      lcd32_RS_o                    => open,
+      lcd32_nWR_o                   => open,
+      lcd32_nRD_o                   => open,
+      lcd32_nRESET_o                => open,
+      
+      touch_irq_i                   => '1',
+      touch_nCS_o                   => open,
+      touch_SCLK_o                  => open,
+      touch_MOSI_o                  => open,
+      touch_MISO_i                  => '1'
+
 
    );
+
+   p_txe:process
+   begin
+      i_nTXE <= '1';
+      wait for 100 us;
+      wait until rising_edge(i_clk_50M);
+      i_nTXE <= '0';
+      wait for 12 us;
+   end process;   
       
 end rtl;

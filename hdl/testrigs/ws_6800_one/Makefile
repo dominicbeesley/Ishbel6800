@@ -55,13 +55,16 @@ ASM_ARGS =
 
 STAMP = echo done >
 
+.PHONY:	asm/test_monitor/build/test_monitor.mif
 
+asm/test_monitor/build/test_monitor.mif:
+	make -C asm/test_monitor
 
-output_files/$(PROJECT).map.rpt fit.chg: $(PROJECT).qsf 
+output_files/$(PROJECT).map.rpt fit.chg: $(PROJECT).qsf  asm/test_monitor/build/test_monitor.mif
 	$(QUARTUS_MAP) $(MAP_ARGS) $(PROJECT)
 	$(STAMP) fit.chg
 
-output_files/$(PROJECT).fit.rpt asm.chg: $(PROJECT).qsf output_files/$(PROJECT).map.rpt fit.chg asm/test_monitor/build/test_monitor.mif
+output_files/$(PROJECT).fit.rpt asm.chg: $(PROJECT).qsf output_files/$(PROJECT).map.rpt fit.chg
 	$(QUARTUS_FIT) $(FIT_ARGS) $(PROJECT)
 	$(STAMP) asm.chg
 
