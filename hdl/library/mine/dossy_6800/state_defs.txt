@@ -115,9 +115,6 @@ DB			{	T_ld_DB_o			<= '1';	}
 ABH		{	T_ld_ABH_o			<= '1';	}
 
 
-[REG IR]
-D			{ IR_ld_D_o				<= '1';	}
-
 
 [REG INCL]
 ABL		{ INC_L_src_o			<= abl;  }
@@ -188,8 +185,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 
 [TSL0, TSL0_D02, TSL0_D01]
 	INC->AB,PC
-	D->IR
-	NEXT=DECODE
+	DECODE
 
 [GI_T1_D00]
 	{if IR_i(5 downto 4) = "00" then}
@@ -231,8 +227,8 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 [GI_TSL0_D01]
 
 	SUM->DB
-	{if IR_i(3) = '1' or IR_i(0) = '0' then}
-		{if IR_i(6) = '1' then}
+	{if IR_P_i(3) = '1' or IR_P_i(0) = '0' then}
+		{if IR_P_i(6) = '1' then}
 			DB->ACCB	#ACCB
 		{else}
 			DB->ACCA	#ACCA
@@ -245,9 +241,8 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	ALUH->CCR
 	ALUV->CCR
 
-	D->IR	
 	INC->AB,PC
-	NEXT=DECODE
+	DECODE
 
 [GI_STA_T1_D00]
 	INC->AB
@@ -314,8 +309,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 
 [GII_ACC_TSL0_D01]
 	INC->AB,PC
-	D->IR	
-	{ if IR_i(4) = '1' then }
+	{ if IR_P_i(4) = '1' then }
 		DB->ACCB
 	{ else }
 		DB->ACCA
@@ -325,13 +319,13 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	ALUZ->CCR
 	ALUN->CCR
 	ALUV->CCR
-	{ if IR_i(3 downto 0) = x"F" or IR_i(3 downto 0) = x"D" then }
+	{ if IR_P_i(3 downto 0) = x"F" or IR_P_i(3 downto 0) = x"D" then }
 		CLC->CCR
 	{ else }
 		ALUC->CCR
 	{ end if;}
 
-	NEXT=DECODE
+	DECODE
 
 [GII_MEM_T1_D00]
 	INC->AB
@@ -420,10 +414,10 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 [JBSR_GP52]
 	INC->AB->SP
 	nVMA
-	{ if PMATCH(IR_DBI_i, "1-11----") then }
+	{ if PMATCH(IR_i, "1-11----") then }
 		#EXT
 		NEXT=JBSR_EXT_GP53
-	{ elsif PMATCH(IR_DBI_i,  "1-10----") then }
+	{ elsif PMATCH(IR_i,  "1-10----") then }
 		#IDX
 		NEXT=JBSR_IDX_GP53
 	{ else }
@@ -554,8 +548,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 [INXDEX_TSL0]
 	ALUZ->CCR
 	INC->AB->INC->PC
-	D->IR
-	NEXT=DECODE
+	DECODE
 	
 [INSDES_T1_GP50]
 	SP->AB->INC
@@ -665,8 +658,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	
 	ANDALUZ->CCR
 	INC->AB,PC
-	D->IR
-	NEXT=DECODE
+	DECODE
 
 
 [LDx_T1_D00]
@@ -710,8 +702,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	
 	ANDALUZ->CCR
 	INC->AB,PC
-	D->IR
-	NEXT=DECODE
+	DECODE
 
 [STx_T1_D00]
 	INC->AB
@@ -865,9 +856,9 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 
 [xBA_TSL0_D01]
 	SUM->DB
-	{ if IR_i(0) = '0' then }
+	{ if IR_P_i(0) = '0' then }
 		DB->ACCA
-	{ elsif IR_i(3) = '1' then }
+	{ elsif IR_P_i(3) = '1' then }
 		DB->ACCA
 		ALUH->CCR
 	{ end if; }
@@ -875,9 +866,8 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	ALUN->CCR
 	ALUV->CCR
 	ALUC->CCR
-	D->IR
 	INC->AB,PC
-	NEXT=DECODE
+	DECODE
 
 [Txx_T1_D00]
 	{ if IR_i(0) = '1' then }
@@ -891,7 +881,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 
 [Txx_TSL0_D01]
 	SUM->DB
-	{ if IR_i(0) = '1' then }
+	{ if IR_P_i(0) = '1' then }
 		DB->ACCA
 	{ else }
 		DB->ACCB
@@ -899,9 +889,8 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	ALUZ->CCR
 	ALUN->CCR
 	ALUV->CCR
-	D->IR
 	INC->AB,PC
-	NEXT=DECODE
+	DECODE
 
 [DAA_T1_D00]
 	ACCA->ABLI
@@ -916,9 +905,8 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	ALUN->CCR
 	ALUV->CCR
 	ALUC->CCR
-	D->IR
 	INC->AB,PC
-	NEXT=DECODE
+	DECODE
 
 
 [T1_EXT0]
@@ -945,7 +933,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 		{ if PMATCH(IR_i, "01------") then }		
 			HOLD
 		{ end if; }
-		NEXT=DECODE
+		NEXT=DECODE2
 	{ end if; }
 
 [T1_DIR0]
@@ -957,7 +945,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 		nVMA
 		HOLD
 	{end if;}
-	NEXT=DECODE
+	NEXT=DECODE2
 
 [T1_IDX0]
 	INC->PC
@@ -997,5 +985,5 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 		# JMP / JSR
 		NEXT=TSL0
 	{ else }
-		NEXT=DECODE
+		NEXT=DECODE2
 	{ end if; }

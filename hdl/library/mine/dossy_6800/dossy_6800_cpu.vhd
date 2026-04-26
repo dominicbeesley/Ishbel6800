@@ -111,8 +111,7 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_CCR_Q				: std_logic_vector(7 downto 0);
 	signal	i_DBI_Q				: std_logic_vector(7 downto 0);
 	signal	i_IR_Q				: std_logic_vector(7 downto 0);
-
-   signal   i_IR_Q_DBI        : std_logic_vector(7 downto 0); -- this comes from IR unless loading from DBI...TODO: think of a nicer way
+	signal	i_IR_P_Q				: std_logic_vector(7 downto 0);
 
 	-- alu control and outputs
    signal   i_ALU_op          : t_alu_op;
@@ -551,15 +550,27 @@ begin
 		D_o			=> i_DBI_Q
 	);
 
-   -- TODO: Fig.1 shows this coming from D_i, we have to mux IR with DBI in control
 	e_reg_ir:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
 		CLKEN_i		=> CLKEN_i,
 		WE_i			=> i_IR_ld_D,
-		D_i			=> i_DBI_Q,
+		D_i			=> D_i,
 		D_o			=> i_IR_Q
 	);
+
+	-- TODO: this is used in some states where a decision based on 
+	-- IR happens after the next instruction fetched need to register
+	-- the decision as a flag somewhere
+	e_reg_ir_p:entity dossy_6800.dossy_6800_reg8
+	port map (
+		CLK_i			=> CLK_i,
+		CLKEN_i		=> CLKEN_i,
+		WE_i			=> i_IR_ld_D,
+		D_i			=> i_IR_Q,
+		D_o			=> i_IR_P_Q
+	);
+
 
 --
 -- ###
@@ -658,13 +669,12 @@ begin
 		end if;
 	end process;
 
-   i_IR_Q_DBI <= i_DBI_Q when i_IR_ld_D = '1' else i_IR_Q;
 
 	e_ctl_gen:entity dossy_6800.dossy_6800_ctl_gen
 	port map (
 		state_i			=> r_state,
-      IR_DBI_i       => i_IR_Q_DBI,
 		IR_i				=> i_IR_Q,
+		IR_P_i			=> i_IR_P_Q,
       ALU_CC_i       => i_ALU_CCR_Q,
       CCR_i				=> i_CCR_Q,
       T_Q_i				=> i_T_Q,

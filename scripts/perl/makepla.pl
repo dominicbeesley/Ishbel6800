@@ -133,7 +133,7 @@ while (<$fh_in>) {
 						type => "vhdl",
 						vhdl => $1
 					};
-				} elsif ($l =~ /\s*(\w+)(\s*->\s*(\w+)\s*(,\s*(\w+(\s*,\s*\w+)*))?)+/) {
+				} elsif ($l =~ /^\s*(\w+)(\s*->\s*(\w+)\s*(,\s*(\w+(\s*,\s*\w+)*))?)+/) {
 						
 					my @parts = ();
 
@@ -163,11 +163,20 @@ while (<$fh_in>) {
 							};	
 						}
   					}
-				} elsif ($l =~ /NEXT\s*=\s*(\w+)/) {
+				} elsif ($l =~ /^NEXT\s*=\s*(\w+)/) {
 					push @{$cur_state->{lines}}, {
 						type => "next",
-						vhdl => "next_state_o <= $1;"
-					};				
+						vhdl => "v_next_state := $1;"
+					};		
+
+					$cur_state->{had_next} = 1;
+				} elsif ($l =~ /^DECODE$/)	{
+					push @{$cur_state->{lines}}, {
+						type => "next",
+						vhdl => "v_next_state := DECODE;"
+					};		
+
+					$cur_state->{decode} = 1;
 				} else {
 					# look for a statement
 					exists $statements{$l} or die "Unrecognised line in states \"$l\"";
@@ -186,6 +195,24 @@ while (<$fh_in>) {
 close $fh_in;
 
 print Dumper(%states);
+
+foreach my $s (sort keys %states) {
+	my $state = $states{$s};
+
+	if ($state->{type} eq "state") {
+		$state->{decode} or $state->{had_next} or die "State \"$s\" missing NEXT or DECODE";
+		$state->{decode} and $state->{had_next} and die "State \"$s\" has both NEXT and DECODE";
+	}
+
+	if ($state->{type} eq "state" and $state->{decode}) {
+		foreach my $l (@{$state->{lines}}) {
+			my $vhdl = $l->{vhdl};
+
+			$vhdl =~ /\bIR_i\b/ and print STDERR "WARNING: IR_i referenced in DECODE state \"$s\"\n";
+		}
+	}
+}
+
 
 open(my $fh_out, ">", $fn_out) or usage(*STDERR, "Cannot open \"$fn_out\" for output : $!");
 
@@ -230,8 +257,8 @@ port
 (
 	state_i			: in	t_cpu_state;
 
-	IR_DBI_i			: in  std_logic_vector(7 downto 0); -- used for decode * early
 	IR_i				: in	std_logic_vector(7 downto 0); -- used for executing instruction
+	IR_P_i			: in  std_logic_vector(7 downto 0); -- used for executing instruction in decode state
 	ALU_CC_i			: in  std_logic_vector(7 downto 0); -- registered ALU output flags
 	CCR_i				: in  std_logic_vector(7 downto 0); -- registered CPU status flags
 	T_Q_i				: in  std_logic_vector(7 downto 0); -- used for branch page carries : TODO: think of cheaper way
@@ -327,100 +354,95 @@ begin
 			return std_match(V, M);
 		end function;
 
-		impure function DECODE return t_cpu_state is
-		variable firstdecode : boolean;	-- A bodge to differentiate between first pass include addressing mode
+		impure function DECODE2 return t_cpu_state is
 		begin
-			firstdecode := (
-				state_i = TSL0 or 
-				state_i = TSL0_D02 or 
-				state_i = TSL0_D01 or 
-				state_i = LDX_TSL0_D02 or
-				state_i = CPX_TSL0_D02 or
-				state_i = INXDEX_TSL0 or
-				state_i = GI_TSL0_D01 or
-				state_i = GII_ACC_TSL0_D01 or
-				state_i = xBA_TSL0_D01 or
-				state_i = Txx_TSL0_D01 or
-				state_i = DAA_TSL0_D01
-			);
-			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
-				return T1_EXT0;
-			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
-				return T1_DIR0;
-			elsif PMATCH(IR_DBI_i,  "1-10----") and firstdecode then
-				return T1_IDX0;
-			elsif PMATCH(IR_DBI_i,  "0111----") and firstdecode then
-				return T1_EXT0;
-			elsif PMATCH(IR_DBI_i,  "0110----") and firstdecode then
-				return T1_IDX0;
 
-			elsif PMATCH(IR_DBI_i, "00000001") then
+			if PMATCH(IR_i, "00000001") then
 				return NOP_T1_D00;
-			elsif PMATCH(IR_DBI_i, "00000110") then
+			elsif PMATCH(IR_i, "00000110") then
 				return TAP_T1_D00;
-			elsif PMATCH(IR_DBI_i, "00000111") then
+			elsif PMATCH(IR_i, "00000111") then
 				return TPA_T1_D00;
-			elsif PMATCH(IR_DBI_i, "0000100-") then
+			elsif PMATCH(IR_i, "0000100-") then
 				return INXDEX_T1_D00;
-			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
+			elsif PMATCH(IR_i, "0000101-") or PMATCH(IR_i, "000011--") then
 				return SEx_T1_D00;
 
-			elsif PMATCH(IR_DBI_i, "0001000-") then
+			elsif PMATCH(IR_i, "0001000-") then
 				return xBA_T1_D00;
-			elsif PMATCH(IR_DBI_i, "0001011-") then
+			elsif PMATCH(IR_i, "0001011-") then
 				return Txx_T1_D00;
-			elsif PMATCH(IR_DBI_i, "00011001") then
+			elsif PMATCH(IR_i, "00011001") then
 				return DAA_T1_D00;
-			elsif PMATCH(IR_DBI_i, "00011011") then
+			elsif PMATCH(IR_i, "00011011") then
 				return xBA_T1_D00;
 
-			elsif PMATCH(IR_DBI_i, "0010----") then
+			elsif PMATCH(IR_i, "0010----") then
 				return BRA_T1_IDX0;
 
-			elsif PMATCH(IR_DBI_i, "00110000") then
+			elsif PMATCH(IR_i, "00110000") then
 				return TSX_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00110001") or PMATCH(IR_DBI_i, "00110100") then
+			elsif PMATCH(IR_i, "00110001") or PMATCH(IR_i, "00110100") then
 				return INSDES_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "0011001-") then
+			elsif PMATCH(IR_i, "0011001-") then
 				return PULA_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00110101") then
+			elsif PMATCH(IR_i, "00110101") then
 				return TXS_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "0011011-") then
+			elsif PMATCH(IR_i, "0011011-") then
 				return PSHA_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00111001") then
+			elsif PMATCH(IR_i, "00111001") then
 				return RTS_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00111011") then
+			elsif PMATCH(IR_i, "00111011") then
 				return RTI_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00111111") then
+			elsif PMATCH(IR_i, "00111111") then
 				return SWAI_T1_GP50;
 
 			-- NOTE: FOR GII JMP is caught at end of EXT/IDX addressing mode
-			elsif PMATCH(IR_DBI_i, "010-----") then
+			elsif PMATCH(IR_i, "010-----") then
 				return GII_ACC_T1_D00;
-			elsif PMATCH(IR_DBI_i, "011-----") then
+			elsif PMATCH(IR_i, "011-----") then
 				return GII_MEM_T1_D00;
 
-			elsif PMATCH(IR_DBI_i, "10--1100") then
+			elsif PMATCH(IR_i, "10--1100") then
 				return CPX_T1_D00;
-			elsif PMATCH(IR_DBI_i, "1---1110") then
+			elsif PMATCH(IR_i, "1---1110") then
 				return LDx_T1_D00;
-			elsif PMATCH(IR_DBI_i, "1---1111") then
+			elsif PMATCH(IR_i, "1---1111") then
 				return STx_T1_D00;
-			elsif PMATCH(IR_DBI_i, "1---0111") then
+			elsif PMATCH(IR_i, "1---0111") then
 				return GI_STA_T1_D00;
-			elsif PMATCH(IR_DBI_i, "100011-1") then
+			elsif PMATCH(IR_i, "100011-1") then
 				return BSR_T1_IDX0;
 			-- JSR is special case at end of EXT/IDX modes
-			--elsif PMATCH(IR_DBI_i, "101-11-1") then
+			--elsif PMATCH(IR_i, "101-11-1") then
 			--	return JBSR_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "1-------") then
+			elsif PMATCH(IR_i, "1-------") then
 				return GI_T1_D00;
 			else
 				return DIEBAD;
 			end if;
 		end function;
+
+		impure function DECODE return t_cpu_state is
+		begin
+			if PMATCH(IR_i,  "1-11----") then
+				return T1_EXT0;
+			elsif PMATCH(IR_i,  "1-01----") then
+				return T1_DIR0;
+			elsif PMATCH(IR_i,  "1-10----") then
+				return T1_IDX0;
+			elsif PMATCH(IR_i,  "0111----") then
+				return T1_EXT0;
+			elsif PMATCH(IR_i,  "0110----") then
+				return T1_IDX0;
+			else
+				return DECODE2;
+			end if;
+		end function;
+
+	variable v_next_state : t_cpu_state;
 	begin
-		next_state_o <= DIEBAD;
+		v_next_state := DIEBAD;
 
 		mux_ABL_INCL_o		<= '0';
 		mux_ABL_PCL_o		<= '0';
@@ -536,6 +558,26 @@ foreach my $ks (sort keys %states) {
 print $fh_out <<'ENDVHDL';
 			when others => null;
 		end case;
+
+		case v_next_state is
+ENDVHDL
+foreach my $ks (sort keys %states) {
+	$indent = 3;
+	my $state = $states{$ks};
+
+	if ($state->{type} eq "state" && $state->{decode}) {
+		print $fh_out ("   " x $indent) . "when $ks" . ($state->{aliases}?"|":"") . $state->{aliases} . " =>\n";
+		$indent++;
+		print $fh_out ("   " x $indent) . "IR_ld_D_o <= '1';\n";
+		$indent--;
+	}
+}
+
+print $fh_out <<'ENDVHDL';
+			when others => null;
+		end case;
+
+		next_state_o <= v_next_state;
 	end process;
 
 end rtl;
