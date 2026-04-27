@@ -199,6 +199,9 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 # Bare words should translate to a statement
 # NEXT=<state> will set <state> as the next state
 # DECODE[2] will call the DECODE[2] function
+#
+# The labels for the states roughly translate to the labels in Fig.2 of the
+# 3,962,682 patent.
 
 ============ STATES =============
 
