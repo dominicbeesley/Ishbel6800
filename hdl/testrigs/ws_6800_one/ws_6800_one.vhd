@@ -81,42 +81,52 @@ entity ws_6800_one is
 		touch_nCS_o							: out		std_logic;
 		touch_SCLK_o						: out		std_logic;
 		touch_MOSI_o						: out		std_logic;
-		touch_MISO_i						: in		std_logic
+		touch_MISO_i						: in		std_logic;
+
+		LCD12864_N_o						: out		std_logic;
+		LCD12864_RST_o						: out		std_logic;
+		LCD12864_PSB_o						: out		std_logic;
+		LCD12864_P_o						: out		std_logic;
+		LCD12864_RS_o						: out		std_logic;
+		LCD12864_RnW_o						: out		std_logic;
+		LCD12864_E_o						: out		std_logic;
+		LCD12864_D_io						: inout	std_logic_vector(7 downto 0)
 
 	);
 end ws_6800_one;
 
 architecture rtl of ws_6800_one is
 
-	signal	i_clk_pll	: std_logic;
-	signal	i_rst			: std_logic;
+	signal	i_clk_pll		: std_logic;
+	signal	i_rst				: std_logic;
 
-	signal	r_clken_ring: std_logic_vector(3 downto 0) := (0 => '1', others => '0');
+	signal	r_clken_ring	: std_logic_vector(3 downto 0) := (0 => '1', others => '0');
 
-	signal	i_clken_addr: std_logic;
-	signal	i_clken_mems: std_logic; -- memory transfer start
-	signal	i_clken_cpu : std_logic;
+	signal	i_clken_addr	: std_logic;
+	signal	i_clken_mems	: std_logic; -- memory transfer start
+	signal	i_clken_cpu 	: std_logic;
 
-	signal	i_RDen		: std_logic;
-	signal	i_WRen		: std_logic;
+	signal	i_RDen			: std_logic;
+	signal	i_WRen			: std_logic;
 
-	signal	i_CS_RAM		: std_logic;
-	signal	i_CS_ROM		: std_logic;
-	signal	i_CS_FT245_D: std_logic;	-- data
-	signal	i_CS_FT245_S: std_logic;	-- status
-	signal	i_CS_LCD32	: std_logic;
+	signal	i_CS_RAM			: std_logic;
+	signal	i_CS_ROM			: std_logic;
+	signal	i_CS_FT245_D	: std_logic;	-- data
+	signal	i_CS_FT245_S	: std_logic;	-- status
+	signal	i_CS_LCD32		: std_logic;
+	signal   i_CS_LCD12864	: std_logic;
 
-	signal	i_cpu_RnW	: std_logic;
-	signal	i_cpu_VMA	: std_logic;
-	signal	i_cpu_A		: std_logic_vector(15 downto 0);
-	signal	i_cpu_D_i	: std_logic_vector(7 downto 0);
-	signal	i_cpu_D_o	: std_logic_vector(7 downto 0);
+	signal	i_cpu_RnW		: std_logic;
+	signal	i_cpu_VMA		: std_logic;
+	signal	i_cpu_A			: std_logic_vector(15 downto 0);
+	signal	i_cpu_D_i		: std_logic_vector(7 downto 0);
+	signal	i_cpu_D_o		: std_logic_vector(7 downto 0);
 
-	signal	i_ram_we		: std_logic;
-	signal	i_ram_D_o	: std_logic_vector(7 downto 0);
-	signal	i_rom_D_o	: std_logic_vector(7 downto 0);
+	signal	i_ram_we			: std_logic;
+	signal	i_ram_D_o		: std_logic_vector(7 downto 0);
+	signal	i_rom_D_o		: std_logic_vector(7 downto 0);
 
-	signal	r_lcd_lat	: std_logic_vector(7 downto 0); -- latches 16 bit data see
+	signal	r_lcd_lat		: std_logic_vector(7 downto 0); -- latches 16 bit data see
 
 begin
 
@@ -173,12 +183,14 @@ begin
 			i_CS_FT245_D <= '0';
 			i_CS_FT245_S <= '0';
 			i_CS_LCD32 <= '0';
+			i_CS_LCD12864 <= '0';
 		else
 			i_CS_RAM <= '0';
 			i_CS_ROM <= '0';
 			i_CS_FT245_D <= '0';
 			i_CS_FT245_S <= '0';
 			i_CS_LCD32 <= '0';
+			i_CS_LCD12864 <= '0';
 
 			if i_cpu_VMA = '1' then
 
@@ -192,6 +204,8 @@ begin
 					end if;
 				elsif i_cpu_A(15 downto 8) = x"81" then
 					i_CS_LCD32 <= '1';
+				elsif i_cpu_A(15 downto 8) = x"82" then
+					i_CS_LCD12864 <= '1';
 				elsif i_cpu_A(15) = '0' then
 					i_CS_RAM <= '1';
 				end if;
@@ -222,6 +236,7 @@ begin
 					 					when i_CS_FT245_S = '1' else
 					 lcd32_D_io(15 downto 8) when i_CS_LCD32 = '1' and i_cpu_A(0) = '0' else
 					 r_lcd_lat when i_CS_LCD32 = '1' and i_cpu_A(0) = '1' else
+					 LCD12864_D_io when i_CS_LCD12864 = '1' else
 					 x"FF";
 
 	e_ram:entity work.RAM_syn
@@ -319,4 +334,17 @@ begin
 		end if;
 	end process;
 
+
+	LCD12864_N_o 	<= '0';
+	LCD12864_P_o 	<= '1';
+	LCD12864_PSB_o <= '1';
+	LCD12864_RST_o <= not i_rst;
+	LCD12864_D_io 	<= i_cpu_D_o when i_cpu_RnW = '0' and i_CS_LCD12864 = '1' else
+							(others => 'Z');
+	LCD12864_RnW_o <= i_cpu_RnW;
+	LCD12864_RS_o 	<= i_cpu_A(0);
+	LCD12864_E_o 	<= '1' when i_CS_LCD12864 = '1' and i_RDen = '1' and i_cpu_RnW = '1' else
+							'1' when i_CS_LCD12864 = '1' and i_WRen = '1' and i_cpu_RnW = '0' else
+							'0';
+	
 end rtl;
