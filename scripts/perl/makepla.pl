@@ -29,6 +29,7 @@ open(my $fh_in, "<", $fn_in) or usage(*STDERR, "Cannot open \"$fn_in\" for input
 my %xfers = ();
 my %statements = ();
 my %states = ();
+my @decodes = ();
 
 use POSIX qw(strftime);
 my $now = time();
@@ -37,12 +38,14 @@ my $nowstr = strftime('%FT%TZ', gmtime($now));
 use constant {
 	STATE_XFERS => 0,
 	STATE_STATEMENTS => 1,
-	STATE_STATES => 2
+	STATE_STATES => 2,
+	STATE_DECODE => 3
 };
 
 my $in_state = 0;
 my $cur_xfer;
 my $cur_state;
+my $cur_decode;
 
 while (<$fh_in>) {
 	
@@ -61,10 +64,9 @@ while (<$fh_in>) {
 			} elsif ($sec eq "STATEMENTS") {
 				$in_state = STATE_STATEMENTS;
 			} elsif ($sec eq "STATES") {
-
-				print Dumper(%xfers);
-
 				$in_state = STATE_STATES;
+			} elsif ($sec eq "DECODE") {
+				$in_state = STATE_DECODE;
 			} else {
 				die "Unrecognised section $sec";
 			}
@@ -185,6 +187,22 @@ while (<$fh_in>) {
 						vhdl => $statements{$l}
 					};	
 				}
+			} elsif ($in_state == STATE_DECODE) {
+				if ($l =~ /^\[\s*([01\-]{8}(\s*\|\s*[01\-]{8})*)\s*\]$/) {
+					$cur_decode = {
+						match => [ split(/\s*\|\s*/, $1) ]
+					};
+					push @decodes, $cur_decode;
+				} elsif ( $l =~ /^MODE$/ ) {
+					$cur_decode or die "MODE before []";
+					$cur_decode->{mode} = 1;
+				} elsif ( $l =~ /^STATE=(\w+)$/ ) {
+					$cur_decode or die "STATE= before []";
+					$cur_decode->{state} and die "Two states for one match.";
+					$cur_decode->{state} = $1;
+				} else {
+					die "Unrecognised line in decodes: \"$l\"";
+				}
 			} else {
 				die "Unhandled state";
 			}
@@ -194,7 +212,10 @@ while (<$fh_in>) {
 
 close $fh_in;
 
+print Dumper(%xfers);
+print Dumper(%statements);
 print Dumper(%states);
+print Dumper(@decodes);
 
 foreach my $s (sort keys %states) {
 	my $state = $states{$s};
@@ -216,6 +237,14 @@ foreach my $s (sort keys %states) {
 
 open(my $fh_out, ">", $fn_out) or usage(*STDERR, "Cannot open \"$fn_out\" for output : $!");
 
+
+sub decmatch($) {
+	my ($d) = @_;
+
+	return join(" or ", 
+		map { "std_match(IR_i, \"" . $_ . "\")"  } @{$d->{match}}
+	);
+}
 
 print $fh_out <<'ENDVHDL';
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
@@ -348,94 +377,42 @@ architecture rtl of dossy_6800_ctl_gen is
 begin
 
 	p_control:process(all)
-		function PMATCH(V: in std_logic_vector; M: in std_logic_vector) return boolean is
-		variable ret : boolean;
-		begin
-			return std_match(V, M);
-		end function;
 
 		impure function DECODE2 return t_cpu_state is
 		begin
+ENDVHDL
 
-			if PMATCH(IR_i, "00000001") then
-				return NOP_T1_D00;
-			elsif PMATCH(IR_i, "00000110") then
-				return TAP_T1_D00;
-			elsif PMATCH(IR_i, "00000111") then
-				return TPA_T1_D00;
-			elsif PMATCH(IR_i, "0000100-") then
-				return INXDEX_T1_D00;
-			elsif PMATCH(IR_i, "0000101-") or PMATCH(IR_i, "000011--") then
-				return SEx_T1_D00;
+print $fh_out "\t\t\t";
+foreach my $d (@decodes) {
+	if (!$d->{mode}) {
+		print $fh_out "if " . decmatch($d) . " then
+				return $d->{state};
+			els"
+	}
+}
 
-			elsif PMATCH(IR_i, "0001000-") then
-				return xBA_T1_D00;
-			elsif PMATCH(IR_i, "0001011-") then
-				return Txx_T1_D00;
-			elsif PMATCH(IR_i, "00011001") then
-				return DAA_T1_D00;
-			elsif PMATCH(IR_i, "00011011") then
-				return xBA_T1_D00;
 
-			elsif PMATCH(IR_i, "0010----") then
-				return BRA_T1_IDX0;
-
-			elsif PMATCH(IR_i, "00110000") then
-				return TSX_T1_GP50;
-			elsif PMATCH(IR_i, "00110001") or PMATCH(IR_i, "00110100") then
-				return INSDES_T1_GP50;
-			elsif PMATCH(IR_i, "0011001-") then
-				return PULA_T1_GP50;
-			elsif PMATCH(IR_i, "00110101") then
-				return TXS_T1_GP50;
-			elsif PMATCH(IR_i, "0011011-") then
-				return PSHA_T1_GP50;
-			elsif PMATCH(IR_i, "00111001") then
-				return RTS_T1_GP50;
-			elsif PMATCH(IR_i, "00111011") then
-				return RTI_T1_GP50;
-			elsif PMATCH(IR_i, "00111111") then
-				return SWAI_T1_GP50;
-
-			-- NOTE: FOR GII JMP is caught at end of EXT/IDX addressing mode
-			elsif PMATCH(IR_i, "010-----") then
-				return GII_ACC_T1_D00;
-			elsif PMATCH(IR_i, "011-----") then
-				return GII_MEM_T1_D00;
-
-			elsif PMATCH(IR_i, "10--1100") then
-				return CPX_T1_D00;
-			elsif PMATCH(IR_i, "1---1110") then
-				return LDx_T1_D00;
-			elsif PMATCH(IR_i, "1---1111") then
-				return STx_T1_D00;
-			elsif PMATCH(IR_i, "1---0111") then
-				return GI_STA_T1_D00;
-			elsif PMATCH(IR_i, "100011-1") then
-				return BSR_T1_IDX0;
-			-- JSR is special case at end of EXT/IDX modes
-			--elsif PMATCH(IR_i, "101-11-1") then
-			--	return JBSR_T1_GP50;
-			elsif PMATCH(IR_i, "1-------") then
-				return GI_T1_D00;
-			else
+print $fh_out <<'ENDVHDL';
+e
 				return DIEBAD;
 			end if;
 		end function;
 
 		impure function DECODE return t_cpu_state is
 		begin
-			if PMATCH(IR_i,  "1-11----") then
-				return T1_EXT0;
-			elsif PMATCH(IR_i,  "1-01----") then
-				return T1_DIR0;
-			elsif PMATCH(IR_i,  "1-10----") then
-				return T1_IDX0;
-			elsif PMATCH(IR_i,  "0111----") then
-				return T1_EXT0;
-			elsif PMATCH(IR_i,  "0110----") then
-				return T1_IDX0;
-			else
+ENDVHDL
+
+print $fh_out "\t\t\t";
+foreach my $d (@decodes) {
+	if ($d->{mode}) {
+		print $fh_out "if " . decmatch($d) . " then
+				return $d->{state};
+			els"
+	}
+}
+
+print $fh_out <<'ENDVHDL';
+e
 				return DECODE2;
 			end if;
 		end function;

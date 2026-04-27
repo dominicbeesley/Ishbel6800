@@ -1,5 +1,19 @@
 # State machine and instruction decode definitions
 
+
+#####                            ##
+  #                             #
+  #    # ##   ###  ###    ###   #     ##   # ##   ###
+  #    ##    #  #  #  #  #     ###   #  #  ##    #
+  #    #     #  #  #  #   ##    #    ####  #      ##
+  #    #     # ##  #  #     #   #    #     #        #
+  #    #      # #  #  #  ###    #     ##   #     ###
+
+# Transfers represent register->bus->register etc transfers
+# and are roughly analogous to the -> transfers in the patent
+#
+# 
+
 ========== TRANSFERS ==========
 
 [MUX ABL]
@@ -114,8 +128,6 @@ DB			{	ACCA_ld_DB_o		<= '1';	}
 DB			{	T_ld_DB_o			<= '1';	}
 ABH		{	T_ld_ABH_o			<= '1';	}
 
-
-
 [REG INCL]
 ABL		{ INC_L_src_o			<= abl;  }
 DB			{ INC_L_src_o			<= db;  }
@@ -125,6 +137,17 @@ ABH		{ INC_H_src_o			<= abh;  }
 
 [REG INC!INCL,INCH]
 AB			{ INC_L_src_o			<= abl; INC_H_src_o			<= abh; }
+
+
+  ##
+ #  #   #           #                             #
+ #     ####   ###  ####   ##  ## #    ##   ###   ####   ###
+  ##    #    #  #   #    #  # # # #  #  #  #  #   #    #
+    #   #    #  #   #    #### # # #  ####  #  #   #     ##
+ #  #   #    # ##   #    #    # # #  #     #  #   #       #
+  ##     ##   # #    ##   ##  #   #   ##   #  #    ##  ###
+
+# These are used for non-transfer state-machine driven logic
 
 ========== STATEMENTS ===========
 nVMA		{ VMA_o <= '0'; }
@@ -153,6 +176,29 @@ ALU_ROL	{ ALU_op_o <= alu_rol; }
 ALU_LSR	{ ALU_op_o <= alu_lsr; }
 
 ALU_DAA	{ ALU_op_o <= alu_daa; }
+
+
+
+  ##                                 #  #              #      #
+ #  #   #           #                ####              #
+ #     ####   ###  ####   ##         ####   ###   ###  ###   ##    ###    ##
+  ##    #    #  #   #    #  #        #  #  #  #  #     #  #   #    #  #  #  #
+    #   #    #  #   #    ####        #  #  #  #  #     #  #   #    #  #  ####
+ #  #   #    # ##   #    #           #  #  # ##  #     #  #   #    #  #  #
+  ##     ##   # #    ##   ##         #  #   # #   ###  #  #  ###   #  #   ##
+
+# Each State (with possible aliases) defines a set of statements or transfers
+# that can occur in each step
+#
+# { Extra VHDL instructions }can be inserted and will be inserted verbatim 
+# into the state machine procedure
+#
+# Lines of the form XX->YY[->ZZ...] will be rendered by finding a data transfer 
+# above.
+# 
+# Bare words should translate to a statement
+# NEXT=<state> will set <state> as the next state
+# DECODE[2] will call the DECODE[2] function
 
 ============ STATES =============
 
@@ -198,17 +244,17 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 
 	DBI->DB
 	
-	{if PMATCH(IR_i(3 downto 0), "000-") then }
+	{if std_match(IR_i(3 downto 0), "000-") then }
 		ALU_SUB
-	{elsif PMATCH(IR_i(3 downto 0), "001-") then }
+	{elsif std_match(IR_i(3 downto 0), "001-") then }
 		ALU_SBC
-	{elsif PMATCH(IR_i(3 downto 0), "1000") then }
+	{elsif std_match(IR_i(3 downto 0), "1000") then }
 		ALU_EOR
-	{elsif PMATCH(IR_i(3 downto 0), "1001") then }
+	{elsif std_match(IR_i(3 downto 0), "1001") then }
 		ALU_ADC
-	{elsif PMATCH(IR_i(3 downto 0), "1010") then }
+	{elsif std_match(IR_i(3 downto 0), "1010") then }
 		ALU_ORA
-	{elsif PMATCH(IR_i(3 downto 0), "1011") then }
+	{elsif std_match(IR_i(3 downto 0), "1011") then }
 		ALU_ADD
 	{end if;}
 	
@@ -414,10 +460,10 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 [JBSR_GP52]
 	INC->AB->SP
 	nVMA
-	{ if PMATCH(IR_i, "1-11----") then }
+	{ if std_match(IR_i, "1-11----") then }
 		#EXT
 		NEXT=JBSR_EXT_GP53
-	{ elsif PMATCH(IR_i,  "1-10----") then }
+	{ elsif std_match(IR_i,  "1-10----") then }
 		#IDX
 		NEXT=JBSR_IDX_GP53
 	{ else }
@@ -909,6 +955,27 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	DECODE
 
 
+  ##      #     #                                #  #           #
+ #  #     #     #                                ####           #
+ #  #   ###   ###  # ##   ##    ###   ###        ####   ##    ###   ##
+ ####  #  #  #  #  ##    #  #  #     #           #  #  #  #  #  #  #  #
+ #  #  #  #  #  #  #     ####   ##    ##         #  #  #  #  #  #  ####
+ #  #  #  #  #  #  #     #        #     #        #  #  #  #  #  #  #
+ #  #   ###   ###  #      ##   ###   ###         #  #   ##    ###   ##
+
+# These are subroutines that are potentially called before a Group I or II 
+# instruction to setup the address for the operand where it is not immediate
+# or implied.
+
+
+####################### Extended mode ########################
+# The byte following the opcode is loaded into the T register then the second 
+# byte is loaded as the INCL, T is loaded to INCH.
+#
+# For writes the incrementer is held and a nVMA cycle inserted
+#
+# For group II instructions the incrementer is held
+
 [T1_EXT0]
 	DBI->DB->T
 	INC->AB
@@ -918,23 +985,31 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	T->ABH->INCH
 	DBI->DB->OBL,INCL
 	INC->PC
-	{ if PMATCH(IR_i, "1----111") then }
+	{ if std_match(IR_i, "1----111") then }
 		{-- its a write next}
 		nVMA
 		HOLD
 	{ end if; }
-	{ if PMATCH(IR_i, "011-1110") then }
+	#TODO: get rid of these two - move to decoder
+	{ if std_match(IR_i, "011-1110") then }
 		# JMP
 		NEXT=TSL0
-	{ elsif PMATCH(IR_i, "101-1101") then }
+	{ elsif std_match(IR_i, "101-1101") then }
 		# JSR
 		NEXT=JBSR_T1_GP50
 	{ else }
-		{ if PMATCH(IR_i, "01------") then }		
+		{ if std_match(IR_i, "01------") then }		
 			HOLD
 		{ end if; }
 		NEXT=DECODE2
 	{ end if; }
+
+####################### Direct mode ########################
+# The byte following the opcode is loaded into INCL, 0 is loaded to INCH.
+#
+# For writes the incrementer is held and a nVMA cycle inserted
+#
+
 
 [T1_DIR0]
 	DBI->DB->OBL,INCL
@@ -947,6 +1022,15 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	{end if;}
 	NEXT=DECODE2
 
+####################### Indexed mode ########################
+# The byte following the opcode is loaded into T and will be used
+# to add an offset to X
+#
+# For writes the incrementer is held and a nVMA cycle inserted
+#
+# For JSR n,X the subroutine exits early to JBSR_T1_GP50 and DX
+# is completed after the current PC is stacked.
+
 [T1_IDX0]
 	INC->PC
 	HOLD
@@ -955,7 +1039,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	IXH->ABH->INCH
 	ALU_ADD
 	nVMA
-	{ if PMATCH(IR_i, "101-1101") then}
+	{ if std_match(IR_i, "101-1101") then}
 		#JSR
 		NEXT=JBSR_T1_GP50
 	{ else }
@@ -981,9 +1065,167 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 		HOLD
 	{end if;}
 
-	{ if PMATCH(IR_i, "101-11-1") or PMATCH(IR_i, "011-1110") then }
+	{ if std_match(IR_i, "101-11-1") or std_match(IR_i, "011-1110") then }
 		# JMP / JSR
 		NEXT=TSL0
 	{ else }
 		NEXT=DECODE2
 	{ end if; }
+
+
+
+ ###                        #
+ #  #                       #
+ #  #   ##    ###   ##    ###   ##   # ##
+ #  #  #  #  #     #  #  #  #  #  #  ##
+ #  #  ####  #     #  #  #  #  ####  #
+ #  #  #     #     #  #  #  #  #     #
+ ###    ##    ###   ##    ###   ##   #
+
+============ DECODE =============
+
+# DECODER section
+# [] - headers are an 8-bit std-match string to match against
+#      the IR opcode
+#
+# Items marked MODE are only followed immediately following a
+# FETCH cycle and are used for DIRECT/EXTENDED/INDEXED modes
+# in Groups I and II
+#
+# STATE=<state> go to <state> after DECODE/DECODE2 step
+#
+# Matches are evaluated in order first match wins
+
+
+############ ADDRESS MODE Group I ################
+
+# Instructions in Group I can be Immediate, Direct, Indexed or Extended
+# The MODE matches below will go to the state "subroutine" for all except
+# immediate (the immediate is fetched automatically) and will leave the 
+# incrementer p
+
+[1-11----]
+	# extended mode in Group I
+	MODE
+	STATE=T1_EXT0
+
+[1-01----]
+	# direct mode in Group I
+	MODE
+	STATE=T1_DIR0
+
+[1-10----]
+	# indexed mode Group I
+	MODE
+	STATE=T1_IDX0
+
+############ ADDRESS MODE Group II ################
+
+[0111----]
+	# extended mode Group II
+	MODE
+	STATE=T1_EXT0
+
+[0110----]
+	# indexed mode Group II
+	MODE
+	STATE=T1_IDX0
+
+################# EXEC GROUP I ####################
+
+[10--1100]
+	# Compare X
+	STATE=CPX_T1_D00
+
+[1---1110]
+	# LDX/LDS
+	STATE=LDx_T1_D00
+
+[1---1111]
+	# STX/STS
+	STATE=STx_T1_D00
+
+[1-010111|1-100111|1-110111]
+	# STA/STB
+	STATE=GI_STA_T1_D00
+
+[100011-1]
+	# Note: JSR is special case at end of EXT/IDX modes
+	STATE=BSR_T1_IDX0
+
+[1-------]
+	# Other Group I ops
+	STATE=GI_T1_D00
+
+################ EXEC GROUP II ####################
+
+# NOTE: FOR GII JMP is caught at end of EXT/IDX addressing mode
+[010-----]
+	# ACCA/ACCB G.II
+	STATE=GII_ACC_T1_D00
+
+[011-----]
+	# Ext/IDX G.II
+	STATE=GII_MEM_T1_D00
+
+################ EXEC GROUP III ###################
+
+[0010----]
+	# Bxx
+	STATE=BRA_T1_IDX0
+
+################ EXEC GROUP IV ####################
+
+[0001000-|00011011]
+	# SBA, CBA, ABA
+	STATE=xBA_T1_D00
+[0001011-]
+	# TAB, TBA
+	STATE=Txx_T1_D00
+[00011001]
+	# DAA
+	STATE=DAA_T1_D00
+
+################# EXEC GROUP V ####################
+
+[00110000]
+	STATE=TSX_T1_GP50
+
+[00110001|00110100]
+	STATE=INSDES_T1_GP50
+
+[0011001-]
+	STATE=PULA_T1_GP50
+
+[00110101]
+	STATE=TXS_T1_GP50
+
+[0011011-]
+	STATE=PSHA_T1_GP50
+
+[00111001]
+	STATE=RTS_T1_GP50
+
+[00111011]
+	STATE=RTI_T1_GP50
+
+[00111111]
+	STATE=SWAI_T1_GP50
+
+
+################# EXEC GROUP VI ####################
+
+[00000001]
+	STATE=NOP_T1_D00
+
+[00000110]
+	STATE=TAP_T1_D00
+
+[00000111]
+	STATE=TPA_T1_D00
+
+[0000100-]
+	STATE=INXDEX_T1_D00
+
+[0000101-|000011--]
+	STATE=SEx_T1_D00

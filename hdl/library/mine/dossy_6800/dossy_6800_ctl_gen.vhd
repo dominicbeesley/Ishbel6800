@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-26T15:08:57Z
+-- GENERATED : 2026-04-27T14:23:43Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -126,76 +126,59 @@ architecture rtl of dossy_6800_ctl_gen is
 begin
 
 	p_control:process(all)
-		function PMATCH(V: in std_logic_vector; M: in std_logic_vector) return boolean is
-		variable ret : boolean;
-		begin
-			return std_match(V, M);
-		end function;
 
 		impure function DECODE2 return t_cpu_state is
 		begin
-
-			if PMATCH(IR_i, "00000001") then
-				return NOP_T1_D00;
-			elsif PMATCH(IR_i, "00000110") then
-				return TAP_T1_D00;
-			elsif PMATCH(IR_i, "00000111") then
-				return TPA_T1_D00;
-			elsif PMATCH(IR_i, "0000100-") then
-				return INXDEX_T1_D00;
-			elsif PMATCH(IR_i, "0000101-") or PMATCH(IR_i, "000011--") then
-				return SEx_T1_D00;
-
-			elsif PMATCH(IR_i, "0001000-") then
-				return xBA_T1_D00;
-			elsif PMATCH(IR_i, "0001011-") then
-				return Txx_T1_D00;
-			elsif PMATCH(IR_i, "00011001") then
-				return DAA_T1_D00;
-			elsif PMATCH(IR_i, "00011011") then
-				return xBA_T1_D00;
-
-			elsif PMATCH(IR_i, "0010----") then
-				return BRA_T1_IDX0;
-
-			elsif PMATCH(IR_i, "00110000") then
-				return TSX_T1_GP50;
-			elsif PMATCH(IR_i, "00110001") or PMATCH(IR_i, "00110100") then
-				return INSDES_T1_GP50;
-			elsif PMATCH(IR_i, "0011001-") then
-				return PULA_T1_GP50;
-			elsif PMATCH(IR_i, "00110101") then
-				return TXS_T1_GP50;
-			elsif PMATCH(IR_i, "0011011-") then
-				return PSHA_T1_GP50;
-			elsif PMATCH(IR_i, "00111001") then
-				return RTS_T1_GP50;
-			elsif PMATCH(IR_i, "00111011") then
-				return RTI_T1_GP50;
-			elsif PMATCH(IR_i, "00111111") then
-				return SWAI_T1_GP50;
-
-			-- NOTE: FOR GII JMP is caught at end of EXT/IDX addressing mode
-			elsif PMATCH(IR_i, "010-----") then
-				return GII_ACC_T1_D00;
-			elsif PMATCH(IR_i, "011-----") then
-				return GII_MEM_T1_D00;
-
-			elsif PMATCH(IR_i, "10--1100") then
+			if std_match(IR_i, "10--1100") then
 				return CPX_T1_D00;
-			elsif PMATCH(IR_i, "1---1110") then
+			elsif std_match(IR_i, "1---1110") then
 				return LDx_T1_D00;
-			elsif PMATCH(IR_i, "1---1111") then
+			elsif std_match(IR_i, "1---1111") then
 				return STx_T1_D00;
-			elsif PMATCH(IR_i, "1---0111") then
+			elsif std_match(IR_i, "1-010111") or std_match(IR_i, "1-100111") or std_match(IR_i, "1-110111") then
 				return GI_STA_T1_D00;
-			elsif PMATCH(IR_i, "100011-1") then
+			elsif std_match(IR_i, "100011-1") then
 				return BSR_T1_IDX0;
-			-- JSR is special case at end of EXT/IDX modes
-			--elsif PMATCH(IR_i, "101-11-1") then
-			--	return JBSR_T1_GP50;
-			elsif PMATCH(IR_i, "1-------") then
+			elsif std_match(IR_i, "1-------") then
 				return GI_T1_D00;
+			elsif std_match(IR_i, "010-----") then
+				return GII_ACC_T1_D00;
+			elsif std_match(IR_i, "011-----") then
+				return GII_MEM_T1_D00;
+			elsif std_match(IR_i, "0010----") then
+				return BRA_T1_IDX0;
+			elsif std_match(IR_i, "0001000-") or std_match(IR_i, "00011011") then
+				return xBA_T1_D00;
+			elsif std_match(IR_i, "0001011-") then
+				return Txx_T1_D00;
+			elsif std_match(IR_i, "00011001") then
+				return DAA_T1_D00;
+			elsif std_match(IR_i, "00110000") then
+				return TSX_T1_GP50;
+			elsif std_match(IR_i, "00110001") or std_match(IR_i, "00110100") then
+				return INSDES_T1_GP50;
+			elsif std_match(IR_i, "0011001-") then
+				return PULA_T1_GP50;
+			elsif std_match(IR_i, "00110101") then
+				return TXS_T1_GP50;
+			elsif std_match(IR_i, "0011011-") then
+				return PSHA_T1_GP50;
+			elsif std_match(IR_i, "00111001") then
+				return RTS_T1_GP50;
+			elsif std_match(IR_i, "00111011") then
+				return RTI_T1_GP50;
+			elsif std_match(IR_i, "00111111") then
+				return SWAI_T1_GP50;
+			elsif std_match(IR_i, "00000001") then
+				return NOP_T1_D00;
+			elsif std_match(IR_i, "00000110") then
+				return TAP_T1_D00;
+			elsif std_match(IR_i, "00000111") then
+				return TPA_T1_D00;
+			elsif std_match(IR_i, "0000100-") then
+				return INXDEX_T1_D00;
+			elsif std_match(IR_i, "0000101-") or std_match(IR_i, "000011--") then
+				return SEx_T1_D00;
 			else
 				return DIEBAD;
 			end if;
@@ -203,15 +186,15 @@ begin
 
 		impure function DECODE return t_cpu_state is
 		begin
-			if PMATCH(IR_i,  "1-11----") then
+			if std_match(IR_i, "1-11----") then
 				return T1_EXT0;
-			elsif PMATCH(IR_i,  "1-01----") then
+			elsif std_match(IR_i, "1-01----") then
 				return T1_DIR0;
-			elsif PMATCH(IR_i,  "1-10----") then
+			elsif std_match(IR_i, "1-10----") then
 				return T1_IDX0;
-			elsif PMATCH(IR_i,  "0111----") then
+			elsif std_match(IR_i, "0111----") then
 				return T1_EXT0;
-			elsif PMATCH(IR_i,  "0110----") then
+			elsif std_match(IR_i, "0110----") then
 				return T1_IDX0;
 			else
 				return DECODE2;
@@ -412,7 +395,7 @@ begin
                VMA_o <= '0';
                INC_act_o <= hold;
             end if;
-            if PMATCH(IR_i, "101-11-1") or PMATCH(IR_i, "011-1110") then
+            if std_match(IR_i, "101-11-1") or std_match(IR_i, "011-1110") then
                v_next_state := TSL0;
             else
                v_next_state := DECODE2;
@@ -425,17 +408,17 @@ begin
             mux_OBL_DB_o <= '1';
             INC_L_src_o <= db;
             PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
-            if PMATCH(IR_i, "1----111") then
+            if std_match(IR_i, "1----111") then
                -- its a write next
                VMA_o <= '0';
                INC_act_o <= hold;
             end if;
-            if PMATCH(IR_i, "011-1110") then
+            if std_match(IR_i, "011-1110") then
                v_next_state := TSL0;
-            elsif PMATCH(IR_i, "101-1101") then
+            elsif std_match(IR_i, "101-1101") then
                v_next_state := JBSR_T1_GP50;
             else
-               if PMATCH(IR_i, "01------") then
+               if std_match(IR_i, "01------") then
                   INC_act_o <= hold;
                end if;
                v_next_state := DECODE2;
@@ -582,17 +565,17 @@ begin
                INC_L_src_o <= abl; INC_H_src_o <= abh;
             end if;
             mux_DB_DBI_o <= '1';
-            if PMATCH(IR_i(3 downto 0), "000-") then
+            if std_match(IR_i(3 downto 0), "000-") then
                ALU_op_o <= alu_sub;
-            elsif PMATCH(IR_i(3 downto 0), "001-") then
+            elsif std_match(IR_i(3 downto 0), "001-") then
                ALU_op_o <= alu_sbc;
-            elsif PMATCH(IR_i(3 downto 0), "1000") then
+            elsif std_match(IR_i(3 downto 0), "1000") then
                ALU_op_o <= alu_eor;
-            elsif PMATCH(IR_i(3 downto 0), "1001") then
+            elsif std_match(IR_i(3 downto 0), "1001") then
                ALU_op_o <= alu_adc;
-            elsif PMATCH(IR_i(3 downto 0), "1010") then
+            elsif std_match(IR_i(3 downto 0), "1010") then
                ALU_op_o <= alu_or;
-            elsif PMATCH(IR_i(3 downto 0), "1011") then
+            elsif std_match(IR_i(3 downto 0), "1011") then
                ALU_op_o <= alu_add;
             end if;
             if IR_i(3 downto 0) = "0110" then
@@ -704,9 +687,9 @@ begin
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
             SPL_ld_ABL_o <= '1'; SPH_ld_ABH_o <= '1';
             VMA_o <= '0';
-            if PMATCH(IR_i, "1-11----") then
+            if std_match(IR_i, "1-11----") then
                v_next_state := JBSR_EXT_GP53;
-            elsif PMATCH(IR_i, "1-10----") then
+            elsif std_match(IR_i, "1-10----") then
                v_next_state := JBSR_IDX_GP53;
             else
                v_next_state := JBSR_BSR_GP53;
@@ -1059,7 +1042,7 @@ begin
             INC_H_src_o <= abh;
             ALU_op_o <= alu_add;
             VMA_o <= '0';
-            if PMATCH(IR_i, "101-1101") then
+            if std_match(IR_i, "101-1101") then
                v_next_state := JBSR_T1_GP50;
             else
                v_next_state := DX1;
