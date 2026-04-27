@@ -3,6 +3,9 @@
 		.equ	TESTEXT2, 0x380
 
 
+		.equ	ZP_FLAGS, 0x80
+		.equ	ZP_A, 0x81
+
 		.org 0xF000
 
 handle_irq:	rti
@@ -572,6 +575,35 @@ there:		nop
 		ldb	#0x80
 		aba
 		swi
+
+		; Hoglet's DAA test - translated to not be self-modifying
+
+		clra
+		staa	ZP_FLAGS
+		clrb
+daa_lp:		ldaa	ZP_FLAGS
+		tap
+		pshb
+		pula
+		daa
+		swi
+		decb
+		bne	daa_lp
+		ldaa	ZP_FLAGS
+		eora	#0x01		; swap C
+		staa	ZP_FLAGS
+		anda	#0x01
+		bne	daa_lp
+		ldaa	ZP_FLAGS
+		eora	#0x20		; swap H
+		staa	ZP_FLAGS
+		anda	#0x20
+		bne	daa_lp
+		ldaa	ZP_FLAGS
+		eora	#0x02		; swap V
+		staa	ZP_FLAGS
+		anda	#0x02
+		bne	daa_lp
 
 		staa	0xEFFF		; debug / stop
 		wai
