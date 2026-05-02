@@ -104,6 +104,7 @@ ARCHITECTURE Behavioral OF real_6800_tb IS
 	SIGNAL	i_RESET				: STD_LOGIC;	
 	SIGNAL	i_ba					: STD_LOGIC;
 	SIGNAL	i_ba2					: STD_LOGIC; -- reclock on phi2 rise
+	SIGNAL	i_ba3					: STD_LOGIC; -- reclock on phi1 rise
 
 	SIGNAL   i_dbe_ddw			: STD_LOGIC;
 	SIGNAL	i_dbe_dh				: STD_LOGIC;
@@ -131,12 +132,20 @@ BEGIN
 		end if;
 	end process;
 
-	BA <= transport i_ba2 after dly_Tba;				
+	p_phi1_ba:process(PHI1, BA)
+	begin
+		if rising_edge(PHI1) then
+			i_ba3 <= i_ba;
+		end if;
+	end process;
+
+
+	BA <= transport (i_ba2 and i_ba3) after dly_Tba;				
 
 	RnW <= i_RnW_dly when i_ba_dly = '0' else 'Z';
 	A <= i_A_dly when i_ba_dly = '0' else (others => 'Z');
 
-	VMA <= i_VMA;
+	VMA <= transport i_VMA after dly_addr;
 
 	p_cpu_do:process(phi1)
 	begin

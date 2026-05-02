@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-04-27T14:23:43Z
+-- GENERATED : 2026-05-01T15:35:41Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -117,7 +117,8 @@ port
 	ALU_op_o			: out t_alu_op;
 
 	RnW_o				: out std_logic;
-	VMA_o				: out std_logic
+	VMA_o				: out std_logic;
+	FIC_o				: out std_logic
 
 );
 end;
@@ -283,6 +284,7 @@ begin
 
 		RnW_o					<= '1';
 		VMA_o					<= '1';
+		FIC_o					<= '0';
 
 		case state_i is 
          when BRA_DX1 =>
@@ -1157,22 +1159,31 @@ begin
 		case v_next_state is
          when CPX_TSL0_D02 =>
             IR_ld_D_o <= '1';
+            FIC_o <= '1';
          when DAA_TSL0_D01 =>
             IR_ld_D_o <= '1';
+            FIC_o <= '1';
          when GII_ACC_TSL0_D01 =>
             IR_ld_D_o <= '1';
+            FIC_o <= '1';
          when GI_TSL0_D01 =>
             IR_ld_D_o <= '1';
+            FIC_o <= '1';
          when INXDEX_TSL0 =>
             IR_ld_D_o <= '1';
+            FIC_o <= '1';
          when LDX_TSL0_D02 =>
             IR_ld_D_o <= '1';
+            FIC_o <= '1';
          when TSL0|TSL0_D02|TSL0_D01 =>
             IR_ld_D_o <= '1';
+            FIC_o <= '1';
          when Txx_TSL0_D01 =>
             IR_ld_D_o <= '1';
+            FIC_o <= '1';
          when xBA_TSL0_D01 =>
             IR_ld_D_o <= '1';
+            FIC_o <= '1';
 			when others => null;
 		end case;
 

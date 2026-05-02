@@ -368,7 +368,8 @@ port
 	ALU_op_o			: out t_alu_op;
 
 	RnW_o				: out std_logic;
-	VMA_o				: out std_logic
+	VMA_o				: out std_logic;
+	FIC_o				: out std_logic
 
 );
 end;
@@ -499,6 +500,7 @@ e
 
 		RnW_o					<= '1';
 		VMA_o					<= '1';
+		FIC_o					<= '0';
 
 		case state_i is 
 ENDVHDL
@@ -546,6 +548,7 @@ foreach my $ks (sort keys %states) {
 		print $fh_out ("   " x $indent) . "when $ks" . ($state->{aliases}?"|":"") . $state->{aliases} . " =>\n";
 		$indent++;
 		print $fh_out ("   " x $indent) . "IR_ld_D_o <= '1';\n";
+		print $fh_out ("   " x $indent) . "FIC_o <= '1';\n";
 		$indent--;
 	}
 }
