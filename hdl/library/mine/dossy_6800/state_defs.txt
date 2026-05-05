@@ -150,9 +150,10 @@ AB			{ INC_L_src_o			<= abl; INC_H_src_o			<= abh; }
 # These are used for non-transfer state-machine driven logic
 
 ========== STATEMENTS ===========
+BA			{ BA_o <= '1'; }
 nVMA		{ VMA_o <= '0'; }
 WRITE		{ RnW_o <= '0'; }
-DEC		{ INC_act_o <= dec; }
+DEC			{ INC_act_o <= dec; }
 HOLD		{ INC_act_o <= hold; }
 HINC		{ INC_act_o <= inc_page; }
 HDEC		{ INC_act_o <= dec_page; }
@@ -176,6 +177,8 @@ ALU_ROL	{ ALU_op_o <= alu_rol; }
 ALU_LSR	{ ALU_op_o <= alu_lsr; }
 
 ALU_DAA	{ ALU_op_o <= alu_daa; }
+
+INT_CLEAR { INT_CLEAR_o <= '1'; }
 
 
 
@@ -206,25 +209,28 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 ============ STATES =============
 
 [RESET, GP58]
-	{if IR_i = x"3F" then}
-		SWIV->DB
-	{else}
+	{ if state_i = RESET then }
 		RESV->DB
+	{ elsif IR_i = x"3F" then }
+		SWIV->DB
+	{ elsif NMI_act_i = '1' then }
+		NMIV->DB
+	{ else }
+		IRQV->DB
 	{end if;}
 	
 	FF->ABH->INCH
 	SEI->CCR
 	DB->OBL,INCL
 
-	{if state_i = RESET then}
-		NEXT=GP58
-	{else}
-		NEXT=R57
-	{end if;}
+	NEXT=R57
 
 [R57]
 	DBI->DB->T
 	INC->AB
+
+	INT_CLEAR
+
 	NEXT=R58;
 
 [R58]
@@ -596,7 +602,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 
 [INXDEX_TSL0]
 	ALUZ->CCR
-	INC->AB->INC->PC
+	INC->AB,PC
 	DECODE
 	
 [INSDES_T1_GP50]
@@ -850,14 +856,12 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	INC->AB->SP
 	DEC
 	nVMA
-	{if IR_i /= x"3E" then -- TODO: better check here!}
-		NEXT=GP58
+	{if IR_i = x"3E" and not(IRQ_act_i = '1' and not NMI_act_i = '1') then }
+		NEXT=SWAI_GP57
+		BA
 	{else}
-		NEXT=WAIT_INTER
+		NEXT=GP58
 	{end if;}
-[WAIT_INTER]	
-	{--TODO: this is WAIT's WAIT state...what to do here, BA?}
-	NEXT=WAIT_INTER			
 
 [RTI_T1_GP50]
 	SP->AB->INC
@@ -865,7 +869,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 	NEXT=RTI_GP51
 
 [RTI_GP51]
-	INC->AB->SP # load SP unnnecessary here?
+	INC->AB->SP # load SP unnecessary here?
 	NEXT=RTI_GP52
 [RTI_GP52]
 	DBI->DB->CCR
@@ -1212,7 +1216,7 @@ ALU_DAA	{ ALU_op_o <= alu_daa; }
 [00111011]
 	STATE=RTI_T1_GP50
 
-[00111111]
+[00111111|00111110]
 	STATE=SWAI_T1_GP50
 
 

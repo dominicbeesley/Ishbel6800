@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-05-01T15:35:41Z
+-- GENERATED : 2026-05-04T17:36:37Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -34,6 +34,10 @@ entity dossy_6800_ctl_gen is
 port
 (
 	state_i			: in	t_cpu_state;
+
+	IRQ_act_i		: in  std_logic;
+	NMI_act_i		: in  std_logic;
+	INT_fetch_i		: in  std_logic;
 
 	IR_i				: in	std_logic_vector(7 downto 0); -- used for executing instruction
 	IR_P_i			: in  std_logic_vector(7 downto 0); -- used for executing instruction in decode state
@@ -118,7 +122,10 @@ port
 
 	RnW_o				: out std_logic;
 	VMA_o				: out std_logic;
-	FIC_o				: out std_logic
+	BA_o				: out std_logic;
+	FIC_o				: out std_logic;
+
+	INT_CLEAR_o		: out std_logic
 
 );
 end;
@@ -168,7 +175,7 @@ begin
 				return RTS_T1_GP50;
 			elsif std_match(IR_i, "00111011") then
 				return RTI_T1_GP50;
-			elsif std_match(IR_i, "00111111") then
+			elsif std_match(IR_i, "00111111") or std_match(IR_i, "00111110") then
 				return SWAI_T1_GP50;
 			elsif std_match(IR_i, "00000001") then
 				return NOP_T1_D00;
@@ -187,7 +194,9 @@ begin
 
 		impure function DECODE return t_cpu_state is
 		begin
-			if std_match(IR_i, "1-11----") then
+			if INT_fetch_i = '1' then
+				return SWAI_T1_GP50;
+			elsif std_match(IR_i, "1-11----") then
 				return T1_EXT0;
 			elsif std_match(IR_i, "1-01----") then
 				return T1_DIR0;
@@ -285,6 +294,9 @@ begin
 		RnW_o					<= '1';
 		VMA_o					<= '1';
 		FIC_o					<= '0';
+		BA_o					<= '0';
+
+		INT_CLEAR_o			<= '0';
 
 		case state_i is 
          when BRA_DX1 =>
@@ -653,7 +665,6 @@ begin
          when INXDEX_TSL0 =>
             CCR_ld_ALU_Z_o <= '1';
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
-            INC_L_src_o <= abl; INC_H_src_o <= abh;
             PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
             v_next_state := DECODE;
 
@@ -802,6 +813,7 @@ begin
             mux_DB_DBI_o <= '1';
             T_ld_DB_o <= '1';
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
+            INT_CLEAR_o <= '1';
             v_next_state := R58;
 
          when R58 =>
@@ -813,21 +825,21 @@ begin
             v_next_state := TSL0;
 
          when RESET|GP58 =>
-            if IR_i = x"3F" then
-               mux_DB_SWIV_o <= '1';
-            else
+            if state_i = RESET then
                mux_DB_RESV_o <= '1';
+            elsif IR_i = x"3F" then
+               mux_DB_SWIV_o <= '1';
+            elsif NMI_act_i = '1' then
+               mux_DB_NMIV_o <= '1';
+            else
+               mux_DB_IRQV_o <= '1';
             end if;
             mux_ABH_FF_o <= '1';
             INC_H_src_o <= abh;
             CCR_ld_SEI_o <= '1';
             mux_OBL_DB_o <= '1';
             INC_L_src_o <= db;
-            if state_i = RESET then
-               v_next_state := GP58;
-            else
-               v_next_state := R57;
-            end if;
+            v_next_state := R57;
 
          when RTI_GP51 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
@@ -999,10 +1011,11 @@ begin
             SPL_ld_ABL_o <= '1'; SPH_ld_ABH_o <= '1';
             INC_act_o <= dec;
             VMA_o <= '0';
-            if IR_i /= x"3E" then -- TODO: better check here!
-               v_next_state := GP58;
+            if IR_i = x"3E" and not(IRQ_act_i = '1' and not NMI_act_i = '1') then
+               v_next_state := SWAI_GP57;
+               BA_o <= '1';
             else
-               v_next_state := WAIT_INTER;
+               v_next_state := GP58;
             end if;
 
          when SWAI_T1_GP50 =>
@@ -1120,10 +1133,6 @@ begin
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
             PCL_ld_INCL_o <= '1'; PCH_ld_INCH_o <= '1';
             v_next_state := DECODE;
-
-         when WAIT_INTER =>
-            --TODO: this is WAIT's WAIT state...what to do here, BA?
-            v_next_state := WAIT_INTER;
 
          when xBA_T1_D00 =>
             mux_ABLI_ACCA_o <= '1';

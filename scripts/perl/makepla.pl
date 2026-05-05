@@ -286,6 +286,10 @@ port
 (
 	state_i			: in	t_cpu_state;
 
+	IRQ_act_i		: in  std_logic;
+	NMI_act_i		: in  std_logic;
+	INT_fetch_i		: in  std_logic;
+
 	IR_i				: in	std_logic_vector(7 downto 0); -- used for executing instruction
 	IR_P_i			: in  std_logic_vector(7 downto 0); -- used for executing instruction in decode state
 	ALU_CC_i			: in  std_logic_vector(7 downto 0); -- registered ALU output flags
@@ -369,7 +373,10 @@ port
 
 	RnW_o				: out std_logic;
 	VMA_o				: out std_logic;
-	FIC_o				: out std_logic
+	BA_o				: out std_logic;
+	FIC_o				: out std_logic;
+
+	INT_CLEAR_o		: out std_logic
 
 );
 end;
@@ -401,19 +408,19 @@ e
 
 		impure function DECODE return t_cpu_state is
 		begin
+			if INT_fetch_i = '1' then
+				return SWAI_T1_GP50;
 ENDVHDL
 
-print $fh_out "\t\t\t";
 foreach my $d (@decodes) {
 	if ($d->{mode}) {
-		print $fh_out "if " . decmatch($d) . " then
-				return $d->{state};
-			els"
+		print $fh_out "\t\t\telsif " . decmatch($d) . " then
+				return $d->{state};\n"
 	}
 }
 
 print $fh_out <<'ENDVHDL';
-e
+			else
 				return DECODE2;
 			end if;
 		end function;
@@ -501,6 +508,9 @@ e
 		RnW_o					<= '1';
 		VMA_o					<= '1';
 		FIC_o					<= '0';
+		BA_o					<= '0';
+
+		INT_CLEAR_o			<= '0';
 
 		case state_i is 
 ENDVHDL

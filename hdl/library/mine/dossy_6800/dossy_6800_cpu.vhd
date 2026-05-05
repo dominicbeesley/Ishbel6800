@@ -172,17 +172,26 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_INC_act			: t_inc_act;
 
 	-- other control signals
-	signal	i_VMA			: std_logic;
-	signal	i_RnW			: std_logic;
-	signal   i_BA			: std_logic;
-	signal	i_FIC			: std_logic;
+	signal	i_VMA					: std_logic;
+	signal	i_RnW					: std_logic;
+	signal   i_BA					: std_logic;
+	signal   i_BA_ctl				: std_logic;
+	signal	i_FIC					: std_logic;
 	
 	-- halt registered
-	signal	r_HALT		: std_logic;
-	signal   i_CLKEN_H	: std_logic; -- CLKEN gated by halt state
+	signal	r_HALT				: std_logic;
+	signal   i_CLKEN_H			: std_logic; -- CLKEN gated by halt state
 
-	signal i_next_state		: t_cpu_state;
-	signal r_state			: t_cpu_state;
+	-- interrupts
+	signal	i_INT_clear			: std_logic; -- ctl clears pending interrupts	
+	signal	r_NMI_prev			: std_logic; -- NMI edge detect
+	signal	r_IRQ_lat			: std_logic; -- IRQ registered
+	signal	r_NMI_lat			: std_logic; -- NMI registered
+	signal	r_INT_fetch			: std_logic; -- Interrupt recognised during fetch
+
+
+	signal i_next_state			: t_cpu_state;
+	signal r_state					: t_cpu_state;
 
 begin
 
@@ -596,6 +605,8 @@ begin
 		if rising_edge(CLK_i) then
 			if i_CLKEN_H = '1' then
 
+				r_INT_fetch <= '0';
+
 				case i_INC_L_src is 
 					when abl =>
 						v_src_l := ib_ABL;
@@ -612,37 +623,44 @@ begin
 						v_src_h := i_INCH_Q;
 				end case;
 
-				case i_INC_act is
-					when inc => 
-						v_int := std_logic_vector("0" & unsigned(v_src_l) + 1);
-						r_incl <= v_int(7 downto 0);
-					when dec	=> 
-						v_int := std_logic_vector("0" & unsigned(v_src_l) - 1);
-						r_incl <= v_int(7 downto 0);
-					when others =>
-						r_incl <= v_src_l;
-				end case;
+				if i_FIC = '1' and (r_IRQ_lat = '1' or r_NMI_lat = '1') then
+					r_INT_fetch <= '1'; -- inhibit incrementer during first cycle of interrupt sequence (fetch)
+					r_incl <= v_src_l;
+					r_inch <= v_src_h;
+				else
 
-				case i_INC_act is
-					when inc => 
-						if v_int(8) = '1' then
+					case i_INC_act is
+						when inc => 
+							v_int := std_logic_vector("0" & unsigned(v_src_l) + 1);
+							r_incl <= v_int(7 downto 0);
+						when dec	=> 
+							v_int := std_logic_vector("0" & unsigned(v_src_l) - 1);
+							r_incl <= v_int(7 downto 0);
+						when others =>
+							r_incl <= v_src_l;
+					end case;
+
+					case i_INC_act is
+						when inc => 
+							if v_int(8) = '1' then
+								r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
+							else
+								r_inch <= v_src_h;
+							end if;
+						when dec =>
+							if v_int(8) = '1' then
+								r_inch <= std_logic_vector(unsigned(v_src_h) - 1);
+							else
+								r_inch <= v_src_h;
+							end if;
+						when inc_page =>
 							r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
-						else
-							r_inch <= v_src_h;
-						end if;
-					when dec =>
-						if v_int(8) = '1' then
+						when dec_page =>
 							r_inch <= std_logic_vector(unsigned(v_src_h) - 1);
-						else
+						when others =>	
 							r_inch <= v_src_h;
-						end if;
-					when inc_page =>
-						r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
-					when dec_page =>
-						r_inch <= std_logic_vector(unsigned(v_src_h) - 1);
-					when others =>	
-						r_inch <= v_src_h;
-				end case;
+					end case;
+				end if;
 			end if;
 		end if;
 	end process;
@@ -678,6 +696,11 @@ begin
 	e_ctl_gen:entity dossy_6800.dossy_6800_ctl_gen
 	port map (
 		state_i			=> r_state,
+
+		IRQ_act_i		=> r_IRQ_lat,
+		NMI_act_i		=> r_NMI_lat,
+		INT_fetch_i		=> r_INT_fetch,
+
 		IR_i				=> i_IR_Q,
 		IR_P_i			=> i_IR_P_Q,
       ALU_CC_i       => i_ALU_CCR_Q,
@@ -763,7 +786,10 @@ begin
 
 		RnW_o				=> i_RnW,
 		VMA_o				=> i_VMA,
-		FIC_o				=> i_FIC
+		BA_o				=> i_BA_ctl,
+		FIC_o				=> i_FIC,
+
+		INT_clear_o		=> i_INT_clear
 
 	);
 
@@ -776,7 +802,8 @@ begin
 		end if;
 	end process;
 
-	i_BA <= 	'1' when r_HALT = '1' and i_FIC = '1' else
+	i_BA <= 	'1' when i_BA_ctl = '1' else
+				'1' when r_HALT = '1' and i_FIC = '1' else
 				'0';
 	i_CLKEN_H <= 	'1' when CLKEN_i = '1' and not(r_HALT = '1' and i_FIC = '1') else
 						'0';
@@ -790,5 +817,42 @@ begin
 	end process;
 
 	D_o <= ib_DB;
+
+	--TODO: should these be CLKEN or CLKEN_H?
+
+	p_NMI:process(CLK_i)
+	begin
+		if rising_edge(CLK_i) then
+			if RST_i = '1' then
+				r_NMI_prev <= NMI_i;
+				r_NMI_lat <= '0';
+			elsif i_CLKEN_H = '1' then
+				r_NMI_prev <= NMI_i;
+				if i_INT_clear = '1' then
+					r_NMI_lat <= '0';
+				end if;
+				if NMI_i = '1' and r_NMI_prev = '0' then
+					r_NMI_lat <= '1';
+				end if;
+			end if;
+		end if;
+	end process;
+
+	p_IRQ:process(CLK_i)
+	begin
+		if rising_edge(CLK_i) then
+			if RST_i = '1' then
+				r_IRQ_lat <= '0';
+			elsif i_CLKEN_H = '1' then
+				if i_INT_clear = '1' then
+					r_IRQ_lat <= '0';
+				end if;
+				if IRQ_i = '1' and i_CCR_Q(CCIX_I) = '0' then
+					r_IRQ_lat <= '1';
+				end if;
+			end if;
+		end if;
+	end process;
+
 
 end rtl;
