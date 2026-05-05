@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-05-04T17:36:37Z
+-- GENERATED : 2026-05-05T21:23:58Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -824,8 +824,8 @@ begin
             INC_H_src_o <= abh;
             v_next_state := TSL0;
 
-         when RESET|GP58 =>
-            if state_i = RESET then
+         when RESET|RESET2|GP58 =>
+            if (state_i = RESET) or (state_i = RESET2) then
                mux_DB_RESV_o <= '1';
             elsif IR_i = x"3F" then
                mux_DB_SWIV_o <= '1';
@@ -839,7 +839,11 @@ begin
             CCR_ld_SEI_o <= '1';
             mux_OBL_DB_o <= '1';
             INC_L_src_o <= db;
-            v_next_state := R57;
+            if state_i = RESET then
+               v_next_state := RESET2;
+            else
+               v_next_state := R57;
+            end if;
 
          when RTI_GP51 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';

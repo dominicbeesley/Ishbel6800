@@ -65,6 +65,7 @@ package dossy_6800 is
 
 	type t_cpu_state is (
 		RESET,
+		RESET2,
 		-- prep vector address
 		GP58,
 		-- load first vector address

@@ -208,8 +208,8 @@ INT_CLEAR { INT_CLEAR_o <= '1'; }
 
 ============ STATES =============
 
-[RESET, GP58]
-	{ if state_i = RESET then }
+[RESET, RESET2, GP58]
+	{ if (state_i = RESET) or (state_i = RESET2) then }
 		RESV->DB
 	{ elsif IR_i = x"3F" then }
 		SWIV->DB
@@ -223,7 +223,11 @@ INT_CLEAR { INT_CLEAR_o <= '1'; }
 	SEI->CCR
 	DB->OBL,INCL
 
-	NEXT=R57
+	{ if state_i = RESET then}
+		NEXT=RESET2
+	{ else }
+		NEXT=R57
+	{ end if; }
 
 [R57]
 	DBI->DB->T
