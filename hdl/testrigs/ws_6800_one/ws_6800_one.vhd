@@ -101,6 +101,8 @@ end ws_6800_one;
 
 architecture rtl of ws_6800_one is
 
+	constant CLOCK_SPEED		: natural := 48;
+
 	signal	i_clk_pll		: std_logic;
 	signal	i_rst				: std_logic;
 
@@ -130,8 +132,18 @@ architecture rtl of ws_6800_one is
 	signal	i_ram_we			: std_logic;
 	signal	i_ram_D_o		: std_logic_vector(7 downto 0);
 	signal	i_rom_D_o		: std_logic_vector(7 downto 0);
+	signal   i_via_D_o		: std_logic_vector(7 downto 0);
+
+	signal	i_via_nIRQ		: std_logic;
 
 	signal	r_lcd_lat		: std_logic_vector(7 downto 0); -- latches 16 bit data see
+
+	constant CLK_4_DIV		: natural := CLOCK_SPEED / 4;
+	signal 	r_via_1MHzE		: std_logic;
+	signal	r_via_clkdiv	: unsigned(numbits(CLK_4_DIV-1)-1 downto 0) 
+											:= to_unsigned(CLK_4_DIV - 1, numbits(CLK_4_DIV-1));
+	signal	r_via_phase		: unsigned(1 downto 0) := "00";
+	signal	r_via_ena4		: std_logic;
 
 begin
 
@@ -165,12 +177,51 @@ begin
 		end if;
 	end process;
 
+
+	--TODO: the clock stretching is very basic - it could be improved
+
 	p_clken:process(i_clk_pll, i_rst)
+	variable v_stretch : boolean;
 	begin
 		if rising_edge(i_clk_pll) then
-			r_clken_ring <= r_clken_ring(r_clken_ring'high-1 downto 0) & r_clken_ring(r_clken_ring'high);
+			v_stretch := false;
+			if i_CS_VIA = '1' then
+				if r_clken_ring(1) = '1' and r_via_phase /= "00" then
+					v_stretch := true;
+				elsif r_clken_ring(3) = '1' and (r_via_phase /= "11" or r_via_ena4 = '0') then
+					v_stretch := true;
+				end if;
+			end if;
+
+			if not v_stretch then
+				r_clken_ring <= r_clken_ring(r_clken_ring'high-1 downto 0) & r_clken_ring(r_clken_ring'high);
+			end if;
 		end if;
 	end process;
+
+	p_1MHz_VIA:process(i_clk_pll)
+	begin
+		if rising_edge(i_clk_pll) then
+			r_via_ena4 <= '0';
+			if r_via_clkdiv = 0 then
+				r_via_clkdiv <= to_unsigned(CLK_4_DIV - 1, numbits(CLK_4_DIV-1));
+				r_via_ena4 <= '1';
+			else
+				r_via_clkdiv <= r_via_clkdiv - 1;
+			end if;
+		end if;
+	end process;
+
+	p_VIA_phase:process(i_clk_pll)
+	begin
+		if rising_edge(i_clk_pll) then
+			r_via_1MHzE <= std_logic(r_via_phase(1)); -- need this to be 1 cycle late for reads
+			if r_via_ena4 = '1' then
+				r_via_phase <= r_via_phase + 1;
+			end if;
+		end if;
+	end process;
+
 
 	i_clken_addr <= r_clken_ring(1);
 	i_clken_mems <= r_clken_ring(2);
@@ -226,7 +277,7 @@ begin
 		CLKEN_i	=> i_clken_cpu,
 		RST_i		=> i_rst,
 		HALT_i	=> '0',
-		IRQ_i		=>	'0',
+		IRQ_i		=>	not i_via_nIRQ,
 		NMI_i		=>	'0',
 		RnW_o		=>	i_cpu_RnW,
 		VMA_o		=>	i_cpu_VMA,
@@ -244,6 +295,7 @@ begin
 					 lcd32_D_io(15 downto 8) when i_CS_LCD32 = '1' and i_cpu_A(0) = '0' else
 					 r_lcd_lat when i_CS_LCD32 = '1' and i_cpu_A(0) = '1' else
 					 LCD12864_D_io when i_CS_LCD12864 = '1' else
+					 i_via_D_o when i_CS_VIA = '1' else
 					 x"FF";
 
 	e_ram:entity work.RAM_syn
@@ -386,5 +438,48 @@ begin
 			SEL_o		=> disp0_sel_o
 		);
 	end block;
+
+	e_VIA:entity work.M6522
+   port map (
+      I_RS                  => i_cpu_A(3 downto 0),
+      I_DATA                => i_cpu_D_o,
+      O_DATA                => i_via_D_o,
+      O_DATA_OE_L           => open,
+
+      I_RW_L                => i_cpu_RnW,
+      I_CS1                 => i_CS_VIA,
+      I_CS2_L               => '0',
+
+      O_IRQ_L               => i_via_nIRQ,
+
+      -- port a
+      I_CA1                 => '1',
+      I_CA2                 => '1',
+      O_CA2                 => open,
+      O_CA2_OE_L            => open,
+
+      I_PA                  => (others => '1'),
+      O_PA                  => open,
+      O_PA_OE_L             => open,
+
+      -- port b
+      I_CB1                 => '1',
+      O_CB1                 => open,
+      O_CB1_OE_L            => open,
+
+      I_CB2                 => '1',
+      O_CB2                 => open,
+      O_CB2_OE_L            => open,
+
+      I_PB                  => (others => '1'),
+      O_PB                  => open,
+      O_PB_OE_L             => open,
+
+      I_P2_H                => r_via_1MHzE,
+      RESET_L               => not i_rst,
+      ENA_4                 => r_via_ena4,
+      CLK                   => i_clk_pll
+   );
+
 
 end rtl;
