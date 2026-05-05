@@ -7,7 +7,7 @@ MEMORY
 
 SECTIONS
 {
-  zero: {
+  zero (NOLOAD): {
     *(.dpage)
   } >zero
   ram : {

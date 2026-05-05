@@ -9,7 +9,7 @@
 		.equ LCD_12864_DATA, 	0x8201
 
 
-		.dpage
+		.section .dpage, "aurwz"
 zp_v:		.skip	1
 zp_y:		.skip	1
 
