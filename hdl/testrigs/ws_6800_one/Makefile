@@ -7,7 +7,7 @@
 	QUARTUS_PGM=quartus_pgm.exe
 	QUARTUS_CPF=quartus_cpf.exe
 
-FIRMWARE=./asm/smithbug/build/V2_Ishbel.mif
+FIRMWARE=./asm/NoIce/build/mon6800.hex
 
 
 ###################################################################

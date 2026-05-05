@@ -42,8 +42,8 @@ USE altera_mf.altera_mf_components.all;
 
 ENTITY rom IS
 	GENERIC (
-		MIF	: STRING
-		);
+		MIF : STRING
+	);
 	PORT
 	(
 		address		: IN STD_LOGIC_VECTOR (12 DOWNTO 0);
@@ -110,7 +110,7 @@ END SYN;
 -- Retrieval info: PRIVATE: JTAG_ENABLED NUMERIC "0"
 -- Retrieval info: PRIVATE: JTAG_ID STRING "NONE"
 -- Retrieval info: PRIVATE: MAXIMUM_DEPTH NUMERIC "0"
--- Retrieval info: PRIVATE: MIFfilename STRING "./asm/test_monitor/build/test_monitor.mif"
+-- Retrieval info: PRIVATE: MIFfilename STRING "./asm/NoIce/build/mon6800.mif"
 -- Retrieval info: PRIVATE: NUMWORDS_A NUMERIC "8192"
 -- Retrieval info: PRIVATE: RAM_BLOCK_TYPE NUMERIC "2"
 -- Retrieval info: PRIVATE: RegAddr NUMERIC "1"
@@ -125,7 +125,7 @@ END SYN;
 -- Retrieval info: CONSTANT: ADDRESS_ACLR_A STRING "NONE"
 -- Retrieval info: CONSTANT: CLOCK_ENABLE_INPUT_A STRING "BYPASS"
 -- Retrieval info: CONSTANT: CLOCK_ENABLE_OUTPUT_A STRING "BYPASS"
--- Retrieval info: CONSTANT: INIT_FILE STRING "./asm/test_monitor/build/test_monitor.mif"
+-- Retrieval info: CONSTANT: INIT_FILE STRING "./asm/NoIce/build/mon6800.mif"
 -- Retrieval info: CONSTANT: INTENDED_DEVICE_FAMILY STRING "Cyclone IV E"
 -- Retrieval info: CONSTANT: LPM_HINT STRING "ENABLE_RUNTIME_MOD=NO"
 -- Retrieval info: CONSTANT: LPM_TYPE STRING "altsyncram"

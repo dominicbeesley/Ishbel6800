@@ -39,13 +39,13 @@
 ;
 		.section RAM, "aurx"
 ;
-BUFFER:	.skip	2		;V2: Buffer to protect system scratch
+BUFFER:		.skip	2		;V2: Buffer to protect system scratch
 IOV:		.skip	2		;here and below same as V1
 BEGA:		.skip	2
 ENDA:		.skip	2
 NIO:		.skip	2
 SP:		.skip	2
-ACIAT:	.skip	1
+ACIAT:		.skip	1
 ECHO:		.skip	1
 XHI:		.skip	1
 XLOW:		.skip	1

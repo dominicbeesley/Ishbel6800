@@ -90,7 +90,11 @@ entity ws_6800_one is
 		LCD12864_RS_o						: out		std_logic;
 		LCD12864_RnW_o						: out		std_logic;
 		LCD12864_E_o						: out		std_logic;
-		LCD12864_D_io						: inout	std_logic_vector(7 downto 0)
+		LCD12864_D_io						: inout	std_logic_vector(7 downto 0);
+
+		-- seven segment LED matrix on 16I/Os_2
+		disp0_seg_o							: out		std_logic_vector(7 downto 0);
+		disp0_sel_o							: out		std_logic_vector(3 downto 0)
 
 	);
 end ws_6800_one;
@@ -115,6 +119,7 @@ architecture rtl of ws_6800_one is
 	signal	i_CS_FT245_S	: std_logic;	-- status
 	signal	i_CS_LCD32		: std_logic;
 	signal   i_CS_LCD12864	: std_logic;
+	signal   i_CS_VIA			: std_logic;
 
 	signal	i_cpu_RnW		: std_logic;
 	signal	i_cpu_VMA		: std_logic;
@@ -162,9 +167,7 @@ begin
 
 	p_clken:process(i_clk_pll, i_rst)
 	begin
-		if i_rst = '1' then
-			r_clken_ring <= (0 => '1', others => '0');
-		elsif rising_edge(i_clk_pll) then
+		if rising_edge(i_clk_pll) then
 			r_clken_ring <= r_clken_ring(r_clken_ring'high-1 downto 0) & r_clken_ring(r_clken_ring'high);
 		end if;
 	end process;
@@ -184,6 +187,7 @@ begin
 			i_CS_FT245_S <= '0';
 			i_CS_LCD32 <= '0';
 			i_CS_LCD12864 <= '0';
+			i_CS_VIA <= '0';
 		else
 			i_CS_RAM <= '0';
 			i_CS_ROM <= '0';
@@ -191,6 +195,7 @@ begin
 			i_CS_FT245_S <= '0';
 			i_CS_LCD32 <= '0';
 			i_CS_LCD12864 <= '0';
+			i_CS_VIA <= '0';
 
 			if i_cpu_VMA = '1' then
 
@@ -206,6 +211,8 @@ begin
 					i_CS_LCD32 <= '1';
 				elsif i_cpu_A(15 downto 8) = x"82" then
 					i_CS_LCD12864 <= '1';
+				elsif i_cpu_A(15 downto 8) = x"83" then
+					i_CS_VIA <= '1';
 				elsif i_cpu_A(15) = '0' then
 					i_CS_RAM <= '1';
 				end if;
@@ -219,8 +226,8 @@ begin
 		CLKEN_i	=> i_clken_cpu,
 		RST_i		=> i_rst,
 		HALT_i	=> '0',
-		IRQ_i		=>	'1',
-		NMI_i		=>	'1',
+		IRQ_i		=>	'0',
+		NMI_i		=>	'0',
 		RnW_o		=>	i_cpu_RnW,
 		VMA_o		=>	i_cpu_VMA,
 		BA_o		=>	open,
@@ -258,7 +265,8 @@ begin
 
 	e_rom: ENTITY work.rom
 	generic map (
-		MIF => ROOT & "/asm/smithbug/build/V2_Ishbel.mif"
+		MIF => ROOT & "/asm/NoIce/build/mon6800.hex"
+		--MIF => ROOT & "/asm/smithbug/build/V2_Ishbel.mif"
 	)
 	port map
 	(
@@ -280,7 +288,7 @@ begin
 
 	lcd32_nRESET_o <= not i_rst;
 
-	p_lcd_ctl:process(i_clk_pll)
+	p_lcd_ctl:process(i_clk_pll, i_rst)
 	begin
 		
 		if i_rst = '1' then
@@ -347,4 +355,36 @@ begin
 							'1' when i_CS_LCD12864 = '1' and i_WRen = '1' and i_cpu_RnW = '0' else
 							'0';
 	
+	b_led:block	
+		signal	r_led_clken	: std_logic;	
+	begin
+		p_led_clkdiv:process(i_clk_pll)
+		variable v_div : unsigned(15 downto 0);
+		begin
+			if rising_edge(i_clk_pll) then
+				r_led_clken <= '0';
+				v_div := v_div - 1;
+				if v_div = 0 then
+					r_led_clken <= '1';
+				end if;
+			end if;
+		end process;
+
+		e_led8_4:entity work.led8_N
+		generic map (
+			SIZE		=> 4
+		)
+		port map (
+			RST_i		=> '0',
+			CLK_i		=> i_clk_pll,
+			CLKEN_i	=> r_led_clken,
+
+			D_i		=> i_cpu_A,
+			DOT_i		=> i_cpu_RnW & i_cpu_VMA & "00",
+
+			SEG_o		=> disp0_seg_o,
+			SEL_o		=> disp0_sel_o
+		);
+	end block;
+
 end rtl;

@@ -121,6 +121,25 @@ set_location_assignment PIN_L13 -to LCD12864_D_io[6]
 set_location_assignment PIN_M12 -to LCD12864_D_io[7]
 
 
+set_location_assignment PIN_F2 -to disp0_seg_o[6]
+set_location_assignment PIN_F1 -to disp0_sel_o[3]
+set_location_assignment PIN_D1 -to disp0_seg_o[5]
+set_location_assignment PIN_C2 -to disp0_sel_o[2]
+set_location_assignment PIN_B1 -to disp0_seg_o[4]
+set_location_assignment PIN_A2 -to disp0_sel_o[1]
+set_location_assignment PIN_B3 -to disp0_seg_o[3]
+set_location_assignment PIN_A3 -to disp0_sel_o[0]
+set_location_assignment PIN_B4 -to disp0_seg_o[2]
+#set_location_assignment	PIN_A4	-to						#16I/Os_2_10
+set_location_assignment PIN_B5 -to disp0_seg_o[1]
+#set_location_assignment	PIN_A5	-to						#16I/Os_2_12
+set_location_assignment PIN_B6 -to disp0_seg_o[0]
+#set_location_assignment	PIN_A6	-to						#16I/Os_2_14
+set_location_assignment PIN_F3 -to disp0_seg_o[7]
+#set_location_assignment	PIN_D3	-to						#16I/Os_2_16
+
+
+
 
 set_global_assignment -name RESERVE_DCLK_AFTER_CONFIGURATION "USE AS REGULAR IO"
 set_global_assignment -name RESERVE_DATA0_AFTER_CONFIGURATION "USE AS REGULAR IO"
@@ -132,10 +151,13 @@ set_global_assignment -name RESERVE_FLASH_NCE_AFTER_CONFIGURATION "USE AS REGULA
 
 
 
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 set_global_assignment -name VHDL_FILE ws_6800_one.vhd
 set_global_assignment -name VHDL_FILE ../../library/mine/common.vhd
 set_global_assignment -name VHDL_FILE ../../library/mine/rom_syn.vhd
 set_global_assignment -name VHDL_FILE ../../library/mine/ram_syn.vhd
+set_global_assignment -name VHDL_FILE ../../library/mine/led8.vhd
+set_global_assignment -name VHDL_FILE ../../library/mine/led8_N.vhd
 set_global_assignment -name VHDL_FILE ../../library/mine/dossy_6800/dossy_6800_alu.vhd
 set_global_assignment -name VHDL_FILE ../../library/mine/dossy_6800/dossy_6800_cpu.vhd
 set_global_assignment -name VHDL_FILE ../../library/mine/dossy_6800/dossy_6800_ctl_gen.vhd
@@ -146,4 +168,3 @@ set_global_assignment -name VHDL_FILE ../../library/mine/dossy_6800/dossy_6800_r
 set_global_assignment -name QIP_FILE main_pll.qip
 set_global_assignment -name QIP_FILE rom.qip
 set_global_assignment -name SDC_FILE ws_6800_one.sdc
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
