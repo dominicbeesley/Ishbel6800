@@ -1,12 +1,22 @@
-		.include "hardware.inc"
+		.include	"hardware.inc"
+		.include "noice.inc"
 
 		.section .dpage, "aurwz"
 zp_v:		.skip	1
 zp_y:		.skip	1
 
+clock:		.skip	4
+
+zp_row_ctr:	.skip	1
+zp_row_ptr:	.skip	2
+zp_ch_ptr:	.skip	2
+
+		.bss
+disp_bcd:	.skip 8*8
+
 		.text
 START:
-		lds	#STACK
+		lds	#0x7EFF
 
 
 		ldx	#40
@@ -75,15 +85,134 @@ START:
 ;;		bne	@lp2
 
 
+@loop:		ldb	#4
+		ldx	#clock+3
+		sec
+@incloop:	ldaa	0,X
+		adca	#0
+		daa
+		staa	0,X
+		dex
+		decb
+		bne	@incloop
+@skinc:		
+		
+		ldx	#disp_bcd
+		stx	zp_row_ptr	; reset to home of disp area
+		lda	clock
+		jsr	hexA
+		lda	clock+1
+		jsr	hexA
+		lda	clock+2
+		jsr	hexA
+		lda	clock+3
+		jsr	hexA
+
+
+
+; copy buffer to screen
+; local buffer is in 8 columns of 8 rows
+; screen is 8 time 4*16-bit rows
+
+		ldx	#disp_bcd		
+		clr	zp_row_ctr
+.1:		stx	zp_row_ptr
+		ldaa	#0x3E
+		jsr	lcd_reg
+		ldaa	#0x3E
+		jsr	lcd_reg
+		ldaa	#0x3E
+		jsr	lcd_reg
+		ldaa	#0x3E
+		jsr	lcd_reg
+
+		jsr	delay1ms
+
+		; position on LCD
+		ldaa	zp_row_ctr
+		oraa	#0x88	
+		jsr	lcd_reg
+		ldaa	#0x88
+		jsr	lcd_reg
+
+		jsr	delay1ms
+
+
+		ldx	zp_row_ptr
+		ldb	#8
+.2:		ldaa	0,X
+		jsr	lcd_data
+		inx
+		inx
+		inx
+		inx
+		inx
+		inx
+		inx
+		inx
+		decb
+		bne	.2	
+		ldx	zp_row_ptr
+		inx
+		ldaa	zp_row_ctr
+		inca
+		staa	zp_row_ctr
+		cmpa	#8
+		bne	.1
+
+
+		ldx	#1000
+		jsr	delayXms
+
+
+		jmp	@loop
+
+
+
 		swi 			; POH
+hexA:		psha
+		asra
+		asra
+		asra
+		asra
+		jsr	hexNyb
+		pula
+hexNyb:		anda	#0x0F
+		asla
+		asla
+		asla
+		adda	#<BCDFONT		
+		staa	zp_ch_ptr+1
+		ldaa	#>BCDFONT
+		adca	#0
+		staa	zp_ch_ptr
+
+		; zp_ch_ptr now points at font, transfer to zp_row_ptr
+		ldb	#8
+.1:		ldx	zp_ch_ptr
+		ldaa	0,X
+		inx
+		stx	zp_ch_ptr
+		ldx	zp_row_ptr
+		staa	0,X
+		inx
+		stx	zp_row_ptr
+		decb
+		bne	.1
+		rts
+
 
 	; need ~ 2500 cycles
 delay1ms:	psha		;4
+		pshb
+		ldb	#6
 		clra		;2
 .0:		deca		;512
 		nop		;512
-		nop		;512
 		bne	.0	;1024
+		decb 
+		bne	.0
+		pulb
 		pula		;4
 		rts		;4
 delayXms:	jsr	delay1ms
@@ -172,5 +301,137 @@ bin_picture:
 	.byte	0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000001, 0b11111111, 0b11100000, 0b11111111, 0b11110000, 0b01111111, 0b11111000, 0b00111111, 0b11111100, 0b00000000
 	.byte	0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000
 	.byte	0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000
+
+BCDFONT:
+	.byte	0b00111000
+	.byte	0b01101100
+	.byte	0b11101110
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b01111100
+	.byte	0b00111000
+	.byte	0b00000000
+	.byte	0b01111000
+	.byte	0b00111000
+	.byte	0b00111000
+	.byte	0b00111000
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b00000000
+	.byte	0b11111100
+	.byte	0b00001110
+	.byte	0b01111100
+	.byte	0b11110000
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b00000000
+	.byte	0b11111100
+	.byte	0b00001110
+	.byte	0b00111100
+	.byte	0b00001110
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b11111100
+	.byte	0b00000000
+	.byte	0b11100000
+	.byte	0b11100000
+	.byte	0b11101110
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b01111110
+	.byte	0b00001110
+	.byte	0b00000000
+	.byte	0b11111110
+	.byte	0b11100000
+	.byte	0b11111100
+	.byte	0b00001110
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b11111100
+	.byte	0b00000000
+	.byte	0b01111100
+	.byte	0b11100000
+	.byte	0b11111100
+	.byte	0b11101110
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b01111100
+	.byte	0b00000000
+	.byte	0b11111110
+	.byte	0b11101110
+	.byte	0b00001110
+	.byte	0b00011100
+	.byte	0b00111100
+	.byte	0b01111100
+	.byte	0b01111100
+	.byte	0b00000000
+	.byte	0b01111100
+	.byte	0b11101110
+	.byte	0b01111100
+	.byte	0b11101110
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b01111100
+	.byte	0b00000000
+	.byte	0b01111100
+	.byte	0b11101110
+	.byte	0b01111110
+	.byte	0b00001110
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b11111100
+	.byte	0b00000000
+
+
+	.byte	0b00111000
+	.byte	0b01111100
+	.byte	0b01101100
+	.byte	0b01111100
+	.byte	0b11101110
+	.byte	0b11101110
+	.byte	0b11101110
+	.byte	0b00000000
+	.byte	0b11111100
+	.byte	0b11101110
+	.byte	0b11111110
+	.byte	0b11101100
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b11111100
+	.byte	0b00000000
+	.byte	0b01111100
+	.byte	0b11101110
+	.byte	0b11100000
+	.byte	0b11101110
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b01111100
+	.byte	0b00000000
+	.byte	0b11111000
+	.byte	0b11111100
+	.byte	0b01110110
+	.byte	0b01110110
+	.byte	0b11111110
+	.byte	0b11111100
+	.byte	0b11111000
+	.byte	0b00000000
+	.byte	0b11111110
+	.byte	0b11110000
+	.byte	0b01111100
+	.byte	0b01110000
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b11111110
+	.byte	0b00000000
+	.byte	0b11111110
+	.byte	0b11110000
+	.byte	0b01111100
+	.byte	0b01110000
+	.byte	0b11111000
+	.byte	0b11111000
+	.byte	0b11111000
+	.byte	0b00000000
+
 HERE:
-	.equ	STACK, HERE + 0x100

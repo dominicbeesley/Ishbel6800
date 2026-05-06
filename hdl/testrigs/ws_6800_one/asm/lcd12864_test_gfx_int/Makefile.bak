@@ -23,7 +23,7 @@ $(BUILD)/%.o: %.asm
 	$(AS) $(ASFLAGS) -Fvobj -o $@ -L $(basename $@).lst $<
 
 $(BUILD)/%.s19: $(BUILD)/%.o 
-	$(LD) $(LDFLAGS) -M$(basename $@).map -o $@ -T./$(notdir $(basename $@)).lk -symfile $(basename $@).sym -symfmt "DEF %s 0x%08llx" $(filter %.o, $^) 
+	$(LD) $(LDFLAGS) -M$(basename $@).map -o $@ -symfile $(basename $@).sym -symfmt "DEF %s 0x%08llx" $(filter %.o, $^) 
 
 
 clean::

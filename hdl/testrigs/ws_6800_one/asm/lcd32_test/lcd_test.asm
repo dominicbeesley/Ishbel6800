@@ -1,13 +1,4 @@
-
-		.equ FT245_STAT,	0x8000
-		.equ FT245_DATA,	0x8001
-
-		.equ FT245_RXF,		0x01
-		.equ FT245_TXE,		0x02
-
-		.equ LCD32_REG, 	0x8100
-		.equ LCD32_DATA, 	0x8102
-
+		.include "hardware.inc"
 
 		.dpage
 ZP_SENDXX:	.word	0

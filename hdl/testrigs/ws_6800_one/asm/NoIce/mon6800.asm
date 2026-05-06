@@ -1,12 +1,11 @@
-; Dominic Beesley December 31 2021
+		.include "hardware.inc"
+
+; Dominic Beesley May 6 2026
 ;
-; This is a heavily frigged version of John Hartmann's 68HC11 monitor
-; which has been adapted to bootstrap a 6800 CPU in a BBC micro (main CPU not TUBE!)
+; This is a heavily frigged version of John Hartmann's 6801 monitor
 ;
-; The Protocol is based around the 68HC11 so has the extra Y register which is unused
-;
-; This file will produce a mainly empty MOS ROM at 0xC000 with hardware vectors at
-; FFF8-FFFF and expects BBC Model B Hardware in Page FE (Sheila)
+; This file will produce a mainly empty MOS ROM at 0xE000 with hardware vectors at
+; FFF8-FFFF and expects WS_ONE_6800 hardware (see hardware.inc)
 ;
 ;  Hardware definitions
 		
@@ -21,29 +20,6 @@
 ;
 ;  Put you UART equates here
 
-		.equ VIA_orb,		0x8300
-		.equ VIA_ora,		0x8301
-		.equ VIA_ddrb,		0x8302
-		.equ VIA_ddra,		0x8303
-		.equ VIA_t1cl,		0x8304
-		.equ VIA_t1ch,		0x8305
-		.equ VIA_t1ll,		0x8306
-		.equ VIA_t1lh,		0x8307
-		.equ VIA_t2cl,		0x8308
-		.equ VIA_t2ch,		0x8309
-		.equ VIA_sr,		0x830A
-		.equ VIA_acr,		0x830B
-		.equ VIA_pcr,		0x830C
-		.equ VIA_ifr,		0x830D
-		.equ VIA_ier,		0x830E
-		.equ VIA_ora_nh,	0x830F
-
-
-		.equ FT245_STAT,	0x8000
-		.equ FT245_DATA,	0x8001
-
-		.equ	nRXRDY,		0x01
-		.equ	nTXRDY,		0x02
 
 		;
 ;============================================================================
@@ -56,7 +32,11 @@
 ;; ;  like most processors.  Thus, init SP to TOP-1 of stack space
 ;; 		.space	63
 ;; INITSTACK:      .space	1
-		.equ	INITSTACK, 0x1FF
+		.equ	INITSTACK, 0x7EFF
+
+VECTOR_IRQ:	.space   2
+VECTOR_NMI:	.space   2
+
 ;
 ;  Monitor stack
 ;  (Calculated use is at most 7 bytes [TODO:CHECK].  Leave plenty of spare)
@@ -100,6 +80,12 @@ RESET:
 ;
 ;  Set CPU mode to safe state
 		SEI                             ;INTERRUPTS OFF (WE MAY JUMP HERE)
+
+		LDX	#NMI_ENT
+		STX	VECTOR_NMI
+		LDX	#IRQ_ENTRY
+		STX	VECTOR_IRQ
+
 		CLR	REG_STATE               ;STATE 0 = "RESET"
 RES10:
 		LDS     #MONSTACK               ;CLEAN STACK IS HAPPY STACK
@@ -183,7 +169,7 @@ GC10:
 ;
 PUTCHAR:
 		PSHA
-		LDA	#nTXRDY
+		LDA	#FT245_TXE
 PC10:		BITA	FT245_STAT      	;CHECK TX STATUS
 		BNE	PC10
 		PULA
@@ -802,15 +788,20 @@ NMI_ENT:	LDAA	REG_STATE
 		JMP	INT_ENTRY
 EXIT_NMI:	RTI
 
+C_IRQ_ENTRY:	LDX	#VECTOR_IRQ
+		JMP	0,X
+C_NMI_ENTRY:	LDX	#VECTOR_NMI
+		JMP	0,X
+
 
 ;
 ;  INTERRUPT VECTORS
 		.section HARD_VECS, "acrx"
 ;
 ;  The remaining interrupts are permanently trapped to the monitor
-		.word	IRQ_ENTRY		;fff8 IRQ
-		.word	SWI_ENTRY               ;fffa SWI/breakpoint
-		.word	NMI_ENT		        ;fffc NMI
-		.word	RESET                   ;fffe reset
+		.word	C_IRQ_ENTRY		;fff8 IRQ
+		.word	SWI_ENTRY		;fffa SWI/breakpoint
+		.word	C_NMI_ENTRY		;fffc NMI
+		.word	RESET			;fffe reset
 ;
 

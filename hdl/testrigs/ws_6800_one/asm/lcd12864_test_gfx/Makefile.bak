@@ -16,9 +16,6 @@ DEPS=$(wildcard $(INCLUDES)/*.inc)
 all:: $(TARGETS2)
 
 MKDIR := $(shell mkdir -p $(BUILD))
-
-$(TARGETS2:%.s19=%.o): $(DEPS)
-
 $(BUILD)/%.o: %.asm
 	$(AS) $(ASFLAGS) -Fvobj -o $@ -L $(basename $@).lst $<
 

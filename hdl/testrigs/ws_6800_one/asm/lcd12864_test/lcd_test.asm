@@ -1,16 +1,6 @@
-
-		.equ FT245_STAT,	0x8000
-		.equ FT245_DATA,	0x8001
-
-		.equ FT245_RXF,		0x01
-		.equ FT245_TXE,		0x02
-
-		.equ LCD_12864_REG, 	0x8200
-		.equ LCD_12864_DATA, 	0x8201
-
+		.include "hardware.inc"
 
 		.dpage
-
 
 		.text
 START:

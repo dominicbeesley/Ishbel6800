@@ -122,6 +122,7 @@ architecture rtl of ws_6800_one is
 	signal	i_CS_LCD32		: std_logic;
 	signal   i_CS_LCD12864	: std_logic;
 	signal   i_CS_VIA			: std_logic;
+	signal   i_CS_1M			: std_logic;
 
 	signal	i_cpu_RnW		: std_logic;
 	signal	i_cpu_VMA		: std_logic;
@@ -157,7 +158,7 @@ begin
 		locked	=>	open
 	);
 
-	LED_o(0) <= not(i_rst);
+	LED_o(0) <= i_via_nIRQ;
 	LED_o(1) <= i_cpu_A(0);
 	LED_o(2) <= i_cpu_A(14);
 	LED_o(3) <= i_cpu_A(15);
@@ -185,7 +186,7 @@ begin
 	begin
 		if rising_edge(i_clk_pll) then
 			v_stretch := false;
-			if i_CS_VIA = '1' then
+			if i_CS_1M = '1' then
 				if r_clken_ring(1) = '1' and r_via_phase /= "00" then
 					v_stretch := true;
 				elsif r_clken_ring(3) = '1' and (r_via_phase /= "11" or r_via_ena4 = '0') then
@@ -239,6 +240,7 @@ begin
 			i_CS_LCD32 <= '0';
 			i_CS_LCD12864 <= '0';
 			i_CS_VIA <= '0';
+			i_CS_1M <= '0';
 		else
 			i_CS_RAM <= '0';
 			i_CS_ROM <= '0';
@@ -247,6 +249,7 @@ begin
 			i_CS_LCD32 <= '0';
 			i_CS_LCD12864 <= '0';
 			i_CS_VIA <= '0';
+			i_CS_1M <= '0';
 
 			if i_cpu_VMA = '1' then
 
@@ -259,10 +262,13 @@ begin
 						i_CS_FT245_S <= '1';
 					end if;
 				elsif i_cpu_A(15 downto 8) = x"81" then
+					i_CS_1M <= '1';
 					i_CS_LCD32 <= '1';
 				elsif i_cpu_A(15 downto 8) = x"82" then
+					i_CS_1M <= '1';
 					i_CS_LCD12864 <= '1';
 				elsif i_cpu_A(15 downto 8) = x"83" then
+					i_CS_1M <= '1';
 					i_CS_VIA <= '1';
 				elsif i_cpu_A(15) = '0' then
 					i_CS_RAM <= '1';
