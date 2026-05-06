@@ -1,25 +1,30 @@
 		.include	"hardware.inc"
 		.include "noice.inc"
 
+
+		.equ	CLOCKSZ, 3
+
 		.section .dpage, "aurwz"
 zp_v:		.skip	1
 zp_y:		.skip	1
+zp_tmp:		.skip	2
+zp_tmp2:		.skip	2
 
-clock:		.skip	4
+clock:		.skip	CLOCKSZ
 
 zp_row_ctr:	.skip	1
 zp_row_ptr:	.skip	2
 zp_ch_ptr:	.skip	2
 
 		.bss
-disp_bcd:	.skip 8*8
+disp_bcd:	.skip CLOCKSZ*2*8
 
 		.text
 START:
 		lds	#0x7EFF
 
 
-		ldx	#40
+		ldx	#400
 		jsr	delayXms
 
 		ldaa	#0x38
@@ -43,7 +48,8 @@ START:
 		ldaa	#0x3E
 		jsr	lcd_reg
 
-		jsr	delay1ms
+		ldx	#100
+		jsr	delayXms
 
 
 
@@ -85,8 +91,8 @@ START:
 ;;		bne	@lp2
 
 
-@loop:		ldb	#4
-		ldx	#clock+3
+@loop:		ldb	#CLOCKSZ
+		ldx	#clock+CLOCKSZ-1
 		sec
 @incloop:	ldaa	0,X
 		adca	#0
@@ -99,16 +105,17 @@ START:
 		
 		ldx	#disp_bcd
 		stx	zp_row_ptr	; reset to home of disp area
-		lda	clock
+		ldx	#clock
+		stx	zp_tmp
+		ldab	#CLOCKSZ
+		stab	zp_tmp2
+.3:		ldx	zp_tmp
+		ldaa	0,X
+		inx
+		stx	zp_tmp
 		jsr	hexA
-		lda	clock+1
-		jsr	hexA
-		lda	clock+2
-		jsr	hexA
-		lda	clock+3
-		jsr	hexA
-
-
+		dec	zp_tmp2
+		bne	.3
 
 ; copy buffer to screen
 ; local buffer is in 8 columns of 8 rows
@@ -117,6 +124,7 @@ START:
 		ldx	#disp_bcd		
 		clr	zp_row_ctr
 .1:		stx	zp_row_ptr
+
 		ldaa	#0x3E
 		jsr	lcd_reg
 		ldaa	#0x3E
@@ -127,6 +135,11 @@ START:
 		jsr	lcd_reg
 
 		jsr	delay1ms
+		jsr	delay1ms
+		jsr	delay1ms
+		jsr	delay1ms
+
+
 
 		; position on LCD
 		ldaa	zp_row_ctr
@@ -139,7 +152,7 @@ START:
 
 
 		ldx	zp_row_ptr
-		ldb	#8
+		ldb	#CLOCKSZ*2
 .2:		ldaa	0,X
 		jsr	lcd_data
 		inx
@@ -161,8 +174,8 @@ START:
 		bne	.1
 
 
-		ldx	#1000
-		jsr	delayXms
+;		ldx	#1000
+;		jsr	delayXms
 
 
 		jmp	@loop
