@@ -3,6 +3,7 @@
 
 
 		.equ	CLOCKSZ, 3
+		.equ	T1_TICKS, (1000000 / 100) - 2		
 
 		.section .dpage, "aurwz"
 zp_v:		.skip	1
@@ -10,18 +11,26 @@ zp_y:		.skip	1
 zp_tmp:		.skip	2
 zp_tmp2:		.skip	2
 
-clock:		.skip	CLOCKSZ
+zp_ctr100:	.skip	1		; counts down to divide by 100
+zp_seconds:	.skip	CLOCKSZ
 
 zp_row_ctr:	.skip	1
 zp_row_ptr:	.skip	2
 zp_ch_ptr:	.skip	2
 
 		.bss
-disp_bcd:	.skip CLOCKSZ*2*8
+disp_bcd:	.skip 	CLOCKSZ*2*8
+old_IRQV:	.skip	2		; old IRQ handler
 
 		.text
 START:
 		lds	#0x7EFF
+
+		clr	zp_seconds
+		clr	zp_seconds+1
+		clr	zp_seconds+2
+		ldaa	#100
+		staa	zp_ctr100
 
 
 		ldx	#400
@@ -51,7 +60,7 @@ START:
 		ldx	#100
 		jsr	delayXms
 
-
+		
 
 
 		
@@ -91,21 +100,41 @@ START:
 ;;		bne	@lp2
 
 
-@loop:		ldb	#CLOCKSZ
-		ldx	#clock+CLOCKSZ-1
-		sec
-@incloop:	ldaa	0,X
-		adca	#0
-		daa
-		staa	0,X
-		dex
-		decb
-		bne	@incloop
-@skinc:		
-		
+		sei
+		; intercept interrupts
+		ldx	NOICE_VECTOR_IRQ
+		stx	old_IRQV
+
+		ldx	#handle_irq
+		stx	NOICE_VECTOR_IRQ
+	
+		; clear interrupt enables and flags
+		ldaa	#0x7F
+		staa	VIA_ier
+		staa	VIA_ifr
+
+
+		ldaa	#VIA_ACR_T1_CONT
+		staa	VIA_acr		
+
+		ldaa	#<T1_TICKS
+		staa	VIA_t1ll
+		ldaa	#>T1_TICKS
+		staa	VIA_t1lh
+		staa	VIA_t1ch
+
+
+		; enable T1 interrupt
+		ldaa	#VIA_IFR_BIT_ANY|VIA_IFR_BIT_T1
+		staa	VIA_ier
+
+		cli
+
+
+@loop:		
 		ldx	#disp_bcd
 		stx	zp_row_ptr	; reset to home of disp area
-		ldx	#clock
+		ldx	#zp_seconds
 		stx	zp_tmp
 		ldab	#CLOCKSZ
 		stab	zp_tmp2
@@ -232,6 +261,41 @@ lcd_reg:		jsr	lcd_wait
 lcd_data:	jsr	lcd_wait
 		staa	LCD_12864_DATA
 		rts
+
+
+
+handle_irq:
+		ldaa	VIA_ifr
+		bpl	@notirq
+		anda	#VIA_IFR_BIT_T1
+		beq	@notirq
+		staa	VIA_ifr	; clear flag
+
+		dec	zp_ctr100
+		bne	@sk1
+
+		ldaa	#100
+		staa	zp_ctr100
+
+
+		ldab	#CLOCKSZ
+		ldx	#zp_seconds+CLOCKSZ-1
+		sec
+@incloop:	ldaa	0,X
+		adca	#0
+		daa
+		staa	0,X
+		dex
+		decb
+		bne	@incloop
+@skinc:		
+
+@sk1:		rti
+
+@notirq:	ldx	old_IRQV
+		jmp	0,X			; pass on interrupt
+
+		.data		
 
 bin_picture:	
 
@@ -431,5 +495,8 @@ BCDFONT:
 	.byte	0b11111000
 	.byte	0b11111000
 	.byte	0b00000000
+
+	
+
 
 HERE:
