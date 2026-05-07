@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-05-05T21:23:58Z
+-- GENERATED : 2026-05-07T17:11:35Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -412,6 +412,9 @@ begin
             if std_match(IR_i, "101-11-1") or std_match(IR_i, "011-1110") then
                v_next_state := TSL0;
             else
+               if std_match(IR_i, "01------") then
+                  INC_act_o <= hold;
+               end if;
                v_next_state := DECODE2;
             end if;
 

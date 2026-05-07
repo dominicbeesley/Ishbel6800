@@ -1080,6 +1080,9 @@ INT_CLEAR { INT_CLEAR_o <= '1'; }
 		# JMP / JSR
 		NEXT=TSL0
 	{ else }
+		{ if std_match(IR_i, "01------") then }		
+			HOLD
+		{ end if; }
 		NEXT=DECODE2
 	{ end if; }
 
