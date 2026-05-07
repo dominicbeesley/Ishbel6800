@@ -125,21 +125,6 @@ START:
 		clr	zp_row_ctr
 .1:		stx	zp_row_ptr
 
-		ldaa	#0x3E
-		jsr	lcd_reg
-		ldaa	#0x3E
-		jsr	lcd_reg
-		ldaa	#0x3E
-		jsr	lcd_reg
-		ldaa	#0x3E
-		jsr	lcd_reg
-
-		jsr	delay1ms
-		jsr	delay1ms
-		jsr	delay1ms
-		jsr	delay1ms
-
-
 
 		; position on LCD
 		ldaa	zp_row_ctr
