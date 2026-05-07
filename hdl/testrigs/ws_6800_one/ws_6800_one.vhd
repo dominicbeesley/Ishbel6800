@@ -227,7 +227,7 @@ begin
 	i_clken_addr <= r_clken_ring(1);
 	i_clken_mems <= r_clken_ring(2);
 	i_clken_cpu  <= r_clken_ring(0);
-	i_RDen		 <= r_clken_ring(2) or r_clken_ring(3) or r_clken_ring(0);
+	i_RDen		 <= r_clken_ring(2) or r_clken_ring(3);
 	i_WRen		 <= r_clken_ring(2) or r_clken_ring(3);
 
 	p_cs:process(all)
