@@ -29,6 +29,7 @@ open(my $fh_in, "<", $fn_in) or usage(*STDERR, "Cannot open \"$fn_in\" for input
 my %xfers = ();
 my %statements = ();
 my %states = ();
+my @decodes = ();
 
 use POSIX qw(strftime);
 my $now = time();
@@ -37,12 +38,14 @@ my $nowstr = strftime('%FT%TZ', gmtime($now));
 use constant {
 	STATE_XFERS => 0,
 	STATE_STATEMENTS => 1,
-	STATE_STATES => 2
+	STATE_STATES => 2,
+	STATE_DECODE => 3
 };
 
 my $in_state = 0;
 my $cur_xfer;
 my $cur_state;
+my $cur_decode;
 
 while (<$fh_in>) {
 	
@@ -61,10 +64,9 @@ while (<$fh_in>) {
 			} elsif ($sec eq "STATEMENTS") {
 				$in_state = STATE_STATEMENTS;
 			} elsif ($sec eq "STATES") {
-
-				print Dumper(%xfers);
-
 				$in_state = STATE_STATES;
+			} elsif ($sec eq "DECODE") {
+				$in_state = STATE_DECODE;
 			} else {
 				die "Unrecognised section $sec";
 			}
@@ -133,7 +135,7 @@ while (<$fh_in>) {
 						type => "vhdl",
 						vhdl => $1
 					};
-				} elsif ($l =~ /\s*(\w+)(\s*->\s*(\w+)\s*(,\s*(\w+(\s*,\s*\w+)*))?)+/) {
+				} elsif ($l =~ /^\s*(\w+)(\s*->\s*(\w+)\s*(,\s*(\w+(\s*,\s*\w+)*))?)+/) {
 						
 					my @parts = ();
 
@@ -163,11 +165,20 @@ while (<$fh_in>) {
 							};	
 						}
   					}
-				} elsif ($l =~ /NEXT\s*=\s*(\w+)/) {
+				} elsif ($l =~ /^NEXT\s*=\s*(\w+)/) {
 					push @{$cur_state->{lines}}, {
 						type => "next",
-						vhdl => "next_state_o <= $1;"
-					};				
+						vhdl => "v_next_state := $1;"
+					};		
+
+					$cur_state->{had_next} = 1;
+				} elsif ($l =~ /^DECODE$/)	{
+					push @{$cur_state->{lines}}, {
+						type => "next",
+						vhdl => "v_next_state := DECODE;"
+					};		
+
+					$cur_state->{decode} = 1;
 				} else {
 					# look for a statement
 					exists $statements{$l} or die "Unrecognised line in states \"$l\"";
@@ -175,6 +186,22 @@ while (<$fh_in>) {
 						type => "statement",
 						vhdl => $statements{$l}
 					};	
+				}
+			} elsif ($in_state == STATE_DECODE) {
+				if ($l =~ /^\[\s*([01\-]{8}(\s*\|\s*[01\-]{8})*)\s*\]$/) {
+					$cur_decode = {
+						match => [ split(/\s*\|\s*/, $1) ]
+					};
+					push @decodes, $cur_decode;
+				} elsif ( $l =~ /^MODE$/ ) {
+					$cur_decode or die "MODE before []";
+					$cur_decode->{mode} = 1;
+				} elsif ( $l =~ /^STATE=(\w+)$/ ) {
+					$cur_decode or die "STATE= before []";
+					$cur_decode->{state} and die "Two states for one match.";
+					$cur_decode->{state} = $1;
+				} else {
+					die "Unrecognised line in decodes: \"$l\"";
 				}
 			} else {
 				die "Unhandled state";
@@ -185,10 +212,39 @@ while (<$fh_in>) {
 
 close $fh_in;
 
+print Dumper(%xfers);
+print Dumper(%statements);
 print Dumper(%states);
+print Dumper(@decodes);
+
+foreach my $s (sort keys %states) {
+	my $state = $states{$s};
+
+	if ($state->{type} eq "state") {
+		$state->{decode} or $state->{had_next} or die "State \"$s\" missing NEXT or DECODE";
+		$state->{decode} and $state->{had_next} and die "State \"$s\" has both NEXT and DECODE";
+	}
+
+	if ($state->{type} eq "state" and $state->{decode}) {
+		foreach my $l (@{$state->{lines}}) {
+			my $vhdl = $l->{vhdl};
+
+			$vhdl =~ /\bIR_i\b/ and print STDERR "WARNING: IR_i referenced in DECODE state \"$s\"\n";
+		}
+	}
+}
+
 
 open(my $fh_out, ">", $fn_out) or usage(*STDERR, "Cannot open \"$fn_out\" for output : $!");
 
+
+sub decmatch($) {
+	my ($d) = @_;
+
+	return join(" or ", 
+		map { "std_match(IR_i, \"" . $_ . "\")"  } @{$d->{match}}
+	);
+}
 
 print $fh_out <<'ENDVHDL';
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
@@ -230,9 +286,15 @@ port
 (
 	state_i			: in	t_cpu_state;
 
-	IR_DBI_i			: in  std_logic_vector(7 downto 0); -- used for decode * early
+	IRQ_act_i		: in  std_logic;
+	NMI_act_i		: in  std_logic;
+	INT_fetch_i		: in  std_logic;
+
 	IR_i				: in	std_logic_vector(7 downto 0); -- used for executing instruction
+	IR_P_i			: in  std_logic_vector(7 downto 0); -- used for executing instruction in decode state
 	ALU_CC_i			: in  std_logic_vector(7 downto 0); -- registered ALU output flags
+	CCR_i				: in  std_logic_vector(7 downto 0); -- registered CPU status flags
+	T_Q_i				: in  std_logic_vector(7 downto 0); -- used for branch page carries : TODO: think of cheaper way
 
 	next_state_o	: out t_cpu_state;
 
@@ -247,6 +309,7 @@ port
 	mux_ABLI_ACCB_o: out	std_logic;
 	mux_ABLI_IXH_o	: out	std_logic;
 	mux_ABLI_FF_o	: out	std_logic;
+	mux_ABLI_00_o	: out	std_logic;
 	mux_DB_T_o		: out	std_logic;
 	mux_DB_PCH_o	: out	std_logic;
 	mux_DB_SPH_o	: out	std_logic;
@@ -309,7 +372,11 @@ port
 	ALU_op_o			: out t_alu_op;
 
 	RnW_o				: out std_logic;
-	VMA_o				: out std_logic
+	VMA_o				: out std_logic;
+	BA_o				: out std_logic;
+	FIC_o				: out std_logic;
+
+	INT_CLEAR_o		: out std_logic
 
 );
 end;
@@ -318,81 +385,49 @@ architecture rtl of dossy_6800_ctl_gen is
 begin
 
 	p_control:process(all)
-		function PMATCH(V: in std_logic_vector; M: in std_logic_vector) return boolean is
+
+		impure function DECODE2 return t_cpu_state is
 		begin
-			if V ?= M then
-				return true;
-			else
-				return false;
-			end if;			
-		end function;
+ENDVHDL
 
-		impure function DECODE return t_cpu_state is
-		variable firstdecode : boolean;	-- A bodge to differentiate between first pass include addressing mode
-		begin
-			firstdecode := (
-				state_i = TSL0 or 
-				state_i = TSL0_D02 or 
-				state_i = TSL0_D01 or 
-				state_i = LDX_TSL0_D02 or
-				state_i = INXDEX_TSL0 or
-				state_i = GI_TSL0_D01);
-			if PMATCH(IR_DBI_i,  "1-11----") and firstdecode then
-				return T1_EXT0;
-			elsif PMATCH(IR_DBI_i,  "1-01----") and firstdecode then
-				return T1_DIR0;
-			elsif PMATCH(IR_DBI_i,  "1-10----") and firstdecode then
-				return T1_IDX0;
-			elsif PMATCH(IR_DBI_i,  "0111----") and firstdecode then
-				return T1_EXT0;
-			elsif PMATCH(IR_DBI_i,  "0110----") and firstdecode then
-				return T1_IDX0;
+print $fh_out "\t\t\t";
+foreach my $d (@decodes) {
+	if (!$d->{mode}) {
+		print $fh_out "if " . decmatch($d) . " then
+				return $d->{state};
+			els"
+	}
+}
 
-			elsif PMATCH(IR_DBI_i, "00000001") then
-				return NOP_T1_D00;
-			elsif PMATCH(IR_DBI_i, "00000110") then
-				return TAP_T1_D00;
-			elsif PMATCH(IR_DBI_i, "00000111") then
-				return TPA_T1_D00;
-			elsif PMATCH(IR_DBI_i, "0000100-") then
-				return INXDEX_T1_D00;
-			elsif PMATCH(IR_DBI_i, "0000101-") or PMATCH(IR_DBI_i, "000011--") then
-				return SEx_T1_D00;
 
-			elsif PMATCH(IR_DBI_i, "00110000") then
-				return TSX_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00110001") or PMATCH(IR_DBI_i, "00110100") then
-				return INSDES_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "0011001-") then
-				return PULA_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00110101") then
-				return TXS_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "0011011-") then
-				return PSHA_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00111001") then
-				return RTS_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00111011") then
-				return RTI_T1_GP50;
-			elsif PMATCH(IR_DBI_i, "00111111") then
-				return SWAI_T1_GP50;
-
-			elsif PMATCH(IR_DBI_i, "011-1110") then
-				return TSL0;
-
-			elsif PMATCH(IR_DBI_i, "1---1110") then
-				return LDx_T1_D00;
-			elsif PMATCH(IR_DBI_i, "1---1111") then
-				return STx_T1_D00;
-			elsif PMATCH(IR_DBI_i, "1---0111") then
-				return GI_STA_T1_D00;
-			elsif PMATCH(IR_DBI_i, "1-------") then
-				return GI_T1_D00;
-			else
+print $fh_out <<'ENDVHDL';
+e
 				return DIEBAD;
 			end if;
 		end function;
+
+		impure function DECODE return t_cpu_state is
+		begin
+			if INT_fetch_i = '1' then
+				return SWAI_T1_GP50;
+ENDVHDL
+
+foreach my $d (@decodes) {
+	if ($d->{mode}) {
+		print $fh_out "\t\t\telsif " . decmatch($d) . " then
+				return $d->{state};\n"
+	}
+}
+
+print $fh_out <<'ENDVHDL';
+			else
+				return DECODE2;
+			end if;
+		end function;
+
+	variable v_next_state : t_cpu_state;
 	begin
-		next_state_o <= DIEBAD;
+		v_next_state := DIEBAD;
 
 		mux_ABL_INCL_o		<= '0';
 		mux_ABL_PCL_o		<= '0';
@@ -405,6 +440,7 @@ begin
 		mux_ABLI_ACCB_o	<= '0';
 		mux_ABLI_IXH_o		<= '0';
 		mux_ABLI_FF_o		<= '0';
+		mux_ABLI_00_o		<= '0';
 		mux_DB_T_o			<= '0';
 		mux_DB_PCH_o		<= '0';
 		mux_DB_SPH_o		<= '0';
@@ -471,6 +507,10 @@ begin
 
 		RnW_o					<= '1';
 		VMA_o					<= '1';
+		FIC_o					<= '0';
+		BA_o					<= '0';
+
+		INT_CLEAR_o			<= '0';
 
 		case state_i is 
 ENDVHDL
@@ -507,6 +547,27 @@ foreach my $ks (sort keys %states) {
 print $fh_out <<'ENDVHDL';
 			when others => null;
 		end case;
+
+		case v_next_state is
+ENDVHDL
+foreach my $ks (sort keys %states) {
+	$indent = 3;
+	my $state = $states{$ks};
+
+	if ($state->{type} eq "state" && $state->{decode}) {
+		print $fh_out ("   " x $indent) . "when $ks" . ($state->{aliases}?"|":"") . $state->{aliases} . " =>\n";
+		$indent++;
+		print $fh_out ("   " x $indent) . "IR_ld_D_o <= '1';\n";
+		print $fh_out ("   " x $indent) . "FIC_o <= '1';\n";
+		$indent--;
+	}
+}
+
+print $fh_out <<'ENDVHDL';
+			when others => null;
+		end case;
+
+		next_state_o <= v_next_state;
 	end process;
 
 end rtl;

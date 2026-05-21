@@ -1,0 +1,7 @@
+
+
+Quartus ws_6800_one project
+
+Date		Fmax	LE		Regs		Description
+-			41MHz	881		210			Initial naive implementation
+26/4		39MHz	767		215			Initial attempt deduplicate IR/DECODE steps

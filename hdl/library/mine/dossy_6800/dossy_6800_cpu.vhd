@@ -30,6 +30,7 @@ use dossy_6800.dossy_6800.all;
 entity dossy_6800_cpu is
 	port (	
 		CLK_i:		in	std_logic;
+		CLKEN_i:		in	std_logic;
 		RST_i:		in	std_logic;
 		HALT_i:		in	std_logic;
 		IRQ_i:		in	std_logic;
@@ -48,24 +49,26 @@ architecture rtl of dossy_6800_cpu is
 	-- internal buses
 	signal	ib_DB					: std_logic_vector(7 downto 0);
 	signal	ib_ABL				: std_logic_vector(7 downto 0);
+	signal	ib_ABL2				: std_logic_vector(7 downto 0);
 	signal	ib_ABLI				: std_logic_vector(7 downto 0);
 	signal	ib_ABH				: std_logic_vector(7 downto 0);
 	signal	ib_OBL				: std_logic_vector(7 downto 0);
 
 	-- internal bus mux controls
-	signal	i_mux_ABL_INCL	: std_logic;
+	signal	i_mux_ABL_INCL		: std_logic;
 	signal	i_mux_ABL_PCL		: std_logic;
 	signal	i_mux_ABL_SPL		: std_logic;
-	signal	i_mux_ABL_ABLI	: std_logic;
+	signal	i_mux_ABL_ABLI		: std_logic;
 
 	signal	i_mux_OBL_DB		: std_logic;
 
-	signal	i_mux_ABLI_ABL	: std_logic;
+	signal	i_mux_ABLI_ABL		: std_logic;
 	signal	i_mux_ABLI_IXL		: std_logic;
-	signal	i_mux_ABLI_ACCA		: std_logic;
-	signal	i_mux_ABLI_ACCB		: std_logic;
-	signal	i_mux_ABLI_IXH	: std_logic;
+	signal	i_mux_ABLI_ACCA	: std_logic;
+	signal	i_mux_ABLI_ACCB	: std_logic;
+	signal	i_mux_ABLI_IXH		: std_logic;
 	signal	i_mux_ABLI_FF		: std_logic;
+	signal	i_mux_ABLI_00		: std_logic;
 
 	signal	i_mux_DB_T			: std_logic;
 	signal	i_mux_DB_PCH		: std_logic;
@@ -108,8 +111,7 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_CCR_Q				: std_logic_vector(7 downto 0);
 	signal	i_DBI_Q				: std_logic_vector(7 downto 0);
 	signal	i_IR_Q				: std_logic_vector(7 downto 0);
-
-   signal   i_IR_Q_DBI        : std_logic_vector(7 downto 0); -- this comes from IR unless loading from DBI...TODO: think of a nicer way
+	signal	i_IR_P_Q				: std_logic_vector(7 downto 0);
 
 	-- alu control and outputs
    signal   i_ALU_op          : t_alu_op;
@@ -170,12 +172,26 @@ architecture rtl of dossy_6800_cpu is
 	signal	i_INC_act			: t_inc_act;
 
 	-- other control signals
-	signal	i_VMA			: std_logic;
-	signal	i_RnW			: std_logic;
-
+	signal	i_VMA					: std_logic;
+	signal	i_RnW					: std_logic;
+	signal   i_BA					: std_logic;
+	signal   i_BA_ctl				: std_logic;
+	signal	i_FIC					: std_logic;
 	
-	signal i_next_state		: t_cpu_state;
-	signal r_state			: t_cpu_state;
+	-- halt registered
+	signal	r_HALT				: std_logic;
+	signal   i_CLKEN_H			: std_logic; -- CLKEN gated by halt state
+
+	-- interrupts
+	signal	i_INT_clear			: std_logic; -- ctl clears pending interrupts	
+	signal	r_NMI_prev			: std_logic; -- NMI edge detect
+	signal	r_IRQ_lat			: std_logic; -- IRQ registered
+	signal	r_NMI_lat			: std_logic; -- NMI registered
+	signal	r_INT_fetch			: std_logic; -- Interrupt recognised during fetch
+
+
+	signal i_next_state			: t_cpu_state;
+	signal r_state					: t_cpu_state;
 
 begin
 
@@ -191,6 +207,8 @@ begin
 
 -- TODO: bus muxes should probably surface combinatorial or inconsistent 
 -- behaviour when there are multiple sources active
+
+-- NOTE: there are two ABL muxes one with, one without ABLI to avoid combinatorial loops
 
 	e_bus_mux_ABL:entity dossy_6800.dossy_6800_mux8
 	generic map (
@@ -212,12 +230,31 @@ begin
 		D_o		=> ib_ABL
 	);
 
+	e_bus_mux_ABL2:entity dossy_6800.dossy_6800_mux8
+	generic map (
+		WIDTH => 3
+	)
+	port map (
+		SEL_i		=> (
+			0 => i_mux_ABL_INCL,
+			1 => i_mux_ABL_PCL,
+			2 => i_mux_ABL_SPL
+		),
+		D_i		=> (
+			0 => i_INCL_Q,
+			1 => i_PCL_Q,
+			2 => i_SPL_Q
+		),
+		D_o		=> ib_ABL2
+	);
+
+
 	ib_OBL <= ib_DB when i_mux_OBL_DB = '1' else
 				 ib_ABL;
 
 	e_bus_mux_ABLI:entity dossy_6800.dossy_6800_mux8
 	generic map (
-		WIDTH => 6
+		WIDTH => 7
 	)
 	port map (
 		SEL_i		=> (
@@ -226,15 +263,17 @@ begin
 			2 => i_mux_ABLI_ACCA,
 			3 => i_mux_ABLI_ACCB,
 			4 => i_mux_ABLI_IXH,
-			5 => i_mux_ABLI_FF
+			5 => i_mux_ABLI_FF,
+			6 => i_mux_ABLI_00
 		),
 		D_i		=> (
-			0 => ib_ABL,
+			0 => ib_ABL2,
 			1 => i_IXL_Q,
 			2 => i_ACCA_Q,
 			3 => i_ACCB_Q,
 			4 => i_IXH_Q,
-			5 => x"FF"
+			5 => x"FF",
+			6 => x"00"
 		),
 		D_o		=> ib_ABLI
 	);
@@ -323,6 +362,7 @@ begin
    e_alu:entity dossy_6800.dossy_6800_alu
    port map (   
       CLK_i    => CLK_i,
+      CLKEN_i	=> i_CLKEN_H,
 
       OP_i     => i_ALU_op,
       C_i      => i_CCR_Q(CCIX_C),
@@ -357,6 +397,7 @@ begin
 	e_reg_pcl:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> i_CLKEN_H,
 		WE_i			=> i_PCL_ld_INCL,
 		D_i			=> i_INCL_Q,
 		D_o			=> i_PCL_Q
@@ -365,6 +406,7 @@ begin
 	e_reg_spl:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> i_CLKEN_H,
 		WE_0_i		=> i_SPL_ld_ABL,
 		D_0_i			=> ib_ABL,
 		WE_1_i		=> i_SPL_ld_DB,
@@ -375,6 +417,7 @@ begin
 	e_reg_ixl:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> i_CLKEN_H,
 		WE_0_i		=> i_IXL_ld_ABL,
 		D_0_i			=> ib_ABL,
 		WE_1_i		=> i_IXL_ld_DB,
@@ -385,6 +428,7 @@ begin
 	e_reg_acc_a:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> i_CLKEN_H,
 		WE_0_i		=> i_ACCA_ld_DB,
 		D_0_i			=> ib_DB,
 		WE_1_i		=> i_ACCA_ld_ABLI,
@@ -395,6 +439,7 @@ begin
 	e_reg_acc_b:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> i_CLKEN_H,
 		WE_0_i		=> i_ACCB_ld_DB,
 		D_0_i			=> ib_DB,
 		WE_1_i		=> i_ACCB_ld_ABLI,
@@ -405,6 +450,7 @@ begin
 	e_reg_t_b:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> i_CLKEN_H,
 		WE_i			=> i_T_ld_DB,
 		D_i			=> ib_DB,
 		D_o			=> i_T_Q
@@ -413,6 +459,7 @@ begin
 	e_reg_pch:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> i_CLKEN_H,
 		WE_i			=> i_PCH_ld_INCH,
 		D_i			=> i_INCH_Q,
 		D_o			=> i_PCH_Q
@@ -421,6 +468,7 @@ begin
 	e_reg_sph:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> i_CLKEN_H,
 		WE_0_i		=> i_SPH_ld_ABH,
 		D_0_i			=> ib_ABH,
 		WE_1_i		=> i_SPH_ld_DB,
@@ -431,6 +479,7 @@ begin
 	e_reg_ixh:entity dossy_6800.dossy_6800_reg8_2i
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> i_CLKEN_H,
 		WE_0_i		=> i_IXH_ld_ABH,
 		D_0_i			=> ib_ABH,
 		WE_1_i		=> i_IXH_ld_DB,
@@ -442,62 +491,64 @@ begin
 	p_reg_ccr:process(CLK_i)
 	begin
 		if rising_edge(CLK_i) then
+			if i_CLKEN_H = '1' then
 			
-			if RST_i = '1' then
-				-- TODO: this is a frig - discover what real CPU does.
-				r_CCR <= "010000";
-			else
-				if i_CCR_ld_ALU_Z = '1' then
-					r_CCR(CCIX_Z) <= i_ALU_CCR_Q(CCIX_Z);
-				elsif i_CCR_ld_AND_ALU_Z = '1' then
-					r_CCR(CCIX_Z) <= r_CCR(CCIX_Z) and i_ALU_CCR_Q(CCIX_Z);
-				elsif i_CCR_ld_DB = '1' then
-					r_CCR(CCIX_Z) <= ib_DB(CCIX_Z);
-				end if;
-
-				if i_CCR_ld_ALU_N = '1' then
-					r_CCR(CCIX_N) <= i_ALU_CCR_Q(CCIX_N);
-				elsif i_CCR_ld_DB = '1' then
-					r_CCR(CCIX_N) <= ib_DB(CCIX_N);
-				end if;
-
-				if i_CCR_ld_ALU_V = '1' then
-					r_CCR(CCIX_V) <= i_ALU_CCR_Q(CCIX_V);
-				elsif i_CCR_ld_DB = '1' then
-					r_CCR(CCIX_V) <= ib_DB(CCIX_V);
-				elsif i_CCR_ld_SEV = '1' then
-					r_CCR(CCIX_V) <= '1';
-				elsif i_CCR_ld_CLV = '1' then
-					r_CCR(CCIX_V) <= '0';
-				end if;
-
-				if i_CCR_ld_ALU_C = '1' then
-					r_CCR(CCIX_C) <= i_ALU_CCR_Q(CCIX_C);
-				elsif i_CCR_ld_DB = '1' then
-					r_CCR(CCIX_C) <= ib_DB(CCIX_C);
-				elsif i_CCR_ld_SEC = '1' then
-					r_CCR(CCIX_C) <= '1';
-				elsif i_CCR_ld_CLC = '1' then
-					r_CCR(CCIX_C) <= '0';
-				end if;
-
-				if i_CCR_ld_ALU_H = '1' then
-					r_CCR(CCIX_H) <= i_ALU_CCR_Q(CCIX_H);
-				elsif i_CCR_ld_DB = '1'  then
-					r_CCR(CCIX_H) <= ib_DB(CCIX_H);
-				end if;
-
-				if i_CCR_ld_DB then
-					r_CCR_IM <= ib_DB(CCIX_I);
-					r_CCR(CCIX_I) <= r_CCR(CCIX_I) or ib_DB(CCIX_I) or r_CCR_IM;
-				elsif i_CCR_ld_SEI = '1' then
-					r_CCR_IM <= '1';
-					r_CCR(CCIX_I) <= '1';
-				elsif i_CCR_ld_CLI = '1' then
-					r_CCR(CCIX_I) <= r_CCR(CCIX_I) or r_CCR_IM;
-					r_CCR_IM <= '0';
+				if RST_i = '1' then
+					-- TODO: this is a frig - discover what real CPU does.
+					r_CCR <= "010000";
 				else
-					r_CCR(CCIX_I) <= r_CCR_IM;
+					if i_CCR_ld_ALU_Z = '1' then
+						r_CCR(CCIX_Z) <= i_ALU_CCR_Q(CCIX_Z);
+					elsif i_CCR_ld_AND_ALU_Z = '1' then
+						r_CCR(CCIX_Z) <= r_CCR(CCIX_Z) and i_ALU_CCR_Q(CCIX_Z);
+					elsif i_CCR_ld_DB = '1' then
+						r_CCR(CCIX_Z) <= ib_DB(CCIX_Z);
+					end if;
+
+					if i_CCR_ld_ALU_N = '1' then
+						r_CCR(CCIX_N) <= i_ALU_CCR_Q(CCIX_N);
+					elsif i_CCR_ld_DB = '1' then
+						r_CCR(CCIX_N) <= ib_DB(CCIX_N);
+					end if;
+
+					if i_CCR_ld_ALU_V = '1' then
+						r_CCR(CCIX_V) <= i_ALU_CCR_Q(CCIX_V);
+					elsif i_CCR_ld_DB = '1' then
+						r_CCR(CCIX_V) <= ib_DB(CCIX_V);
+					elsif i_CCR_ld_SEV = '1' then
+						r_CCR(CCIX_V) <= '1';
+					elsif i_CCR_ld_CLV = '1' then
+						r_CCR(CCIX_V) <= '0';
+					end if;
+
+					if i_CCR_ld_ALU_C = '1' then
+						r_CCR(CCIX_C) <= i_ALU_CCR_Q(CCIX_C);
+					elsif i_CCR_ld_DB = '1' then
+						r_CCR(CCIX_C) <= ib_DB(CCIX_C);
+					elsif i_CCR_ld_SEC = '1' then
+						r_CCR(CCIX_C) <= '1';
+					elsif i_CCR_ld_CLC = '1' then
+						r_CCR(CCIX_C) <= '0';
+					end if;
+
+					if i_CCR_ld_ALU_H = '1' then
+						r_CCR(CCIX_H) <= i_ALU_CCR_Q(CCIX_H);
+					elsif i_CCR_ld_DB = '1'  then
+						r_CCR(CCIX_H) <= ib_DB(CCIX_H);
+					end if;
+
+					if i_CCR_ld_DB then
+						r_CCR_IM <= ib_DB(CCIX_I);
+						r_CCR(CCIX_I) <= r_CCR(CCIX_I) or ib_DB(CCIX_I) or r_CCR_IM;
+					elsif i_CCR_ld_SEI = '1' then
+						r_CCR_IM <= '1';
+						r_CCR(CCIX_I) <= '1';
+					elsif i_CCR_ld_CLI = '1' then
+						r_CCR(CCIX_I) <= r_CCR(CCIX_I) or r_CCR_IM;
+						r_CCR_IM <= '0';
+					else
+						r_CCR(CCIX_I) <= r_CCR_IM;
+					end if;
 				end if;
 			end if;
 		end if;
@@ -507,19 +558,33 @@ begin
 	e_reg_dbi:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
-		WE_i			=> VMA_o,
+		CLKEN_i		=> i_CLKEN_H,
+		WE_i			=> i_VMA,
 		D_i			=> D_i,
 		D_o			=> i_DBI_Q
 	);
 
-   -- TODO: Fig.1 shows this coming from D_i, we have to mux IR with DBI in control
 	e_reg_ir:entity dossy_6800.dossy_6800_reg8
 	port map (
 		CLK_i			=> CLK_i,
+		CLKEN_i		=> i_CLKEN_H,
 		WE_i			=> i_IR_ld_D,
-		D_i			=> i_DBI_Q,
+		D_i			=> D_i,
 		D_o			=> i_IR_Q
 	);
+
+	-- TODO: this is used in some states where a decision based on 
+	-- IR happens after the next instruction fetched need to register
+	-- the decision as a flag somewhere
+	e_reg_ir_p:entity dossy_6800.dossy_6800_reg8
+	port map (
+		CLK_i			=> CLK_i,
+		CLKEN_i		=> i_CLKEN_H,
+		WE_i			=> i_IR_ld_D,
+		D_i			=> i_IR_Q,
+		D_o			=> i_IR_P_Q
+	);
+
 
 --
 -- ###
@@ -538,54 +603,65 @@ begin
 	variable v_int	: std_logic_vector(8 downto 0); -- low order with carry
 	begin
 		if rising_edge(CLK_i) then
+			if i_CLKEN_H = '1' then
 
-			case i_INC_L_src is 
-				when abl =>
-					v_src_l := ib_ABL;
-				when db =>
-					v_src_l := ib_DB;
-				when others =>
-					v_src_l := i_INCL_Q;
-			end case;
+				r_INT_fetch <= '0';
 
-			case i_INC_H_src is 
-				when abh =>
-					v_src_h := ib_ABH;
-				when others =>
-					v_src_h := i_INCH_Q;
-			end case;
+				case i_INC_L_src is 
+					when abl =>
+						v_src_l := ib_ABL;
+					when db =>
+						v_src_l := ib_DB;
+					when others =>
+						v_src_l := i_INCL_Q;
+				end case;
 
-			case i_INC_act is
-				when inc => 
-					v_int := std_logic_vector("0" & unsigned(v_src_l) + 1);
-					r_incl <= v_int(7 downto 0);
-				when dec	=> 
-					v_int := std_logic_vector("0" & unsigned(v_src_l) - 1);
-					r_incl <= v_int(7 downto 0);
-				when others =>
+				case i_INC_H_src is 
+					when abh =>
+						v_src_h := ib_ABH;
+					when others =>
+						v_src_h := i_INCH_Q;
+				end case;
+
+				if i_FIC = '1' and (r_IRQ_lat = '1' or r_NMI_lat = '1') then
+					r_INT_fetch <= '1'; -- inhibit incrementer during first cycle of interrupt sequence (fetch)
 					r_incl <= v_src_l;
-			end case;
-
-			case i_INC_act is
-				when inc => 
-					if v_int(8) = '1' then
-						r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
-					else
-						r_inch <= v_src_h;
-					end if;
-				when dec =>
-					if v_int(8) = '1' then
-						r_inch <= std_logic_vector(unsigned(v_src_h) - 1);
-					else
-						r_inch <= v_src_h;
-					end if;
-				when inc_page =>
-					r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
-				when others =>	
 					r_inch <= v_src_h;
-			end case;
+				else
 
+					case i_INC_act is
+						when inc => 
+							v_int := std_logic_vector("0" & unsigned(v_src_l) + 1);
+							r_incl <= v_int(7 downto 0);
+						when dec	=> 
+							v_int := std_logic_vector("0" & unsigned(v_src_l) - 1);
+							r_incl <= v_int(7 downto 0);
+						when others =>
+							r_incl <= v_src_l;
+					end case;
 
+					case i_INC_act is
+						when inc => 
+							if v_int(8) = '1' then
+								r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
+							else
+								r_inch <= v_src_h;
+							end if;
+						when dec =>
+							if v_int(8) = '1' then
+								r_inch <= std_logic_vector(unsigned(v_src_h) - 1);
+							else
+								r_inch <= v_src_h;
+							end if;
+						when inc_page =>
+							r_inch <= std_logic_vector(unsigned(v_src_h) + 1);
+						when dec_page =>
+							r_inch <= std_logic_vector(unsigned(v_src_h) - 1);
+						when others =>	
+							r_inch <= v_src_h;
+					end case;
+				end if;
+			end if;
 		end if;
 	end process;
 
@@ -605,24 +681,32 @@ begin
 
 	p_state_machine:process(CLK_i)
 	begin
-		if rising_edge(CLK_i) then
-			if RST_i = '1' then
-				r_state <= RESET;
-			else
-				r_state <= i_next_state;
+		if rising_edge(CLK_i) then		
+			if i_CLKEN_H = '1' then
+				if RST_i = '1' then
+					r_state <= RESET;
+				else
+					r_state <= i_next_state;
+				end if;
 			end if;
 		end if;
 	end process;
 
-   i_IR_Q_DBI <= i_DBI_Q when i_IR_ld_D = '1' else i_IR_Q;
 
 	e_ctl_gen:entity dossy_6800.dossy_6800_ctl_gen
 	port map (
 		state_i			=> r_state,
-      IR_DBI_i       => i_IR_Q_DBI,
+
+		IRQ_act_i		=> r_IRQ_lat,
+		NMI_act_i		=> r_NMI_lat,
+		INT_fetch_i		=> r_INT_fetch,
+
 		IR_i				=> i_IR_Q,
+		IR_P_i			=> i_IR_P_Q,
       ALU_CC_i       => i_ALU_CCR_Q,
-		
+      CCR_i				=> i_CCR_Q,
+      T_Q_i				=> i_T_Q,
+
 		next_state_o	=> i_next_state,
 
 		mux_ABL_INCL_o	=> i_mux_ABL_INCL,
@@ -636,6 +720,7 @@ begin
 		mux_ABLI_ACCB_o=> i_mux_ABLI_ACCB,
 		mux_ABLI_IXH_o	=> i_mux_ABLI_IXH,
 		mux_ABLI_FF_o	=> i_mux_ABLI_FF,
+		mux_ABLI_00_o	=> i_mux_ABLI_00,
 		mux_DB_T_o		=> i_mux_DB_T,
 		mux_DB_PCH_o	=> i_mux_DB_PCH,
 		mux_DB_SPH_o	=> i_mux_DB_SPH,
@@ -700,18 +785,74 @@ begin
       ALU_op_o       => i_ALU_op,
 
 		RnW_o				=> i_RnW,
-		VMA_o				=> i_VMA
+		VMA_o				=> i_VMA,
+		BA_o				=> i_BA_ctl,
+		FIC_o				=> i_FIC,
+
+		INT_clear_o		=> i_INT_clear
 
 	);
 
-	p_A:process(all)
+	p_HALT:process(CLK_i)
 	begin
-		A_o <= ib_ABH & ib_OBL;
-		VMA_o <= i_VMA;
-		RnW_o <= i_RnW;
+		if rising_edge(CLK_i) then
+			if CLKEN_i = '1' then
+				r_HALT <= HALT_i;
+			end if;
+		end if;
 	end process;
 
-	BA_o <= '0';
+	i_BA <= 	'1' when i_BA_ctl = '1' else
+				'1' when r_HALT = '1' and i_FIC = '1' else
+				'0';
+	i_CLKEN_H <= 	'1' when CLKEN_i = '1' and not(r_HALT = '1' and i_FIC = '1') else
+						'0';
+
+	p_A:process(all)
+	begin		
+		A_o <= ib_ABH & ib_OBL;
+		VMA_o <= i_VMA and not i_BA;
+		RnW_o <= i_RnW;
+		BA_o <= i_BA;
+	end process;
+
 	D_o <= ib_DB;
+
+	--TODO: should these be CLKEN or CLKEN_H?
+
+	p_NMI:process(CLK_i)
+	begin
+		if rising_edge(CLK_i) then
+			if RST_i = '1' then
+				r_NMI_prev <= NMI_i;
+				r_NMI_lat <= '0';
+			elsif i_CLKEN_H = '1' then
+				r_NMI_prev <= NMI_i;
+				if i_INT_clear = '1' then
+					r_NMI_lat <= '0';
+				end if;
+				if NMI_i = '1' and r_NMI_prev = '0' then
+					r_NMI_lat <= '1';
+				end if;
+			end if;
+		end if;
+	end process;
+
+	p_IRQ:process(CLK_i)
+	begin
+		if rising_edge(CLK_i) then
+			if RST_i = '1' then
+				r_IRQ_lat <= '0';
+			elsif i_CLKEN_H = '1' then
+				if i_INT_clear = '1' then
+					r_IRQ_lat <= '0';
+				end if;
+				if IRQ_i = '1' and i_CCR_Q(CCIX_I) = '0' then
+					r_IRQ_lat <= '1';
+				end if;
+			end if;
+		end if;
+	end process;
+
 
 end rtl;

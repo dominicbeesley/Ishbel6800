@@ -49,6 +49,9 @@ LIBRARY IEEE;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.NUMERIC_STD.ALL;
 
+library dossy_6800;
+use dossy_6800.dossy_6800.all;
+
 ENTITY real_6800_tb IS
 	GENERIC (
 			-- these times are from datasheet for 68B00
@@ -101,6 +104,7 @@ ARCHITECTURE Behavioral OF real_6800_tb IS
 	SIGNAL	i_RESET				: STD_LOGIC;	
 	SIGNAL	i_ba					: STD_LOGIC;
 	SIGNAL	i_ba2					: STD_LOGIC; -- reclock on phi2 rise
+	SIGNAL	i_ba3					: STD_LOGIC; -- reclock on phi1 rise
 
 	SIGNAL   i_dbe_ddw			: STD_LOGIC;
 	SIGNAL	i_dbe_dh				: STD_LOGIC;
@@ -128,12 +132,20 @@ BEGIN
 		end if;
 	end process;
 
-	BA <= transport i_ba2 after dly_Tba;				
+	p_phi1_ba:process(PHI1, BA)
+	begin
+		if rising_edge(PHI1) then
+			i_ba3 <= i_ba;
+		end if;
+	end process;
+
+
+	BA <= transport (i_ba2 and i_ba3) after dly_Tba;				
 
 	RnW <= i_RnW_dly when i_ba_dly = '0' else 'Z';
 	A <= i_A_dly when i_ba_dly = '0' else (others => 'Z');
 
-	VMA <= i_VMA;
+	VMA <= transport i_VMA after dly_addr;
 
 	p_cpu_do:process(phi1)
 	begin
@@ -169,7 +181,8 @@ BEGIN
 
 	i_cpu_D_in <= D;
 
-	e_cpu: entity work.dossy_6800_cpu port map (
+	e_cpu: entity dossy_6800.dossy_6800_cpu port map (
+		CLKEN_i		=> '1',
 		CLK_i			=> i_cpu_clk,
 		RST_i			=> i_RESET,
 		HALT_i		=> i_halt,

@@ -1,0 +1,1187 @@
+;	titl "MIKES-M6802 OPERATING SYSTEM"
+;	REV 2.0
+;
+; This is the latest SMITHBUG+S1 source 
+; with the Disassembler "PSHA = MISSING A" bug removed 
+; [see TBLKUP routine, # sign did not replace  £ ].
+; I emailed Ed Smith but as yet no reply. - Mike Lee, April 24 2019
+;
+; July 30 2019 HRJ 
+; - corrected TBLKUP routine as above, adds 4 bytes to code
+; -  CMPX	VAR non- instruction commented out near GETCOUNT in S-record routine
+; -  SLOAD routine starts NINE bytes from previous code, TBLKUP only accounts for four                       ; -- difference of 5 occurs apparently in counting bytes in S1STRING
+;
+;	M	MOVE MEMORY
+;	E	CHANGE MEMORY
+;	G	GO TO PROGRAM
+;	R	PRINT
+;	T	TRACE PROGRAM
+;	@	ASCII CONVERSION
+;	H	PRINTER ON
+;	V	VIEW MEMORY
+;	I	FILL MEMORY
+;	J	JUMP TO TARGET PROGRAM
+;	F	FIND 
+;	Q	HARDWARE LOCATION
+;	D	DISASSEMBLE CODE
+;	K	CONTINUE AFTER BREAK
+;	1	BREAKPOINT ONE
+;	2	BREAKPOINT TWO
+;	&	S1 LOAD PROGRAMME
+;	*	HARDWARE LOCATION (TBA)
+;	O	ECHO ON
+;	N	ECHO OFF
+;
+;
+;	ADDRESS
+;
+		.equ	VAR,	0x7F00		; TOP OF USER MEMORY
+;
+		.section RAM, "aurx"
+;
+BUFFER:		.skip	2		;V2: Buffer to protect system scratch
+IOV:		.skip	2		;here and below same as V1
+BEGA:		.skip	2
+ENDA:		.skip	2
+NIO:		.skip	2
+SP:		.skip	2
+ACIAT:		.skip	1
+ECHO:		.skip	1
+XHI:		.skip	1
+XLOW:		.skip	1
+TEMP:		.skip	1
+TW:		.skip	2
+TFLAG:		.skip	1
+XTEMP:		.skip	2
+BKFLG:		.skip	1
+SWIPTR:		.skip	45
+STACK:		.skip	8
+PRINTR:		.skip	3
+BFLAG:		.skip	1
+MFLAG:		.skip	1
+XFLAG:		.skip	1
+BITE2:		.skip	1
+BITE3:		.skip	15
+TSTACK:		.skip	1
+OPSAVE:		.skip	1
+PB1:		.skip	1
+PB2:		.skip	1
+PB3:		.skip	1
+BYTECT:		.skip	1
+PC1:		.skip	1
+PC2:		.skip	1
+BPOINT:		.skip	3
+BKFLG2:		.skip	1
+MCONT:		.skip	1
+; V2 S-record data area
+TEMPX1:		.skip	2			; S-Load Temporary X register
+ADDRESS:	.skip	1			; Build 16 bit address byte 1
+ADDRESS1:	.skip	1			; Build 16 bit address byte 2
+BYTESTORE:	.skip	1			; Save Byte Count
+TEMPA:		.skip	1			; Save A Register
+;
+		.equ	ACIACS,	0x8018		;V1 has 0x8000, 0x8001
+		.equ	ACIADA,	0x8019
+;
+		.equ	PIAD1A,	0x8000		;V2 has PIA support
+		.equ	PIAS1A,	0x8001
+		.equ	PIAD1B,	0x8002
+		.equ	PIAS1B,	0x8003
+;
+		.equ	PIAD2A,	0x8008
+		.equ	PIAS2A,	0x8009
+		.equ	PIAD2B,	0x800A
+		.equ	PIAS2B,	0x800B
+;
+;	OPT	MEMORY
+;
+		.section CODE, "acrx"
+;
+;	ENTER POWER ON SEQUENCE
+;
+START:
+	LDS #STACK
+	STS SP
+	CLR ECHO
+	LDX #SFE
+	STX SWIPTR
+	STX NIO
+;
+;	ACIA INITIALISE
+;
+	LDAA	#0x03	;RESET CODE
+	STAA	ACIACS
+	NOP
+	NOP
+	NOP
+	LDAA	#0x15	;8N1 NON-INTERRUPT
+	STAA	ACIAT
+;
+;	COMMAND CONTROL
+;
+CONTRL:	LDAA ACIAT
+	STAA ACIACS
+	LDS #STACK	;SET CONTRL STACK POINTER
+	LDS #TSTACK
+	CLR TFLAG
+	CLR BKFLG
+	CLR BKFLG2
+	LDX #MCL
+	BSR PDATA1
+	BSR INCH
+	TAB
+	JSR OUTS
+;
+; CHECK IF COMMAND IS VALID AND JUMP TO APPLICATION
+;
+	LDX #FUTABL
+NXTCHR:	CMPB 0,X
+	BEQ GOODCH
+	INX
+	INX
+	INX
+	CPX #TBLEND
+	BNE NXTCHR
+	JMP CKCBA
+GOODCH:	LDX 1,X
+	JMP 0,X
+;
+;  IRQ INTERUPT SEQUENCE
+;
+IO:	LDX IOV
+	JMP 0,X
+;
+;  NMI SEQUENCE
+;
+POWDWN:	LDX NIO
+	JMP 0,X
+;
+;  SWI SEQUENCE
+;
+H_SWI:	LDX SWIPTR
+	JMP 0,X
+LOAD19:	LDAA #0x3F
+	BSR OUTCH
+C1:	BRA CONTRL
+;
+;  BUILD ADDRESS
+;
+BADDR:	BSR BYTE
+	STAA XHI
+	BSR BYTE
+	STAA XLOW
+	LDX XHI
+	RTS
+;
+;  INPUT ONE BYTE
+;
+BYTE:	BSR INHEX
+	ASLA
+	ASLA
+	ASLA
+	ASLA
+	TAB
+	BSR INHEX
+	ABA
+	RTS
+;
+;  OUTPUT LEFT HEX NUMBER
+;
+OUTHL:	LSRA
+	LSRA
+	LSRA
+	LSRA
+;
+;  OUTPUT RIGHT HEX NUMBER
+;
+OUTHR:	ANDA #0xF
+	ADDA #0x30
+	CMPA #0x39
+	BLS OUTCH
+	ADDA #0x7
+OUTCH:	JMP OUTEEE
+INCH:	JMP INEEE
+;
+PDATA2:	BSR OUTCH
+	INX
+PDATA1:	LDAA 0,X
+	CMPA #0x4
+	BNE PDATA2
+	RTS
+;
+; CHANGE MEMORY
+;
+CHANGE:	BSR BADDR
+CHA51:	LDX #MCL
+	BSR PDATA1
+	BSR OUTXHI
+	BSR OUT2HS
+	STX XHI
+	BSR INCH
+	CMPA #0x20
+	BEQ CHA51
+	CMPA #0x5E
+	BNE CHM1
+	DEX
+	DEX
+	STX XHI
+	BRA CHA51
+CHM1:	BSR INHEX+2
+	BSR BYTE+2
+	DEX
+	STAA 0,X
+	CMPA 0,X
+	BEQ CHA51
+;
+XBK:	BRA LOAD19
+;
+INHEX:	BSR INCH
+	SUBA #0x30
+	BMI C1
+	CMPA #0x9 
+	BLE IN1HG
+	CMPA #0x11
+	BMI C1
+	CMPA #0x16
+	BGT C1
+	SUBA #0x7
+IN1HG:	RTS
+;
+;
+OUT2H:	LDAA 0,X
+	BSR OUTHL
+	LDAA 0,X
+	INX
+	BRA OUTHR
+;
+OUT4HS:	BSR OUT2H
+OUT2HS:	BSR OUT2H
+OUTS:	LDAA #0x20
+	BRA OUTCH
+;
+; SET BREAK POINTS
+;
+BKPNT2:	JSR ADDR
+	STX PC1
+	LDAA 0,X
+	STAA BKFLG2
+	BEQ XBK
+	LDAA #0x3F
+	STAA 0,X
+BKPNT:	JSR ADDR
+	STX PB2
+	LDAA 0,X
+	STAA BKFLG
+	BEQ XBK
+	LDAA #0x3F
+	STAA 0,X
+	JSR CRLF
+;
+; FALL INTO GO COMMAND
+;
+CONTG:	LDS SP
+	RTI
+;
+; PRINT XHI ADDRESS SUB
+;
+OUTXHI:	LDX #XHI
+	BSR OUT4HS
+	LDX XHI
+	RTS
+;
+; VECTORED SWI ROUTINE
+;
+SFE:	STS SP
+	TSX
+	TST 6,X
+	BNE .1
+	DEC 5,X
+.1:	DEC 6,X
+	LDS #TSTACK
+	TST TFLAG
+	BEQ PRINT
+	LDX PC1
+	LDAA OPSAVE
+	STAA 0,X
+	TST BFLAG
+	BEQ DISPLY
+	LDX BPOINT
+	LDAA BPOINT+2
+	STAA 0,X
+DISPLY:	JMP RETURN
+;
+; PRINT REGISTERS
+;
+PRINT:	LDX SP
+	LDAA #6
+	STAA MCONT
+	LDAB 1,X
+	ASLB
+	ASLB
+	LDX #CSET
+;
+DSOOP:	LDAA #0x2D
+	ASLB
+	BCC DSOOP1
+	LDAA 0,X
+DSOOP1:	JSR OUTEEE
+	INX
+	DEC MCONT
+	BNE DSOOP
+	LDX #BREG
+	BSR PDAT
+	LDX SP
+	INX
+	INX
+	JSR OUT2HS
+	STX TEMP
+	LDX #AREG
+	BSR PDAT
+	LDX TEMP
+	JSR OUT2HS
+	STX TEMP
+	LDX #XREG
+	BSR PDAT
+	LDX TEMP
+	BSR PRTS
+	STX TEMP
+	TST TFLAG
+	BNE PNTS
+	LDX #PCTR
+	BSR PDAT
+	LDX TEMP
+	BSR PRTS
+PNTS:	LDX #SREG
+	BSR PDAT
+	LDX #SP
+	TST TFLAG
+	BNE PRINTS
+	BSR PRTS
+;
+; CHECK IF ANY BREAK POINTS ARE SET
+;
+	LDAA BKFLG
+	BNE C2
+	LDX PB2
+	STAA 0,X
+	LDAA BKFLG2
+	BEQ C2
+	LDX PC1
+	STAA 0,X
+C2:	BRA CR8
+PDAT:	JMP PDATA1
+;
+; SET ECHO FUNCTION
+;
+ECHON:	CLRB
+PRNTON:	NEGB
+ECHOFF:	STAB ECHO
+	BRA CR8
+;
+;  PRINT STACK POINTER
+;
+PRINTS:	LDAB 0,X
+	LDAA 1,X
+	ADDA #7
+	ADCB #0
+	STAB TEMP
+	STAA TEMP+1
+	LDX #TEMP
+PRTS:	JMP OUT4HS
+;
+;changes from version 1 are below see 006.jpg
+;
+CR8:	BRA IFILL1
+;
+;     SAVE X REGISTER
+;
+SAV:	STX XTEMP
+	RTS
+;
+;	INPUT ONE CHAR INTO A-REGISTER
+;
+INEEE:	BSR	SAV
+IN1:	LDAA	ACIACS
+	ASRA
+	BCC	IN1	;RECEIVE NOT READY
+	LDAA	ACIADA	;INPUT CHARACTER
+	ANDA	#0x7F	;RESET PARITY BIT
+	CMPA	#0x7F
+	BEQ	IN1	;IF RUBOUT, GET NEXT CHAR
+	TST ECHO
+	BLE OUTEEE
+	RTS
+;
+;	OUTPUT ONE CHAR 
+;
+OUTEEE:	PSHA
+OUTEEE1:	LDAA	ACIACS
+	ASRA
+	ASRA
+	BCC	OUTEEE1
+	PULA
+	STAA	ACIADA
+	RTS
+;
+; changes from V1 are above
+;
+;  HERE ON JUMP COMMAND
+;
+JUMP:	LDX #TOADD
+	BSR ENDADD+3
+	LDS #STACK
+	JMP 0,X
+;
+;  ASCII IN "@" COMMAND
+;
+ASCII:	BSR BAD2
+	INX
+ASC01:	DEX
+ASC02:	BSR INEEE
+	CMPA #0x8
+	BEQ ASC01
+	STAA 0,X
+	CMPA #0x4
+	BEQ CR9
+	INX
+	BRA ASC02
+;
+;  FILL MEMORY "I" COMMAND
+;
+IFILL:	BSR LIMITS
+	BSR VALUE
+	LDX BEGA
+	DEX
+IFILL2:	INX
+	STAA 0,X
+	CPX ENDA
+	BNE IFILL2
+IFILL1:	BRA CR9
+;
+;  INPUT DATA SUB ROUTINE
+;
+BAD2:	LDX #FROMAD
+	BRA SKENADD
+ENDADD:	LDX #THRUAD
+SKENADD:JSR PDATA1
+	JMP BADDR
+LIMITS:	BSR BAD2
+	STX BEGA
+	BSR ENDADD
+	STX ENDA
+	JMP CRLF
+ADDR:	LDX ADASC
+	BRA ENDADD+3
+VALUE:	LDX #VALASC
+	JSR PDATA1
+	JMP BYTE
+;
+; BLOCK MOVE "M" COMMAND
+;
+MOVE:	BSR LIMITS
+	LDX #TOADD
+	BSR ENDADD+3
+	LDX BEGA
+	DEX
+BMC1:	INX
+	LDAA 0,X
+	STX BEGA
+	LDX XHI
+	STAA 0,X
+	INX
+	STX XHI
+	LDX BEGA
+	CPX ENDA
+	BNE BMC1
+CR9:	JMP CONTRL
+;
+;  SEARCH MEMORY "S" COMMAND
+;
+FIND:	BSR LIMITS
+	BSR VALUE
+	TAB
+	LDX BEGA
+	DEX
+SMC1:	INX
+	LDAA 0,X
+	CBA
+	BNE SMC2
+	STX XHI
+	BSR CRLF
+	JSR OUTXHI
+SMC2:	CPX ENDA
+	BNE SMC1
+	BRA CR9
+;
+;  SUB ROUTINE TO ADD SPACE
+;
+SKIP:	LDAA #0x20
+	JSR OUTEEE
+	DECB 
+	BNE SKIP
+	RTS
+;
+;  PRINT BYTE IN A REGISTER
+;
+PNTBYT:	STAA BYTECT
+	LDX #BYTECT
+	JMP OUT2H
+;
+;  CARRIAGE RETURN NON PROMPT
+;
+CRLF:	LDX #CRLFAS
+	JMP PDATA1
+;
+;  DISASSEMBLE "D" COMMAND
+;
+DISSA:	JSR BAD2
+	BRA DISS
+;
+;  TRACE COMMAND "T"
+;
+TRACE:	JSR 	BAD2
+	BSR 	CRLF
+	LDX 	SP
+	LDAB 	XHI
+	STAB 	6,X
+	LDAA 	XLOW
+	STAA 	7,X
+KONTIN:	INC 	TFLAG
+RETURN:	JSR 	PRINT
+	LDX 	SP
+	LDX 	6,X
+DISS:	STX 	PC1
+DISIN:	BSR 	CRLF
+	LDX 	#PC1
+	JSR 	OUT4HS
+	LDX 	#BFLAG
+	LDAA 	#5
+CLEAR:	CLR 	0,X
+	INX
+	DECA
+	BNE 	CLEAR
+	LDX 	PC1
+	LDAB 0,X
+	JSR 	OUT2HS
+	STX 	PC1
+	LDAA 	0,X
+	STAA 	PB2
+	LDAA 	1,X
+	STAA 	PB3
+	STAB 	PB1
+	TBA
+	JSR 	TBLKUP
+	LDAA 	TEMP
+	CMPA 	#0x2A
+	BNE 	OKOP
+	JMP 	NOTBB
+OKOP:	LDAA 	PB1
+	CMPA 	#0x8D
+	BNE 	NEXT
+	INC 	BFLAG
+	BRA 	PUT1
+NEXT:	ANDA 	#0xF0
+	CMPA 	#0x60
+	BEQ 	ISX
+	CMPA 	#0xA0
+	BEQ  	ISX
+	CMPA	#0xE0
+ 	BEQ  	ISX
+	CMPA	#0x80
+	BEQ 	IMM
+	CMPA 	#0xC0
+	BNE 	PUT1
+IMM:	INC 	MFLAG
+	LDX 	#SPLBD0
+	BRA 	PUT
+ISX:	INC 	XFLAG
+	LDAA 	PB2
+	JSR	PNTBYT
+	LDX 	#COMMX
+PUT:	JSR 	PDATA1
+PUT1:	LDX 	PC1
+	LDAA 	PB1
+	CMPA 	#0x8C
+	BEQ 	BYT3
+	CMPA 	#0x8E
+	BEQ 	BYT3
+	CMPA 	#0xCE  
+	BEQ 	BYT3
+	ANDA 	#0xF0
+	CMPA 	#0x20
+	BNE 	NOTB
+	INC 	BFLAG
+	BRA 	BYT2
+NOTB:	CMPA 	#0x60
+	BCS 	BYT1
+	ANDA 	#0x30
+	CMPA 	#0x30
+	BNE 	BYT2
+BYT3:	INC 	BITE3
+	TST 	MFLAG
+	BNE 	BYT31
+	LDAA 	#0x24
+	JSR 	OUTEEE
+BYT31:	LDAA 	0,X
+	INX
+	STX 	PC1
+	JSR 	PNTBYT
+	LDX 	PC1
+	BRA 	BYT21
+BYT2:	INC 	BITE2
+BYT21:	LDAA 	0,X
+	INX
+	STX 	PC1
+	TST 	XFLAG
+	BNE 	BYT1
+	TST 	BITE3
+	BNE 	BYT22
+	TST 	MFLAG
+	BNE 	BYT22
+	TAB
+	LDAA 	#0x24
+	JSR 	OUTEEE
+	TBA
+BYT22:	JSR 	PNTBYT
+BYT1:	TST 	BFLAG
+	BEQ 	NOTBB
+	LDAB 	#3
+	JSR 	SKIP
+	CLRA
+	LDAB 	PB2
+	BGE 	DPOS
+	LDAA 	#0xFF
+DPOS:	ADDB 	PC2
+	ADCA 	PC1
+	STAA 	BPOINT
+	STAB 	BPOINT+1
+	LDX 	#BPOINT
+	JSR 	OUT4HS
+;
+; PRINT ASCII VALUE OF INST
+;
+NOTBB:	LDAB #0xD
+	LDAA #1
+	TST BITE2
+	BEQ PAVOI3
+	LDAB #1
+	TST BFLAG
+	BNE PAVOI2
+	LDAB #8
+	TST MFLAG
+	BNE PAVOI2
+	TST MFLAG
+	BNE PAVOI2
+	LDAB #9
+PAVOI2:	LDAA #2
+	BRA PAVOI8
+;
+PAVOI3:	TST BITE3
+	BEQ PAVOI8
+	LDAA #3
+	LDAB #6
+	TST MFLAG
+	BEQ PAVOI8
+	LDAB #5
+PAVOI8:	PSHA
+	JSR SKIP
+	PULB
+	LDX #PB1
+PAVOI4:	LDAA 0,X
+	CMPA #0x20
+	BLE PAVOI5
+	CMPA #0x60
+	BLE PAVOI9
+PAVOI5:	LDAA #0x2E
+PAVOI9:	INX
+	JSR OUTEEE
+	DECB
+	BNE PAVOI4
+NOT1:	JSR INEEE
+	TAB
+	JSR OUTS
+	CMPB #0x20
+	BEQ DOT
+;
+;  CHECK INPUT COMMAND
+;  A, B, C, X, OR S
+;
+CKCBA:	LDX SP
+	INX
+	CMPB #0x43
+	BEQ RDC
+	INX
+	CMPB #0x42
+	BEQ RDC
+	INX
+	CMPB #0x41
+	BEQ RDC
+	INX
+	CMPB #0x58
+	BEQ RDX
+	LDX #SP
+	CMPB #0x53
+	BNE RETNOT
+RDX:	JSR BYTE
+	STAA 0,X
+	INX
+RDC:	JSR BYTE
+	STAA 0,X
+	JSR CRLF
+	JSR PRINT
+;
+;  WILL RETURN HERE IN TRACE
+;
+	BRA NOT1
+RETNOT:	JMP CONTRL
+DOT:	TST TFLAG
+	BNE DOT1
+	JMP DISIN
+;
+DOT1:	LDAB #0x3F
+	LDAA PB1
+	CMPA #0x8D
+	BNE xTSTB
+	LDX BPOINT
+	STX PC1
+	CLR BFLAG
+xTSTB:	TST BFLAG
+	BEQ TSTJ
+	LDX BPOINT
+	LDAA 0,X
+	STAA BPOINT+2
+	STAB 0,X
+	BRA EXEC
+;
+TSTJ:	CMPA #0x6E
+	BEQ ISXD
+	CMPA #0xAD
+	BEQ ISXD
+	CMPA #0x7E
+	BEQ ISJ
+	CMPA #0xBD
+	BNE NOTJ
+ISJ:	LDX PB2
+	STX PC1
+	BRA EXEC
+ISXD:	LDX SP
+	LDAA 5,X
+	ADDA PB2
+	STAA PC2
+	LDAA 4,X
+	ADCA #0
+	STAA PC1
+	BRA EXEC
+;
+NOTJ:	LDX SP
+	CMPA #0x39
+	BNE NOTRTS
+NOTJ1:	LDX 8,X
+	BRA EXR
+;
+NOTRTS:	CMPA #0x38
+	BNE NOTRTI
+	LDX 13,X
+EXR:	STX PC1
+NOTRTI:	CMPA #0x3F
+	BEQ NONO
+	CMPA #0x3E
+	BEQ NONO
+;
+EXEC:	LDX PC1
+	LDAA 0,X
+	STAA OPSAVE
+	STAB 0,X
+	CMPB 0,X
+	BNE CKROM
+	JMP CONTG
+;
+NONO:	JMP LOAD19
+;
+CKROM:	LDAA PC1
+	CMPA #0xE0
+	BCS NONO
+;
+;  GET JSR OR JMP
+;
+	LDX SP
+	LDAA PB1
+	CMPA #0x7E
+	BEQ NOTJ1
+	CMPA #0xBD
+	BNE NONO
+	LDX 6,X
+	INX
+	INX
+	INX
+	BRA ISJ+3
+;
+;Disassembler "PSHA = MISSING A" bug removed......
+;
+;  INSTRUCTION NMEMONIC LOOKUP
+;  ROUTINE FOR 68XX OP CODES
+;
+TBLKUP:	CMPA #0x40
+	BCC IMLR6
+IMLR1:	JSR PNT3C
+	LDAA PB1
+	CMPA #0x32
+	BEQ IMLR3
+	CMPA #0x36  ;had £ instead of #
+	BEQ IMLR3
+	CMPA #0x33
+	BEQ IMLR4
+	CMPA #0x37
+	BEQ IMLR4
+IMLR2:	LDX #BLANK
+	BRA IMLR5
+;
+IMLR3:	LDX #PNTA
+	BRA IMLR5	;end of "bug removed"
+;
+IMLR4:	LDX #PNTB
+IMLR5:	JMP PDATA1
+IMLR6:	CMPA #0x4E
+	BEQ IMLR7
+	CMPA #0x5E
+	BNE IMLR8
+;
+IMLR7:	CLRA
+	BRA IMLR1
+;
+IMLR8:	CMPA #0x80
+	BCC IMLR9
+	ANDA #0x4F
+	JSR PNT3C
+	LDAA TEMP
+	CMPA #0x2A
+	BEQ IMLR2
+	LDAA PB1
+	CMPA #0x60
+	BCC IMLR2
+	ANDA #0x10
+	BEQ IMLR3
+	BRA IMLR4
+;
+IMLR9:	ANDA #0x3F
+	CMPA #0xF
+	BEQ IMLR7
+	CMPA #0x7
+	BEQ IMLR7
+	ANDA #0xF
+	CMPA #0x3
+	BEQ IMLR7
+	CMPA #0xC
+	BGE IMLR10
+	ADDA #0x50
+	JSR PNT3C
+	LDAA PB1
+	ANDA #0x40
+	BEQ IMLR3
+	BRA IMLR4
+;
+IMLR10:	LDAA PB1
+	CMPA #0x8D
+	BNE IMLR11
+	LDAA #0x53
+	BRA IMLR1
+;
+IMLR11:	CMPA #0xC0
+	BCC IMLR12
+	CMPA #0x9D
+	BEQ IMLR7
+	ANDA #0xF
+	ADDA #0x50
+	BRA IMLR13
+;
+IMLR12:	ANDA #0xF
+	ADDA #0x52
+	CMPA #0x60
+	BLT IMLR7
+;
+IMLR13:	JMP IMLR1
+;
+PNT3C:	CLRB
+	STAA TEMP
+	ASLA
+	ADDA TEMP
+	ADCB #0x0
+	LDX #TBL
+	STX XTEMP
+	ADDA XTEMP+1
+	ADCB XTEMP
+	STAB XTEMP
+	STAA XTEMP+1
+	LDX XTEMP
+	LDAA 0,X
+	STAA TEMP
+	BSR OUTA
+	LDAA 1,X
+	BSR OUTA
+	LDAA 2,X
+;
+OUTA:	JMP OUTEEE
+;
+;  "V" COMMAND
+;
+VIEW:	JSR BAD2
+VCOM1:	LDAA #8
+	STAA MCONT
+VCOM5:	JSR CRLF
+	JSR OUTXHI
+	LDAB #0x10
+VCOM9:	JSR OUT2HS
+	DECB
+	BITB #3
+	BNE VCOM10
+	JSR OUTS
+	CMPB #0x0
+VCOM10:	BNE VCOM9
+	JSR CRLF
+	LDAB #0x5
+	JSR SKIP
+	LDX XHI
+	LDAB #0x10
+VCOM2:	LDAA 0,X
+	CMPA #0x20
+	BCS VCOM3
+	CMPA #0x5F
+	BCS VCOM4
+VCOM3:	LDAA #0x2E
+VCOM4:	BSR OUTA
+	INX
+	DECB
+	BNE VCOM2
+	STX XHI
+	DEC MCONT
+	BNE VCOM5
+	JSR INEEE
+	CMPA #0x20
+	BEQ VCOM1
+	CMPA #0x56
+	BEQ VIEW
+	JMP CONTRL
+;
+; MNKEMONIC TABLE
+;
+TBL:	.byte "***NOPNOP***"
+	.byte "******TAPTPA"
+	.byte "INXDEXCLVSEV"
+	.byte "CLCSECCLISEI"
+	.byte "SBACBA******"
+	.byte "******TABTBA"
+	.byte "***DAA***ABA"
+	.byte "************"
+	.byte "BRA***BHIBLS"
+	.byte "BCCBCSBNEBEQ"
+	.byte "BVCBVSBPLBMI"
+	.byte "BGEBLTBGTBLE"
+	.byte "TSXINSPULPUL"
+	.byte "DESTXSPSHPSH"
+	.byte "***RTS***RTI"
+	.byte "******WAISWI"
+	.byte "NEG******COM"
+	.byte "LSR***RORASR"
+	.byte "ASLROLDEC***"
+	.byte "INCTSTJMPCLR"
+	.byte "SUBCMPSBCBSR"
+	.byte "ANDBITLDASTA"
+	.byte "EORADCORAADD"
+	.byte "CPXJSRLDSSTS"
+	.byte "LDXSTX"
+SPLBD0:	.byte "#0x"
+	 .byte 0x4
+COMMX:	.byte 0x2C,0x58,0x04
+BLANK:	.byte 0x20,0x20,0x20
+	 .byte 0x04
+PNTA:	.byte " A "
+	 .byte 0x04
+PNTB:	.byte " B "
+	 .byte 0x04
+MCL:	.byte 0xD,0xA,0x15,0x13,0x3E,0x04
+BREG:	.byte 0x20,0x42,0x3D,0x04
+AREG:	.byte 0x41,0x3D,0x04
+XREG:	.byte 0x58,0x3D,0x04
+SREG:	.byte 0x53,0x3D,0x04
+PCTR:	.byte 0x50,0x43,0x3D,0x04
+CSET:	.byte 0x48,0x49,0x4E,0x5A,0x56,0x43
+CRLFAS:	.byte 0x0D,0x0A,0x15,0x04
+ADASC:	.byte 0x0D,0x0A
+	 .byte 0x42,0x4B,0x41,0x44,0x44,0x52,0x20,0x04
+FROMAD:	.byte 0x0D,0x0A,0x46,0x52,0x4F,0x4D,0x20
+	 .byte 0x41,0x44,0x44,0x52,0x20,0x04
+THRUAD:	.byte 0x0D,0x0A,0x54,0x48,0x52,0x55,0x20,0x41
+	 .byte 0x44,0x44,0x52,0x20,0x04
+TOADD:	.byte 0x54,0x4F,0x20,0x41,0x44,0x44,0x52,0x20,0x04
+VALASC:	.byte 0x56,0x41,0x4C,0x55,0x45,0x20,0x04
+;
+;   CONNAND JUMP TABLE
+;
+FUTABL:		.byte "M"
+		.word MOVE
+		.byte "E"
+		.word CHANGE
+		.byte "G"
+		.word CONTG
+		.byte "R"
+		.word PRINT
+		.byte "T"
+		.word TRACE
+		.byte "@"
+		.word ASCII
+		.byte "H"
+		.word PRNTON
+		.byte "V"
+		.word VIEW
+		.byte "I"
+		.word IFILL
+		.byte "J"
+		.word JUMP
+		.byte "F"
+		.word FIND
+		.byte "Q"
+		.word 0x8020
+		.byte "D"
+		.word DISSA
+		.byte "K"
+		.word KONTIN
+		.byte "1"
+		.word BKPNT
+		.byte "2"
+		.word BKPNT2
+		.byte "&"
+		.word SLOAD	;new for V2 was .word 0x7283
+		.byte "*"
+		.word 0xF800	
+		.byte "O"
+		.word ECHON
+		.byte "N"
+		.word ECHOFF
+TBLEND:
+;
+;	ADDED TO VERSION 2:
+; 	MOTOROLA "S" LOADER PROGRAMME "S1" STARTS LOAD
+; 	END OF LOAD "S9" RUN START END PLUS ADDRESS
+;
+; 	"S" LOADER PROGRAMME START
+;
+S1STRING:	.byte	"This S1 load has entered system scratch area"
+		.byte	0x0D,0x0A,0x04
+;
+SLOAD:
+		PSHA			; Save A register
+		STX	TEMPX1		; Save X register
+GOAGAIN:	BSR	GETCHAR	; Get first charactor from ACIA  
+		CMPA	#0x53		; Is it "S"
+		BNE	GOAGAIN	; If not go read again
+		BSR	GETCHAR	; Get second charactor in frame
+		CMPA 	#0x39		; Is it "9"
+		BEQ	RECOVER	; If "9" go and end read
+		CMPA 	#0x31		; Is it a "1"
+		BNE	GOAGAIN	; If no then go start again
+		CLR	TEMPA		; Clear Frame length
+		BSR	GETHEX		; Get frame length from input stream
+		SUBA	#0x02		; Subtract the checksum
+		STAA	BYTESTORE	; Save frame length
+		BSR	GETADD		; Read next two bytes for dest address
+GETCOUNT:	BSR	GETHEX		; Get the byte number
+		DEC	BYTESTORE	; decrement counter
+		BEQ	INCOUNT	; If zero go to increment byte count
+		STAA	0,X		; Store read byte into memory
+		CMPA	0,X		; Test if RAM OK
+		BNE	QUESTION	; If write failed send Question and abort
+		INX			; Increment address pointer
+		; bad instruction CMPX	VAR		; Is it the system scratch area
+		BGT	S1EXIT		; Abort if close to system scratch
+		BRA	GETCOUNT	; go get another byte
+;
+S1EXIT:	LDX	#S1STRING		; Protect System Scratch Abort S1
+		BSR	OUTSTR		; Print abort string
+		BRA	RECOVER	; Back to console prompt
+;
+INCOUNT:	INC	TEMPA		; Increment tempa 
+		BEQ	GOAGAIN	; If zero go for another frame
+QUESTION:	LDAA	#0x3F		; Load question mark
+		JSR	OUTPUTA	; Send to console
+RECOVER:	LDX	TEMPX1		; Restore "X"
+		PULA			; Restore A
+		JMP	CONTRL		; Jump to exit
+; 
+;
+GETADD:	BSR	GETHEX	; Read in byte
+		STAA	ADDRESS	; store in first part of address
+		BSR	GETHEX		; Get another byte of data
+		STAA	ADDRESS1	; store in second address register
+		LDX	ADDRESS	; Load X register both bytes of address
+		RTS			; Return from sub routine
+;
+;	ADD IN THE ADDRESS OFFSET
+;
+GETHEX:	BSR	CONVHEX		; Go get byte of data and convert to binary 
+		ASLA			; Shift the the 4 bits into msb
+		ASLA			; Shift the the 4 bits into msb	
+		ASLA			; Shift the the 4 bits into msb	
+		ASLA			; Shift the the 4 bits into msb	
+		TAB			; Transfer "A" to "B"
+		BSR	CONVHEX	; Go get byte of data and convert to binary
+		ABA			; Add 4 bits in "A" and "B" into "B"
+		TAB			; Transfer "A" to "B"
+		ADDB	TEMPA		; Add into checksum
+		STAB	TEMPA		; Add into checksum
+		RTS			; Return from sub routine
+; 	
+CONVHEX:	JSR	GETCHAR	; Get HEX charactor from ACIA
+		SUBA	#0x30		; Convert to binary
+		BMI	QUESTION	; Convert to binary
+		CMPA	#0x09		; Convert to binary
+		BLE	RETURN2	; Convert to binary
+		CMPA	#0x11		; Convert to binary
+		BMI	INCSTACK	; Convert to binary
+		CMPA	#0x16		; Convert to binary
+		BGT	INCSTACK	; Convert to binary
+		SUBA	#0x07		; Convert to binary
+RETURN2:	RTS			; Return from sub routine
+;  
+INCSTACK:	INS			; Restore stack position
+		INS			; Restore stack position
+		BRA	QUESTION	; Go send ? and exit
+;
+GETCHAR:	PSHB
+WAITIN:	LDAB ACIACS			; LOAD ACIA CONTROL REGISTER
+		ASRB			; SHIFT RIGHT  ACIADA
+		BCC 	WAITIN		; IF CARRY NOT SET THEN AGAIN
+		LDAA 	ACIADA		; LOAD DATA REGISTER
+		PULB			; RESTORE B REGISTER
+		BSR 	OUTPUTA	; ECHO INPUT
+		RTS
+;
+OUTPUTA:	PSHB			; SAVE B
+WAITOUT:	LDAB ACIACS		; LOAD ACIA CONTROL REGISTER
+		ASRB			; SHIFT RIGHT
+		ASRB			; SHIFT RIGHT
+		BCC 	WAITOUT	; IF CARRY NOT SET DO AGAIN
+		STAA ACIADA		; SEND CHARACTOR TO ACIA
+		PULB			; RESTORE B
+		RTS			; RETURN FROM ROUTINE
+;
+OUTSTR:	LDAA	0,X			; Read String
+		CMPA	#0x4		; Is it EOT?
+		BEQ	STEXIT		; Exit if EOT
+		BSR	OUTPUTA	; Print Charactor
+		INX			; Point at next charactor
+		BRA	OUTSTR		; Loop and read next
+STEXIT:	RTS			;
+;
+;END of V2 S-loader 
+; 
+;   STARTUP VECTORS 0xFFF8 -0xFFFF
+;
+		.section HARD_VECS, "acrx"
+;
+		.word IO
+		.word H_SWI
+		.word POWDWN
+		.word START
+;
+; Version 1 has table of RAM locations at 0xA000H
+;

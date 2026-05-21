@@ -1,0 +1,21 @@
+
+MEMORY
+{
+ ram: org = 0x7F00, len = 0x0100
+ rom: org = 0xE000, len = 0x2000
+}
+
+SECTIONS
+{
+  ram (NOLOAD) : {
+    *(RAM)
+  } >ram
+
+  code : {
+    *(CODE)
+
+    . = 0xFFF8;
+
+    *(HARD_VECS)
+  } >rom
+}

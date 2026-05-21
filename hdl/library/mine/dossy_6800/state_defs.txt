@@ -1,5 +1,19 @@
 # State machine and instruction decode definitions
 
+
+#####                            ##
+  #                             #
+  #    # ##   ###  ###    ###   #     ##   # ##   ###
+  #    ##    #  #  #  #  #     ###   #  #  ##    #
+  #    #     #  #  #  #   ##    #    ####  #      ##
+  #    #     # ##  #  #     #   #    #     #        #
+  #    #      # #  #  #  ###    #     ##   #     ###
+
+# Transfers represent register->bus->register etc transfers
+# and are roughly analogous to the -> transfers in the patent
+#
+# 
+
 ========== TRANSFERS ==========
 
 [MUX ABL]
@@ -19,6 +33,7 @@ ACCA		{	mux_ABLI_ACCA_o	<= '1';	}
 ACCB		{	mux_ABLI_ACCB_o	<= '1';	}
 IXH		{	mux_ABLI_IXH_o		<= '1';	}
 FF			{	mux_ABLI_FF_o		<= '1';	}
+0			{	mux_ABLI_00_o		<= '1';	}
 
 [MUX DB]
 T			{	mux_DB_T_o			<= '1';	}
@@ -113,11 +128,6 @@ DB			{	ACCA_ld_DB_o		<= '1';	}
 DB			{	T_ld_DB_o			<= '1';	}
 ABH		{	T_ld_ABH_o			<= '1';	}
 
-
-[REG IR]
-D			{ IR_ld_D_o				<= '1';	}
-
-
 [REG INCL]
 ABL		{ INC_L_src_o			<= abl;  }
 DB			{ INC_L_src_o			<= db;  }
@@ -128,12 +138,25 @@ ABH		{ INC_H_src_o			<= abh;  }
 [REG INC!INCL,INCH]
 AB			{ INC_L_src_o			<= abl; INC_H_src_o			<= abh; }
 
+
+  ##
+ #  #   #           #                             #
+ #     ####   ###  ####   ##  ## #    ##   ###   ####   ###
+  ##    #    #  #   #    #  # # # #  #  #  #  #   #    #
+    #   #    #  #   #    #### # # #  ####  #  #   #     ##
+ #  #   #    # ##   #    #    # # #  #     #  #   #       #
+  ##     ##   # #    ##   ##  #   #   ##   #  #    ##  ###
+
+# These are used for non-transfer state-machine driven logic
+
 ========== STATEMENTS ===========
+BA			{ BA_o <= '1'; }
 nVMA		{ VMA_o <= '0'; }
 WRITE		{ RnW_o <= '0'; }
-DEC		{ INC_act_o <= dec; }
+DEC			{ INC_act_o <= dec; }
 HOLD		{ INC_act_o <= hold; }
 HINC		{ INC_act_o <= inc_page; }
+HDEC		{ INC_act_o <= dec_page; }
 
 ALU_ADC	{ ALU_op_o <= alu_adc; }
 ALU_ADD	{ ALU_op_o <= alu_add; }
@@ -142,29 +165,76 @@ ALU_ORA	{ ALU_op_o <= alu_or; }
 ALU_SBC	{ ALU_op_o <= alu_sbc; }
 ALU_SUB	{ ALU_op_o <= alu_sub; }
 
+ALU_INC	{ ALU_op_o <= alu_inc; }
+ALU_DEC	{ ALU_op_o <= alu_dec; }
+ALU_NEG	{ ALU_op_o <= alu_neg; }
+ALU_COM	{ ALU_op_o <= alu_com; }
+
+ALU_ASR	{ ALU_op_o <= alu_asr; }
+ALU_ASL	{ ALU_op_o <= alu_asl; }
+ALU_ROR	{ ALU_op_o <= alu_ror; }
+ALU_ROL	{ ALU_op_o <= alu_rol; }
+ALU_LSR	{ ALU_op_o <= alu_lsr; }
+
+ALU_DAA	{ ALU_op_o <= alu_daa; }
+
+INT_CLEAR { INT_CLEAR_o <= '1'; }
+
+
+
+  ##                                 #  #              #      #
+ #  #   #           #                ####              #
+ #     ####   ###  ####   ##         ####   ###   ###  ###   ##    ###    ##
+  ##    #    #  #   #    #  #        #  #  #  #  #     #  #   #    #  #  #  #
+    #   #    #  #   #    ####        #  #  #  #  #     #  #   #    #  #  ####
+ #  #   #    # ##   #    #           #  #  # ##  #     #  #   #    #  #  #
+  ##     ##   # #    ##   ##         #  #   # #   ###  #  #  ###   #  #   ##
+
+# Each State (with possible aliases) defines a set of statements or transfers
+# that can occur in each step
+#
+# { Extra VHDL instructions }can be inserted and will be inserted verbatim 
+# into the state machine procedure
+#
+# Lines of the form XX->YY[->ZZ...] will be rendered by finding a data transfer 
+# above.
+# 
+# Bare words should translate to a statement
+# NEXT=<state> will set <state> as the next state
+# DECODE[2] will call the DECODE[2] function
+#
+# The labels for the states roughly translate to the labels in Fig.2 of the
+# 3,962,682 patent.
 
 ============ STATES =============
 
-[RESET, GP58]
-	{if IR_i = x"3F" then}
-		SWIV->DB
-	{else}
+[RESET, RESET2, GP58]
+	{ if (state_i = RESET) or (state_i = RESET2) then }
 		RESV->DB
+	{ elsif IR_i = x"3F" then }
+		SWIV->DB
+	{ elsif NMI_act_i = '1' then }
+		NMIV->DB
+	{ else }
+		IRQV->DB
 	{end if;}
 	
 	FF->ABH->INCH
 	SEI->CCR
 	DB->OBL,INCL
 
-	{if state_i = RESET then}
-		NEXT=GP58
-	{else}
+	{ if state_i = RESET then}
+		NEXT=RESET2
+	{ else }
 		NEXT=R57
-	{end if;}
+	{ end if; }
 
 [R57]
 	DBI->DB->T
 	INC->AB
+
+	INT_CLEAR
+
 	NEXT=R58;
 
 [R58]
@@ -174,8 +244,7 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 
 [TSL0, TSL0_D02, TSL0_D01]
 	INC->AB,PC
-	D->IR
-	NEXT=DECODE
+	DECODE
 
 [GI_T1_D00]
 	{if IR_i(5 downto 4) = "00" then}
@@ -188,17 +257,17 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 
 	DBI->DB
 	
-	{if PMATCH(IR_i(3 downto 0), "000-") then }
+	{if std_match(IR_i(3 downto 0), "000-") then }
 		ALU_SUB
-	{elsif PMATCH(IR_i(3 downto 0), "001-") then }
+	{elsif std_match(IR_i(3 downto 0), "001-") then }
 		ALU_SBC
-	{elsif PMATCH(IR_i(3 downto 0), "1000") then }
+	{elsif std_match(IR_i(3 downto 0), "1000") then }
 		ALU_EOR
-	{elsif PMATCH(IR_i(3 downto 0), "1001") then }
+	{elsif std_match(IR_i(3 downto 0), "1001") then }
 		ALU_ADC
-	{elsif PMATCH(IR_i(3 downto 0), "1010") then }
+	{elsif std_match(IR_i(3 downto 0), "1010") then }
 		ALU_ORA
-	{elsif PMATCH(IR_i(3 downto 0), "1011") then }
+	{elsif std_match(IR_i(3 downto 0), "1011") then }
 		ALU_ADD
 	{end if;}
 	
@@ -217,8 +286,8 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 [GI_TSL0_D01]
 
 	SUM->DB
-	{if IR_i(3) = '1' or IR_i(0) = '0' then}
-		{if IR_i(6) = '1' then}
+	{if IR_P_i(3) = '1' or IR_P_i(0) = '0' then}
+		{if IR_P_i(6) = '1' then}
 			DB->ACCB	#ACCB
 		{else}
 			DB->ACCA	#ACCA
@@ -231,9 +300,8 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	ALUH->CCR
 	ALUV->CCR
 
-	D->IR	
 	INC->AB,PC
-	NEXT=DECODE
+	DECODE
 
 [GI_STA_T1_D00]
 	INC->AB
@@ -258,6 +326,225 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	FF->ABLI
 
 	NEXT=TSL0
+
+
+[GII_ACC_T1_D00]
+	PC->AB->INC
+	{ if IR_i(4) = '1' then }
+		ACCB->DB
+	{ else }
+		ACCA->DB
+	{ end if; }
+
+	{ if IR_i(3 downto 0) = x"0" then }
+		0->ABLI
+		ALU_NEG
+	{ elsif IR_i(3 downto 0) = x"3" then }
+		0->ABLI
+		ALU_COM
+	{ elsif IR_i(3 downto 0) = x"4" then }
+		ALU_LSR
+	{ elsif IR_i(3 downto 0) = x"6" then }
+		ALU_ROR
+	{ elsif IR_i(3 downto 0) = x"7" then }
+		ALU_ASR
+	{ elsif IR_i(3 downto 0) = x"8" then }
+		ALU_ASL
+	{ elsif IR_i(3 downto 0) = x"9" then }
+		ALU_ROL
+	{ elsif IR_i(3 downto 0) = x"A" then }
+		FF->ABLI
+		ALU_DEC
+	{ elsif IR_i(3 downto 0) = x"C" then }
+		0->ABLI
+		ALU_INC
+	{ elsif IR_i(3 downto 0) = x"F" then }
+		0->ABLI		
+	{ else }
+		FF->ABLI
+	{ end if; }
+
+	NEXT=GII_ACC_TSL0_D01
+
+[GII_ACC_TSL0_D01]
+	INC->AB,PC
+	{ if IR_P_i(4) = '1' then }
+		DB->ACCB
+	{ else }
+		DB->ACCA
+	{ end if; }
+
+	SUM->DB
+	ALUZ->CCR
+	ALUN->CCR
+	ALUV->CCR
+	{ if IR_P_i(3 downto 0) = x"F" or IR_P_i(3 downto 0) = x"D" then }
+		CLC->CCR
+	{ else }
+		ALUC->CCR
+	{ end if;}
+
+	DECODE
+
+[GII_MEM_T1_D00]
+	INC->AB
+	DBI->DB
+	HOLD
+	nVMA
+
+	{ if IR_i(3 downto 0) = x"0" then }
+		0->ABLI
+		ALU_NEG
+	{ elsif IR_i(3 downto 0) = x"3" then }
+		0->ABLI
+		ALU_COM
+	{ elsif IR_i(3 downto 0) = x"4" then }
+		ALU_LSR
+	{ elsif IR_i(3 downto 0) = x"6" then }
+		ALU_ROR
+	{ elsif IR_i(3 downto 0) = x"7" then }
+		ALU_ASR
+	{ elsif IR_i(3 downto 0) = x"8" then }
+		ALU_ASL
+	{ elsif IR_i(3 downto 0) = x"9" then }
+		ALU_ROL
+	{ elsif IR_i(3 downto 0) = x"A" then }
+		FF->ABLI
+		ALU_DEC
+	{ elsif IR_i(3 downto 0) = x"C" then }
+		0->ABLI
+		ALU_INC
+	{ elsif IR_i(3 downto 0) = x"F" then }
+		0->ABLI
+	{ else }
+		FF->ABLI
+	{ end if; }
+
+	NEXT=GII_MEM_D01
+
+[GII_MEM_D01]
+	WRITE
+	SUM->DB
+	INC->AB
+	ALUZ->CCR
+	ALUN->CCR
+	ALUV->CCR
+	{ if IR_i(3 downto 0) = x"F" or IR_i(3 downto 0) = x"D" then }
+		CLC->CCR
+	{ else }
+		ALUC->CCR
+	{ end if;}
+	{ if IR_i(3 downto 0) = x"D" then }
+		nVMA
+	{ end if; }
+
+	NEXT=GII_MEM_D02
+
+[GII_MEM_D02]
+	PC->AB->INC
+	NEXT=TSL0
+
+
+
+[BSR_T1_IDX0]
+	# I can't tell where this is on the Fig.2 sheets
+	INC->AB,PC
+	HOLD
+	nVMA
+	DBI->DB->T
+	NEXT=JBSR_T1_GP50
+
+[JBSR_T1_GP50]
+	## either a BSR or JSR depending on mode
+	## BSR T will contain offset, EXT T wil contain H of subroutine addr
+	SP->AB->INC
+	PCL->DB
+	WRITE
+	DEC
+	NEXT=JBSR_GP51
+
+[JBSR_GP51]
+	INC->AB
+	PCH->DB
+	WRITE
+	DEC
+	NEXT=JBSR_GP52
+
+[JBSR_GP52]
+	INC->AB->SP
+	nVMA
+	{ if std_match(IR_i, "1-11----") then }
+		#EXT
+		NEXT=JBSR_EXT_GP53
+	{ elsif std_match(IR_i,  "1-10----") then }
+		#IDX
+		NEXT=JBSR_IDX_GP53
+	{ else }
+		#BSR
+		NEXT=JBSR_BSR_GP53
+	{ end if;}
+
+[JBSR_EXT_GP53]
+	PC->AB->INC
+	DEC
+	nVMA
+	#ABLI->ABL -- on Fig.2B but seems wrong
+	#T->DB -- on Fig.2B not sure it will do anything?
+	NEXT=JBSR_EXT_GP54
+
+[JBSR_EXT_GP54]
+	INC->AB
+	NEXT=R58
+
+[JBSR_BSR_GP53]
+	T->DB
+	PC->AB->INC
+	ABL->ABLI
+	ALU_ADD
+	HOLD
+	nVMA
+	NEXT=BRA_DX1
+
+[BRA_T1_IDX0]
+	INC->AB,PC
+	ABL->ABLI
+	DBI->DB
+	DB->T			# this is extra for branch carry
+	ALU_ADD
+	HOLD
+	nVMA
+	NEXT=BRA_DX1
+
+[BRA_DX1]
+	SUM->DB->OBL,INCL
+	INCH->ABH
+	{ if ALU_CC_i(CCIX_C) = '1' and T_Q_i(7) = '0' then }
+		HINC
+	{ elsif ALU_CC_i(CCIX_C) = '0' and T_Q_i(7) = '1' then }
+		HDEC
+	{ else }
+		HOLD
+	{ end if; }
+	nVMA
+	NEXT=BRA_DX2
+
+[BRA_DX2]
+	{ if CONDCHECK(IR_i, CCR_i) then }
+		INC->AB->INC
+	{ else }
+		PC->AB->INC
+	{ end if; }
+	NEXT=TSL0
+
+[JBSR_IDX_GP53]
+	T->DB
+	IXL->ABLI->ABL
+	IXH->ABH->INCH
+	HOLD
+	nVMA
+	ALU_ADD
+	NEXT=DX1
+
 
 [TAP_T1_D00]
 	# simplifier cf Fig.2J
@@ -313,14 +600,14 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	IXL->ABLI
 	IXH->DB
 	PC->AB->INC
-	#this will and L/H for Z flag in next op
+	ALU_ORA
+	#this will OR L/H for Z flag in next op
 	NEXT=INXDEX_TSL0
 
 [INXDEX_TSL0]
 	ALUZ->CCR
-	INC->AB->INC->PC
-	D->IR
-	NEXT=DECODE
+	INC->AB,PC
+	DECODE
 	
 [INSDES_T1_GP50]
 	SP->AB->INC
@@ -401,6 +688,38 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	INC->AB->INC,SP
 	NEXT=RTI_R57
 
+[CPX_T1_D00]
+	INC->AB
+	DBI->DB
+	ALU_EOR
+	IXH->ABLI
+	
+	NEXT=CPX_D01
+
+[CPX_D01]
+	{if IR_i(5 downto 4) = "00" then}
+		{-- was immediate, keep pc}
+		INC->AB
+	{else}
+		PC->AB
+		AB->INC
+	{end if;}
+
+	DBI->DB
+	
+	ALUZ->CCR
+
+	IXL->ABLI
+	ALU_EOR
+	NEXT=CPX_TSL0_D02
+
+[CPX_TSL0_D02]
+	
+	ANDALUZ->CCR
+	INC->AB,PC
+	DECODE
+
+
 [LDx_T1_D00]
 	INC->AB
 	DBI->DB
@@ -442,8 +761,7 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	
 	ANDALUZ->CCR
 	INC->AB,PC
-	D->IR
-	NEXT=DECODE
+	DECODE
 
 [STx_T1_D00]
 	INC->AB
@@ -542,14 +860,12 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	INC->AB->SP
 	DEC
 	nVMA
-	{if IR_i /= x"3E" then -- TODO: better check here!}
-		NEXT=GP58
+	{if IR_i = x"3E" and not(IRQ_act_i = '1' and not NMI_act_i = '1') then }
+		NEXT=SWAI_GP57
+		BA
 	{else}
-		NEXT=WAIT_INTER
+		NEXT=GP58
 	{end if;}
-[WAIT_INTER]	
-	{--TODO: this is WAIT's WAIT state...what to do here, BA?}
-	NEXT=WAIT_INTER			
 
 [RTI_T1_GP50]
 	SP->AB->INC
@@ -557,7 +873,7 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	NEXT=RTI_GP51
 
 [RTI_GP51]
-	INC->AB->SP # load SP unnnecessary here?
+	INC->AB->SP # load SP unnecessary here?
 	NEXT=RTI_GP52
 [RTI_GP52]
 	DBI->DB->CCR
@@ -584,6 +900,93 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	INC->AB->SP
 	NEXT=R58
 
+[xBA_T1_D00]
+	ACCA->ABLI
+	ACCB->DB
+	{ if IR_i(3) = '0' then }
+		ALU_SUB
+	{ else }
+		ALU_ADD
+	{ end if; }
+	PC->AB->INC
+	NEXT=xBA_TSL0_D01
+
+[xBA_TSL0_D01]
+	SUM->DB
+	{ if IR_P_i(0) = '0' then }
+		DB->ACCA
+	{ elsif IR_P_i(3) = '1' then }
+		DB->ACCA
+		ALUH->CCR
+	{ end if; }
+	ALUZ->CCR
+	ALUN->CCR
+	ALUV->CCR
+	ALUC->CCR
+	INC->AB,PC
+	DECODE
+
+[Txx_T1_D00]
+	{ if IR_i(0) = '1' then }
+		ACCB->DB
+	{ else }
+		ACCA->DB
+	{ end if; }
+	FF->ABLI
+	PC->AB->INC
+	NEXT=Txx_TSL0_D01
+
+[Txx_TSL0_D01]
+	SUM->DB
+	{ if IR_P_i(0) = '1' then }
+		DB->ACCA
+	{ else }
+		DB->ACCB
+	{ end if; }
+	ALUZ->CCR
+	ALUN->CCR
+	ALUV->CCR
+	INC->AB,PC
+	DECODE
+
+[DAA_T1_D00]
+	ACCA->ABLI
+	ALU_DAA
+	PC->AB->INC
+	NEXT=DAA_TSL0_D01
+
+[DAA_TSL0_D01]
+	SUM->DB
+	DB->ACCA
+	ALUZ->CCR
+	ALUN->CCR
+	ALUV->CCR
+	ALUC->CCR
+	INC->AB,PC
+	DECODE
+
+
+  ##      #     #                                #  #           #
+ #  #     #     #                                ####           #
+ #  #   ###   ###  # ##   ##    ###   ###        ####   ##    ###   ##
+ ####  #  #  #  #  ##    #  #  #     #           #  #  #  #  #  #  #  #
+ #  #  #  #  #  #  #     ####   ##    ##         #  #  #  #  #  #  ####
+ #  #  #  #  #  #  #     #        #     #        #  #  #  #  #  #  #
+ #  #   ###   ###  #      ##   ###   ###         #  #   ##    ###   ##
+
+# These are subroutines that are potentially called before a Group I or II 
+# instruction to setup the address for the operand where it is not immediate
+# or implied.
+
+
+####################### Extended mode ########################
+# The byte following the opcode is loaded into the T register then the second 
+# byte is loaded as the INCL, T is loaded to INCH.
+#
+# For writes the incrementer is held and a nVMA cycle inserted
+#
+# For group II instructions the incrementer is held
+
 [T1_EXT0]
 	DBI->DB->T
 	INC->AB
@@ -593,12 +996,31 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	T->ABH->INCH
 	DBI->DB->OBL,INCL
 	INC->PC
-	{if IR_i(2 downto 0) = "111" then}
+	{ if std_match(IR_i, "1----111") then }
 		{-- its a write next}
 		nVMA
 		HOLD
-	{end if;}
-	NEXT=DECODE
+	{ end if; }
+	#TODO: get rid of these two - move to decoder
+	{ if std_match(IR_i, "011-1110") then }
+		# JMP
+		NEXT=TSL0
+	{ elsif std_match(IR_i, "101-1101") then }
+		# JSR
+		NEXT=JBSR_T1_GP50
+	{ else }
+		{ if std_match(IR_i, "01------") then }		
+			HOLD
+		{ end if; }
+		NEXT=DECODE2
+	{ end if; }
+
+####################### Direct mode ########################
+# The byte following the opcode is loaded into INCL, 0 is loaded to INCH.
+#
+# For writes the incrementer is held and a nVMA cycle inserted
+#
+
 
 [T1_DIR0]
 	DBI->DB->OBL,INCL
@@ -609,7 +1031,16 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 		nVMA
 		HOLD
 	{end if;}
-	NEXT=DECODE
+	NEXT=DECODE2
+
+####################### Indexed mode ########################
+# The byte following the opcode is loaded into T and will be used
+# to add an offset to X
+#
+# For writes the incrementer is held and a nVMA cycle inserted
+#
+# For JSR n,X the subroutine exits early to JBSR_T1_GP50 and DX
+# is completed after the current PC is stacked.
 
 [T1_IDX0]
 	INC->PC
@@ -619,7 +1050,12 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 	IXH->ABH->INCH
 	ALU_ADD
 	nVMA
-	NEXT=DX1
+	{ if std_match(IR_i, "101-1101") then}
+		#JSR
+		NEXT=JBSR_T1_GP50
+	{ else }
+		NEXT=DX1
+	{ end if; }
 
 [DX1]
 	SUM->DB->OBL,INCL
@@ -639,4 +1075,171 @@ ALU_SUB	{ ALU_op_o <= alu_sub; }
 		nVMA
 		HOLD
 	{end if;}
-	NEXT=DECODE
+
+	{ if std_match(IR_i, "101-11-1") or std_match(IR_i, "011-1110") then }
+		# JMP / JSR
+		NEXT=TSL0
+	{ else }
+		{ if std_match(IR_i, "01------") then }		
+			HOLD
+		{ end if; }
+		NEXT=DECODE2
+	{ end if; }
+
+
+
+ ###                        #
+ #  #                       #
+ #  #   ##    ###   ##    ###   ##   # ##
+ #  #  #  #  #     #  #  #  #  #  #  ##
+ #  #  ####  #     #  #  #  #  ####  #
+ #  #  #     #     #  #  #  #  #     #
+ ###    ##    ###   ##    ###   ##   #
+
+============ DECODE =============
+
+# DECODER section
+# [] - headers are an 8-bit std-match string to match against
+#      the IR opcode
+#
+# Items marked MODE are only followed immediately following a
+# FETCH cycle and are used for DIRECT/EXTENDED/INDEXED modes
+# in Groups I and II
+#
+# STATE=<state> go to <state> after DECODE/DECODE2 step
+#
+# Matches are evaluated in order first match wins
+
+
+############ ADDRESS MODE Group I ################
+
+# Instructions in Group I can be Immediate, Direct, Indexed or Extended
+# The MODE matches below will go to the state "subroutine" for all except
+# immediate (the immediate is fetched automatically) and will leave the 
+# incrementer p
+
+[1-11----]
+	# extended mode in Group I
+	MODE
+	STATE=T1_EXT0
+
+[1-01----]
+	# direct mode in Group I
+	MODE
+	STATE=T1_DIR0
+
+[1-10----]
+	# indexed mode Group I
+	MODE
+	STATE=T1_IDX0
+
+############ ADDRESS MODE Group II ################
+
+[0111----]
+	# extended mode Group II
+	MODE
+	STATE=T1_EXT0
+
+[0110----]
+	# indexed mode Group II
+	MODE
+	STATE=T1_IDX0
+
+################# EXEC GROUP I ####################
+
+[10--1100]
+	# Compare X
+	STATE=CPX_T1_D00
+
+[1---1110]
+	# LDX/LDS
+	STATE=LDx_T1_D00
+
+[1---1111]
+	# STX/STS
+	STATE=STx_T1_D00
+
+[1-010111|1-100111|1-110111]
+	# STA/STB
+	STATE=GI_STA_T1_D00
+
+[100011-1]
+	# Note: JSR is special case at end of EXT/IDX modes
+	STATE=BSR_T1_IDX0
+
+[1-------]
+	# Other Group I ops
+	STATE=GI_T1_D00
+
+################ EXEC GROUP II ####################
+
+# NOTE: FOR GII JMP is caught at end of EXT/IDX addressing mode
+[010-----]
+	# ACCA/ACCB G.II
+	STATE=GII_ACC_T1_D00
+
+[011-----]
+	# Ext/IDX G.II
+	STATE=GII_MEM_T1_D00
+
+################ EXEC GROUP III ###################
+
+[0010----]
+	# Bxx
+	STATE=BRA_T1_IDX0
+
+################ EXEC GROUP IV ####################
+
+[0001000-|00011011]
+	# SBA, CBA, ABA
+	STATE=xBA_T1_D00
+[0001011-]
+	# TAB, TBA
+	STATE=Txx_T1_D00
+[00011001]
+	# DAA
+	STATE=DAA_T1_D00
+
+################# EXEC GROUP V ####################
+
+[00110000]
+	STATE=TSX_T1_GP50
+
+[00110001|00110100]
+	STATE=INSDES_T1_GP50
+
+[0011001-]
+	STATE=PULA_T1_GP50
+
+[00110101]
+	STATE=TXS_T1_GP50
+
+[0011011-]
+	STATE=PSHA_T1_GP50
+
+[00111001]
+	STATE=RTS_T1_GP50
+
+[00111011]
+	STATE=RTI_T1_GP50
+
+[00111111|00111110]
+	STATE=SWAI_T1_GP50
+
+
+################# EXEC GROUP VI ####################
+
+[00000001]
+	STATE=NOP_T1_D00
+
+[00000110]
+	STATE=TAP_T1_D00
+
+[00000111]
+	STATE=TPA_T1_D00
+
+[0000100-]
+	STATE=INXDEX_T1_D00
+
+[0000101-|000011--]
+	STATE=SEx_T1_D00

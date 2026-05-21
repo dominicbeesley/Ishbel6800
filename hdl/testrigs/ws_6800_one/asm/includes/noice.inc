@@ -1,0 +1,4 @@
+
+		.equ	NOICE_VECTOR_IRQ, 0x7F00
+		.equ	NOICE_VECTOR_NMI, 0x7F02		
+		

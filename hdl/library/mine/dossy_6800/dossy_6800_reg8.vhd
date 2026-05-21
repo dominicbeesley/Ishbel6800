@@ -30,6 +30,7 @@ use dossy_6800.dossy_6800.all;
 entity dossy_6800_reg8 is
 	port (	
 		CLK_i:    	in  std_logic;
+		CLKEN_i:		in  std_logic;
 		WE_i:			in  std_logic;
 		D_i:			in  std_logic_vector(7 downto 0);
 		D_o:			out std_logic_vector(7 downto 0)
@@ -46,7 +47,7 @@ begin
 	p_wr:process(CLK_i)
 	begin
 		if rising_edge(CLK_i) then
-			if WE_i = '1' then
+			if WE_i = '1' and CLKEN_i = '1' then
 				r_reg8 <= D_i;
 			end if;
 		end if;

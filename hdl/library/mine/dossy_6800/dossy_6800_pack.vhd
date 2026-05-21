@@ -39,12 +39,33 @@ package dossy_6800 is
 
 	type t_inc_l_src	is (inc, abl, db);
 	type t_inc_h_src	is (inc, abh);
-	type t_inc_act		is (inc, dec, inc_page, hold);
+	type t_inc_act		is (inc, dec, inc_page, dec_page, hold);
 
-	type t_alu_op		is (alu_add, alu_adc, alu_sub, alu_sbc, alu_and, alu_or, alu_eor);
+	type t_alu_op		is (
+		alu_add, 
+		alu_adc, 
+		alu_sub, 
+		alu_sbc, 
+		alu_and, 
+		alu_or, 
+		alu_eor,
+
+		alu_inc,
+		alu_dec,
+		alu_neg,
+		alu_com,
+
+		alu_rol,
+		alu_asl,
+		alu_ror,
+		alu_asr,
+		alu_lsr,
+
+		alu_daa);
 
 	type t_cpu_state is (
 		RESET,
+		RESET2,
 		-- prep vector address
 		GP58,
 		-- load first vector address
@@ -135,6 +156,13 @@ package dossy_6800 is
 		DX2,
 
 		-- GROUP I
+
+		-- compare X register
+		CPX_T1_D00,
+		CPX_D01,
+		CPX_TSL0_D02,
+
+
 		-- load X/Y register
 		LDx_T1_D00,
 		LDx_D01,
@@ -153,15 +181,101 @@ package dossy_6800 is
 		GI_T1_D00,
 		GI_TSL0_D01,
 
+		-- Group II logical op
+
+		-- accumulator
+		GII_ACC_T1_D00,
+		GII_ACC_TSL0_D01,
+
+		-- mem
+		GII_MEM_T1_D00,
+		GII_MEM_D01,
+		GII_MEM_D02,
+
+		-- BSR / JSR
+		BSR_T1_IDX0,
+		JBSR_T1_GP50,
+		JBSR_GP51,
+		JBSR_GP52,
+		JBSR_EXT_GP53,
+		JBSR_EXT_GP54,
+		JBSR_BSR_GP53,
+		JBSR_IDX_GP53,
+
+		BRA_T1_IDX0,
+		BRA_DX1,
+		BRA_DX2,
+
+		-- Group IV
+		xBA_T1_D00,
+		xBA_TSL0_D01,
+		Txx_T1_D00,
+		Txx_TSL0_D01,
+		DAA_T1_D00,
+		DAA_TSL0_D01,
+
 		-- MISC / BAD
 		-- DIE
 		DIEBAD,
 		WAIT_INTER
 		);
 
+		function CONDCHECK(
+			ir		: in	std_logic_vector(7 downto 0); 
+			ccr	: in  std_logic_vector(7 downto 0)) return boolean;
+
+
 end package dossy_6800;
 
 package body dossy_6800 is
+
+	function CONDCHECK(
+		ir		: in	std_logic_vector(7 downto 0); 
+		ccr	: in  std_logic_vector(7 downto 0)) return boolean is
+	begin
+
+		if ir(7) = '1' then
+			return true;
+		elsif ir(3 downto 0) = x"2" then
+			return not(ccr(CCIX_C) = '1' or ccr(CCIX_Z) = '1');
+		elsif ir(3 downto 0) = x"3" then		
+			return ccr(CCIX_C) = '1' or ccr(CCIX_Z) = '1';
+
+		elsif ir(3 downto 0) = x"4" then
+			return ccr(CCIX_C) = '0';
+		elsif ir(3 downto 0) = x"5" then
+			return ccr(CCIX_C) = '1';
+
+		elsif ir(3 downto 0) = x"6" then
+			return ccr(CCIX_Z) = '0';
+		elsif ir(3 downto 0) = x"7" then
+			return ccr(CCIX_Z) = '1';
+
+		elsif ir(3 downto 0) = x"8" then
+			return ccr(CCIX_V) = '0';
+		elsif ir(3 downto 0) = x"9" then
+			return ccr(CCIX_V) = '1';
+
+		elsif ir(3 downto 0) = x"A" then
+			return ccr(CCIX_N) = '0';
+		elsif ir(3 downto 0) = x"B" then
+			return ccr(CCIX_N) = '1';
+
+		elsif ir(3 downto 0) = x"C" then
+			return not(ccr(CCIX_N) = '1' xor ccr(CCIX_V) = '1');
+		elsif ir(3 downto 0) = x"D" then
+			return ccr(CCIX_N) = '1' xor ccr(CCIX_V) = '1';
+
+		elsif ir(3 downto 0) = x"E" then
+			return not(ccr(CCIX_Z) = '1' or (ccr(CCIX_N) = '1' xor ccr(CCIX_V) = '1'));
+		elsif ir(3 downto 0) = x"F" then
+			return ccr(CCIX_Z) = '1' or (ccr(CCIX_N) = '1' xor ccr(CCIX_V) = '1');
+		else
+			return true;
+		end if;
+
+	end function;
+
 
 end package body dossy_6800;
 
