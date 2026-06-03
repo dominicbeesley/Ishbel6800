@@ -92,6 +92,14 @@ entity ws_6800_one is
 		LCD12864_E_o						: out		std_logic;
 		LCD12864_D_io						: inout	std_logic_vector(7 downto 0);
 
+		LCD_50_R_o							: out    std_logic_vector(7 downto 2);
+		LCD_50_G_o							: out    std_logic_vector(7 downto 2);
+		LCD_50_B_o							: out    std_logic_vector(7 downto 2);
+		LCD_50_HS_o							: out    std_logic;
+		LCD_50_VS_o							: out    std_logic;
+		LCD_50_DE_o							: out    std_logic;
+		LCD_50_PCK_o						: out    std_logic;
+
 		-- seven segment LED matrix on 16I/Os_2
 		disp0_seg_o							: out		std_logic_vector(7 downto 0);
 		disp0_sel_o							: out		std_logic_vector(3 downto 0)
@@ -123,6 +131,7 @@ architecture rtl of ws_6800_one is
 	signal   i_CS_LCD12864	: std_logic;
 	signal   i_CS_VIA			: std_logic;
 	signal   i_CS_1M			: std_logic;
+	signal   i_CS_CRTC		: std_logic;
 
 	signal	i_cpu_RnW		: std_logic;
 	signal	i_cpu_VMA		: std_logic;
@@ -134,6 +143,7 @@ architecture rtl of ws_6800_one is
 	signal	i_ram_D_o		: std_logic_vector(7 downto 0);
 	signal	i_rom_D_o		: std_logic_vector(7 downto 0);
 	signal   i_via_D_o		: std_logic_vector(7 downto 0);
+	signal   i_crtc_D_o		: std_logic_vector(7 downto 0);
 
 	signal	i_via_nIRQ		: std_logic;
 
@@ -145,6 +155,9 @@ architecture rtl of ws_6800_one is
 											:= to_unsigned(CLK_4_DIV - 1, numbits(CLK_4_DIV-1));
 	signal	r_via_phase		: unsigned(1 downto 0) := "00";
 	signal	r_via_ena4		: std_logic;
+
+	signal   r_vidram_A		: std_logic_vector(14 downto 0);
+	signal   i_vidram_D_o	: std_logic_vector(7 downto 0);
 
 begin
 
@@ -241,6 +254,7 @@ begin
 			i_CS_LCD12864 <= '0';
 			i_CS_VIA <= '0';
 			i_CS_1M <= '0';
+			i_CS_CRTC <= '0';
 		else
 			i_CS_RAM <= '0';
 			i_CS_ROM <= '0';
@@ -250,6 +264,7 @@ begin
 			i_CS_LCD12864 <= '0';
 			i_CS_VIA <= '0';
 			i_CS_1M <= '0';
+			i_CS_CRTC <= '0';
 
 			if i_cpu_VMA = '1' then
 
@@ -270,6 +285,8 @@ begin
 				elsif i_cpu_A(15 downto 8) = x"83" then
 					i_CS_1M <= '1';
 					i_CS_VIA <= '1';
+				elsif i_cpu_A(15 downto 8) = x"84" then
+					i_CS_CRTC <= '1';
 				elsif i_cpu_A(15) = '0' then
 					i_CS_RAM <= '1';
 				end if;
@@ -302,19 +319,27 @@ begin
 					 r_lcd_lat when i_CS_LCD32 = '1' and i_cpu_A(0) = '1' else
 					 LCD12864_D_io when i_CS_LCD12864 = '1' else
 					 i_via_D_o when i_CS_VIA = '1' else
+					 i_crtc_D_o when i_CS_CRTC = '1' else
 					 x"FF";
 
-	e_ram:entity work.RAM_syn
+	e_ram:entity work.RAM_syn_dp
 	generic map (
 		size		=> 32768
 	)
 	port map (
 		CLK_I			=> i_clk_pll,
-		CLKEN_I		=> '1',
-		A_I			=> i_cpu_A(14 downto 0),
-		D_I			=> i_cpu_D_o,
-		D_O			=> i_ram_D_o,
-		WE_I			=> i_ram_we
+
+		A_CLKEN_I	=> '1',
+		A_A_I			=> i_cpu_A(14 downto 0),
+		A_D_I			=> i_cpu_D_o,
+		A_D_O			=> i_ram_D_o,
+		A_WE_I		=> i_ram_we,
+		
+		B_CLKEN_I	=> '1',
+		B_A_I			=> r_vidram_A,
+		B_D_I			=> (others => '1'),
+		B_D_O			=> i_vidram_D_o,
+		B_WE_I		=> '0'
 	);
 
 	i_ram_we <= '1' when i_WRen = '1' and i_cpu_RnW = '0' and i_CS_RAM = '1' else
@@ -487,5 +512,106 @@ begin
       CLK                   => i_clk_pll
    );
 
+b_ansi_ttl_50:block
+	signal	r_clken_crtc 	: std_logic_vector(7 downto 0) := (0 => '1', others => '0');
+
+	constant CRTCIX_CRTCCKEN: natural := 0;
+	constant CRTCIX_MA		: natural := 1;
+	constant CRTCIX_RA		: natural := 3;
+	constant CRTCIX_SR		: natural := 5;
+	constant CRTCIX_DE		: natural := 6;
+
+	signal	i_crtc_VS		: std_logic;
+	signal	i_crtc_HS		: std_logic;
+	signal	i_crtc_DE		: std_logic;
+	signal	i_crtc_CURSOR	: std_logic;
+	signal	i_crtc_MA		: std_logic_vector(13 downto 0);
+	signal	i_crtc_RA		: std_logic_vector(4 downto 0);
+
+	signal 	r_shift_px		: std_logic_vector(7 downto 0);
+	signal	r_shift_cursor	: std_logic;
+	signal	r_shift_de		: std_logic;
+
+
+begin
+
+	p_crtc_clken:process(i_clk_pll, i_rst)
+	begin
+		if i_rst = '1' then
+			r_clken_crtc <= (0 => '1', others => '0');
+		elsif rising_edge(i_clk_pll) then
+			r_clken_crtc <= r_clken_crtc(6 downto 0) & r_clken_crtc(7);
+		end if;
+	end process;
+
+	p_vidmem_A:process(i_clk_pll, i_rst)
+	begin
+		if i_rst = '1' then
+			r_vidram_A <= (others => '0');
+		elsif rising_edge(i_clk_pll) then
+			if r_clken_crtc(CRTCIX_MA) = '1' then
+				r_vidram_A <= "111" & i_crtc_MA(11 downto 0);
+			elsif r_clken_crtc(CRTCIX_RA) = '1' then
+				r_vidram_A <= "110" & i_vidram_D_o & i_crtc_RA(3 downto 0);
+			end if;
+		end if;
+	end process;
+
+	p_vidshift:process(i_clk_pll, i_rst)
+	begin
+		if i_rst = '1' then
+			r_shift_de <= '0';
+			r_shift_cursor <= '0';
+			r_shift_px <= (others => '0');
+		elsif rising_edge(i_clk_pll) then
+			if r_clken_crtc(CRTCIX_SR) = '1' then
+				r_shift_de <= i_crtc_DE;
+				r_shift_cursor <= i_crtc_CURSOR;
+				r_shift_px <= i_vidram_D_o;
+			else
+				r_shift_px <= r_shift_px(6 downto 0) & r_shift_px(7);
+			end if;
+		end if;		
+	end process;
+
+	LCD_50_PCK_o <= not i_clk_pll;
+	LCD_50_VS_o <= '1'; --not i_crtc_VS;
+	LCD_50_HS_o <= '1'; --not i_crtc_HS;
+	LCD_50_DE_o <= r_shift_de;
+	LCD_50_R_o <= (others => (r_shift_px(r_shift_px'high) xor r_shift_cursor));
+	LCD_50_G_o <= (others => (r_shift_px(r_shift_px'high) xor r_shift_cursor));
+	LCD_50_B_o <= (others => (r_shift_px(r_shift_px'high) xor r_shift_cursor));
+
+
+	e_crtc:entity work.mc6845
+	port map (
+	    CLOCK     => i_clk_pll,
+	    CLKEN     => r_clken_crtc(CRTCIX_CRTCCKEN),
+	    CLKEN_CPU => i_clken_mems,
+	    nRESET    => not i_rst,
+
+	    -- Bus interface
+	    ENABLE    => i_CS_CRTC,
+	    R_nW      => i_cpu_RnW,
+	    RS        => i_cpu_A(0),
+	    DI        => i_cpu_D_o,
+	    DO        => i_crtc_D_o,
+
+	    -- Display interface
+	    VSYNC     => i_crtc_VS,
+	    HSYNC     => i_crtc_HS,
+	    DE        => i_crtc_DE,
+	    CURSOR    => i_crtc_CURSOR,
+	    LPSTB     => '1',
+
+	    FIELD     => open,
+
+	    -- Memory interface
+	    MA        => i_crtc_MA,
+	    RA        => i_crtc_RA,
+	    test      => open
+	    );
+
+end block;
 
 end rtl;

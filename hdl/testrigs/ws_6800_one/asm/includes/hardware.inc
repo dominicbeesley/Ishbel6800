@@ -54,5 +54,12 @@
 		.equ VIA_ACR_T1_SQUARE,		0xC0
 
 
+;***********************************************************************
+;*  TTL 50 pin RGB constants
+;***********************************************************************
 
+		.equ VIDMEM_FONT,			0x6000
+		.equ VIDMEM_TEXT,			0x7000
 
+		.equ VIDCRTC_IX,			0x8400
+		.equ VIDCRTC_DAT,			0x8401
