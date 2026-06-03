@@ -21,13 +21,15 @@ lp1:		stab	VIDCRTC_IX
 		swi
 
 
+		; 48MHz pixel clock
+
 		.data
-crtc_regs:	.byte	168	; 0  Horz total chars
+crtc_regs:	.byte	190	; 0  Horz total chars ; !!! We really want 191 here but that crashes the panel
 		.byte	128	; 1  Horz disp chars
 		.byte   140	; 2  HSync pos
 		.byte	3	; 3  HSync width
-		.byte	40	; 4  V total
-		.byte   0	; 5  V adj
+		.byte	48	; 4  V total
+		.byte   1	; 5  V adj
 		.byte   37	; 6  V disp
 		.byte   38	; 7  VSync pos
 		.byte   0	; 8  Interlace
