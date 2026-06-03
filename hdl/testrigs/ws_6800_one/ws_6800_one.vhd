@@ -517,9 +517,10 @@ b_ansi_ttl_50:block
 
 	constant CRTCIX_CRTCCKEN: natural := 0;
 	constant CRTCIX_MA		: natural := 1;
-	constant CRTCIX_RA		: natural := 3;
-	constant CRTCIX_SR		: natural := 5;
-	constant CRTCIX_DE		: natural := 6;
+	constant CRTCIX_MA2		: natural := 3;
+	constant CRTCIX_RA		: natural := 5;
+	constant CRTCIX_SR		: natural := 7;
+	constant CRTCIX_DE		: natural := 8;
 
 	signal	i_crtc_VS		: std_logic;
 	signal	i_crtc_HS		: std_logic;
@@ -532,6 +533,37 @@ b_ansi_ttl_50:block
 	signal	r_shift_cursor	: std_logic;
 	signal	r_shift_de		: std_logic;
 
+	signal	r_attr			: std_logic_vector(7 downto 0);
+	signal 	r_attr_0			: std_logic_vector(7 downto 0);
+
+	signal	i_r				: std_logic_vector(7 downto 0);
+	signal	i_g				: std_logic_vector(7 downto 0);
+	signal	i_b				: std_logic_vector(7 downto 0);
+	signal	i_c				: std_logic_vector(7 downto 0);
+
+	function EGACOL(index:natural) return std_logic_vector is
+	begin
+		case index is
+			when 0 => return x"000000";
+			when 1 => return x"0000AA";
+			when 2 => return x"00AA00";
+			when 3 => return x"00AAAA";
+			when 4 => return x"AA0000";
+			when 5 => return x"AA00AA";
+			when 6 => return x"AA5500";
+			when 7 => return x"AAAAAA";
+			when 8 => return x"555555";
+			when 9 => return x"5555FF";
+			when 10=> return x"55FF55";
+			when 11=> return x"55FFFF";
+			when 12=> return x"FF5555";
+			when 13=> return x"FF55FF";
+			when 14=> return x"FFFF55";
+			when others => return x"FFFFFF";
+		end case;
+
+
+	end function;
 
 begin
 
@@ -550,9 +582,22 @@ begin
 			r_vidram_A <= (others => '0');
 		elsif rising_edge(i_clk_pll) then
 			if r_clken_crtc(CRTCIX_MA) = '1' then
-				r_vidram_A <= "111" & i_crtc_MA(11 downto 0);
+				r_vidram_A <= "11" & i_crtc_MA(11 downto 0) & "0";
+			elsif r_clken_crtc(CRTCIX_MA2) = '1' then
+				r_vidram_A <= "11" & i_crtc_MA(11 downto 0) & "1";
 			elsif r_clken_crtc(CRTCIX_RA) = '1' then
-				r_vidram_A <= "110" & i_vidram_D_o & i_crtc_RA(3 downto 0);
+				r_vidram_A <= "101" & i_vidram_D_o & i_crtc_RA(3 downto 0);
+			end if;
+		end if;
+	end process;
+
+	p_attr_l:process(i_clk_pll, i_rst)
+	begin
+		if i_rst = '1' then
+			r_attr_0 <= (others => '0');
+		elsif rising_edge(i_clk_pll) then
+			if r_clken_crtc(CRTCIX_MA2) then
+				r_attr_0 <= i_vidram_D_o;
 			end if;
 		end if;
 	end process;
@@ -563,24 +608,45 @@ begin
 			r_shift_de <= '0';
 			r_shift_cursor <= '0';
 			r_shift_px <= (others => '0');
+			r_attr <= (others => '0');
 		elsif rising_edge(i_clk_pll) then
 			if r_clken_crtc(CRTCIX_SR) = '1' then
 				r_shift_de <= i_crtc_DE;
 				r_shift_cursor <= i_crtc_CURSOR;
 				r_shift_px <= i_vidram_D_o;
+				r_attr <= r_attr_0;
 			else
 				r_shift_px <= r_shift_px(6 downto 0) & r_shift_px(7);
 			end if;
 		end if;		
 	end process;
 
+	i_c <= (others => r_shift_cursor);
+
+	p_attr2:process(all)
+	variable v_rgb:std_logic_vector(23 downto 0);
+	begin
+		-- TODO: better attributes
+
+		if r_shift_px(r_shift_px'high) = '1' then
+			v_rgb := EGACOL(to_integer(unsigned(r_attr(3 downto 0))));
+		else
+			v_rgb := EGACOL(to_integer(unsigned(r_attr(6 downto 4))));
+		end if;
+
+		i_r <= v_rgb(23 downto 16) xor i_c;
+		i_g <= v_rgb(15 downto 8) xor i_c;
+		i_b <= v_rgb(7 downto 0) xor i_c;
+	end process;
+
+
 	LCD_50_PCK_o <= not i_clk_pll;
 	LCD_50_VS_o <= '1'; --not i_crtc_VS;
 	LCD_50_HS_o <= '1'; --not i_crtc_HS;
 	LCD_50_DE_o <= r_shift_de;
-	LCD_50_R_o <= (others => (r_shift_px(r_shift_px'high) xor r_shift_cursor));
-	LCD_50_G_o <= (others => (r_shift_px(r_shift_px'high) xor r_shift_cursor));
-	LCD_50_B_o <= (others => (r_shift_px(r_shift_px'high) xor r_shift_cursor));
+	LCD_50_R_o <= i_r(7 downto 2);
+	LCD_50_G_o <= i_g(7 downto 2);
+	LCD_50_B_o <= i_b(7 downto 2);
 
 
 	e_crtc:entity work.mc6845
