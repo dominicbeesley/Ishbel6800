@@ -59,9 +59,11 @@
 
 
 ;	Memory start addresses
+		.equ PDATA, 0xE07E
+
 
        .dpage
-
+	
 
 ;      DATA IN BASE PAGE FOR DIRECT ADDRESSING
 
@@ -120,19 +122,19 @@ TMP2:		.skip 2
 ;         TAP
 ;         JMP EXTENDED
 
-		.text
+		.section ".text0","acrx"
 _CODE:
 ST:		BRA	B1
 		BRA	$
 B1:		JMP	B2
-		.org	0x008E
+		.section ".text1","acrx"
 C1:		JMP	C2
 
 ;      TEST ALL PATHS OF BRANCH
 
 ;          I.E., CHECK FORWARD AND REVERSE OFFSETS
 
-		.org	0x00C0
+		.section ".text2","acrx"		; 20C0
 B2:		BRA	B3
 		BRA	$
 B4:		BRA	B5
@@ -142,9 +144,9 @@ B3:		BRA	B4
 
 ;      FINAL PATH
 
-		.org	0x0106
+		.section ".text3","acrx"		; "106"
 B5:		CLC
-		BCS	0
+		BCS	$
 		BRA	C1
 
 ;      FROM HERE ON IT IS ASSUMED THAT IF BRA CAN BE
@@ -157,82 +159,82 @@ B5:		CLC
 C2:		LDAA	#0x01
 		TAP		; C=1,Z=0
 		BCS	T1
-		BRA	0
+		BRA	$
 T1:		BLS	T2
-		BRA	0
-T2:		BCC	0
-		BHI	0
+		BRA	$
+T2:		BCC	$
+		BHI	$
 		LDAA	#0x00
 		TAP		; C=0,Z=0
 		BCC	T3
-		BRA	0
+		BRA	$
 T3:		BHI	T4
-		BRA	0
-T4:		BCS	0
-		BLS	0
+		BRA	$
+T4:		BCS	$
+		BLS	$
 		LDAA	#0x04
 		TAP		; C=0,Z=1
 		BLS	T5
-		BRA	0
+		BRA	$
 T5:		BEQ	T6
-		BRA	0
-T6:		BNE	0
-		BHI	0
+		BRA	$
+T6:		BNE	$
+		BHI	$
 		LDAA	#0x05
 		TAP		; C=1,Z=1
 		BLS	T7
-		BRA	0
-T7:		BHI	0
+		BRA	$
+T7:		BHI	$
 		LDAA	#0x08
 		TAP		; N=1,V=0,Z=0
 		BMI	T8
-		BRA	0
-T8:		BPL	0
-		BGE	0
+		BRA	$
+T8:		BPL	$
+		BGE	$
 		BLT	T9
-		BRA	0
-T9:		BGT	0
+		BRA	$
+T9:		BGT	$
 		BLE	T10
-		BRA	0
-T10:		BVS	0
-		BEQ	0
+		BRA	$
+T10:		BVS	$
+		BEQ	$
 		BCC	TA
-		BRA	0
+		BRA	$
 TA:		LDAA	#0x02
 		TAP		; N=0,V=1,Z=0
 		BVS	T11
-		BRA	0
-T11:		BVC	0
+		BRA	$
+T11:		BVC	$
 		BLT	T12
-		BRA	0
-T12:		BGE	0
-		BGT	0
+		BRA	$
+T12:		BGE	$
+		BGT	$
 		BLE	T13
-		BRA	0
+		BRA	$
 T13:		BPL	T14
-		BRA	0
-T14:		BMI	0
+		BRA	$
+T14:		BMI	$
 		LDAA	#0x00
 		TAP		; N=0,V=0,Z=0
 		BGE	T15
-		BRA	0
-T15:		BLT	0
-		BLE	0
+		BRA	$
+T15:		BLT	$
+		BLE	$
 		BGT	T16
-		BRA	0
+		BRA	$
 T16:		LDAA	#0x0A
 		TAP		; N=1,V=1,Z=0
 		BGE	T17
-		BRA	0
-T17:		BLT	0
-		BLE	0
+		BRA	$
+T17:		BLT	$
+		BLE	$
 		BGT	T18
-		BRA	0
+		BRA	$
 T18:		LDAA	#0x04
 		TAP		; N=0,V=0,Z=1
 		BLE	T19
-		BRA	0
-T19:		BGT	0
+		BRA	$
+T19:		BGT	$
 		BRA	GRP1 	; GO DO GROUP 1
 ;		PAGE
 ;       TTL **** 6800 TOTAL INSTRUCTION TEST - GROUP 1 ****
@@ -308,7 +310,7 @@ A16:		BNE	A16
 		STAA	TMP
 A20:		BPL	A20
 A21:		BEQ	A21
-		BVS	0
+		BVS	$
 		EORA	TMP
 A23:		BNE	A23
 		LDAA	DATA+1   ; DATA+1=0125,N=0,Z=0,V=0
@@ -323,21 +325,21 @@ A25:		BNE	A25
 		STAB	TMP
 A30:		BPL	A30
 A31:		BEQ	A31
-		BVS	0
+		BVS	$
 		EORB	TMP
 A33:		BNE	A33
 		LDAB	DATA+1 		; DATA+1=0125,N=0,Z=0,V=0
 		STAB	TMP
-		BMI	0
+		BMI	$
 		EORB	TMP
-		BNE	0
+		BNE	$
 ;******************************************
 ;               LOAD AND STORE STACK POINTER (LDS)
 		STS	STACK		; SAVE STACK POINTER
 		LDS	DATA		; DATA=0252,DATA+1=0125,N=1,Z
 A40:		BPL	A40
 A41:		BEQ	A41
-		BVS	0
+		BVS	$
 		STS	TMP
 		LDAA	DATA
 		EORA	TMP
@@ -368,7 +370,7 @@ A52:		BVS	A52
 		LDAA	DATA
 		EORA	TMP
 A53:		BNE	A53
-		BMI	0        	; N=1?
+		BMI	$        	; N=1?
 		LDAA	DATA+1
 		EORA	TMP+1
 A54:		BNE	A54
@@ -397,18 +399,18 @@ A58:		BNE	A58
 ;      Z = 1, N = 0, V = 0, C = 0
 		LDX	DATA
 		CPX	DATA 		; DO IT
-		BNE	0
-		BMI	0
-		BVS	0
-		BCS	0
+		BNE	$
+		BMI	$
+		BVS	$
+		BCS	$
 		BEQ	CP20
-		BRA	0
+		BRA	$
 CP20:		BPL	CP22
-		BRA	0
+		BRA	$
 CP22:		BVC	CP23
-		BRA	0
+		BRA	$
 CP23:		BCC	CP1
-		BRA	0
+		BRA	$
 
 ;      CASE 2:
 ;      X = AA55
@@ -416,26 +418,26 @@ CP23:		BCC	CP1
 ;      RESULT = 54AB
 ;      N=0, Z=0, V=1, C=0
 CP1:		CPX	DATA+1
-		BLS	0
-		BVC	0
-		BCS	0
-		BEQ	0
-		BMI	0
+		BLS	$
+		BVC	$
+		BCS	$
+		BEQ	$
+		BMI	$
 		BNE	CP2
-		BRA	0
-CP2:		BGE	0
-		BGT	0
+		BRA	$
+CP2:		BGE	$
+		BGT	$
 		BHI	CP3
-		BRA	0
+		BRA	$
 CP3:		BLE	CP4
-		BRA	0
-CP4:		BLS	0
+		BRA	$
+CP4:		BLS	$
 		BLT	CP5
-		BRA	0
+		BRA	$
 CP5:		BVS	CP6
-		BRA	0
+		BRA	$
 CP6:		BPL	CP7
-		BRA	0
+		BRA	$
 
 ;      CASE 3:
 ;      X = 55AA
@@ -445,15 +447,15 @@ CP6:		BPL	CP7
 
 CP7:		LDX	DATA+1
 		CPX	DATA
-		BPL	0
-		BVC	0
-		BEQ	0
+		BPL	$
+		BVC	$
+		BEQ	$
 		BMI	CP9
-		BRA	0
+		BRA	$
 CP9:		BVS	CP10
-		BRA	0
+		BRA	$
 CP10:		BNE	CP11
-		BRA	0
+		BRA	$
 
 ;      CASE 4:
 ;      X = 55AA
@@ -463,18 +465,18 @@ CP10:		BNE	CP11
 
 CP11:		LDX	DATA+1
 		CPX	DATA+3 
-		BEQ	0
-		BMI	0
-		BVS	0
-		BCS	0
+		BEQ	$
+		BMI	$
+		BVS	$
+		BCS	$
 		BNE	CP12
-		BRA	0
+		BRA	$
 CP12:		BPL	CP13
-		BRA	0
+		BRA	$
 CP13:		BVC	CP14
-		BRA	0
+		BRA	$
 CP14:		BCC	CP15 
-		BRA	0
+		BRA	$
 
 ;      CASE 5:
 ;      X = AA00
@@ -483,50 +485,50 @@ CP14:		BCC	CP15
 ;      Z=0, N=1, V=0, C=1			; *
 CP15:		LDX	DATA+2 			; X=AA00
 		CPX	DATA
-		BEQ	0
-		bpl	0
-		BVS	0
+		BEQ	$
+		bpl	$
+		BVS	$
 		BNE	CP16
-		BRA	0
+		BRA	$
 CP16:		bmi	CP17			; *
-		BRA	0
+		BRA	$
 CP17:		BVC	CP19
-		BRA	0
+		BRA	$
 CP19:		NOP
 ;*************************************
 
 ;               LOGICAL ANDA CCUMULATOR A (AND)
 		LDAA	DATA			; DATA+1=0252,DATA+1=0125,N=0
 		ANDA	DATA+1
-		BMI	0
-		BNE	0
+		BMI	$
+		BNE	$
 A62:		BVS	A62
 		LDAA	DATA+1
 		ANDA	DATA			; N=0,Z=1,V=0
 A63:		BMI	A63
-		BNE	0
+		BNE	$
 A65:		BVS	A65
 		LDAA	DATA+5			; DATA+5=0377,N=1,Z=0,V=0
 		ANDA	DATA+5
 A66:		BPL	A66
 A67:		BEQ	A67
 		EORA	DATA+5			; Z=1
-		BNE	0
+		BNE	$
 		LDAA	DATA+4			; DATA+4=0
 		ANDA	DATA+4
-		BNE	0
+		BNE	$
 ;********************************************
 
 ;               LOGICAL ANDA CCUMULATOR B (AND)
 		LDAB	DATA			; DATA=0252,DATA+1=0125
 		ANDB	DATA+1			; N=0,Z=1,V=0
 A70:		BMI	A70
-		BNE	0
+		BNE	$
 A72:		BVS	A72
 		LDAB	DATA+1
 		ANDB	DATA			; N=0,Z=1,V=0
 A73:		BMI	A73
-		BNE	0
+		BNE	$
 A75:		BVS	A75
 		LDAB	DATA+5			; DATA+5=0377
 		ANDB	DATA+5			; N=1,Z=0,V=0
@@ -564,7 +566,7 @@ A810:		BMI	A810
 A811:		BNE	A811
 A812:		BVS	A812
 		EORA	DATA+3
-		BNE	0
+		BNE	$
 ;********************************************
 
 ;               LOGICAL OR ACCUMULATOR B (ORA)
@@ -590,7 +592,7 @@ A909:		BNE	A909
 		ORAB	DATA+3			; N=0,Z=1,V=0
 A910:		BMI	A910
 A911:		BNE	A911
-		BVS	0
+		BVS	$
 		EORB	DATA+3
 A913:		BNE	A913
 ;********************************************
@@ -608,7 +610,7 @@ A104:		BNE	A104
 		ADDA	DATA			; N=0,Z=0,V=1,C=1
 A105:		BMI	A105
 A106:		BEQ	A106
-		BVC	0
+		BVC	$
 A108:		BCC	A108
 		EORA	DATA+7			; DATA+7=0124
 A109:		BNE	A109
@@ -718,7 +720,7 @@ A234:		BNE	A234
 		SUBA	DATA+5			; N=0,Z=1,V=0,C=0
 A140:		BMI	A140
 A141:		BNE	A141
-		BVS	0
+		BVS	$
 A143:		BCS	A143
 		LDAA	DATA+10			; DATS"+10""=0277
 		SUBA	DATA+3			; DATA+3=0,N=1,Z=0,V=0,C=0
@@ -753,52 +755,52 @@ A248:		BNE	A248
                 				; CARRY SET TO ZERO
 		ADCA	DATA+5   		; DATA+5=0377,RESULT=0124,
 						; N=0,Z=0,V=0,C=1
-		BMI	0        		; N=1?
-		BEQ	0        		; NO,Z=1?
-		BVS	0        		; NO,V=1?
-		BCC	0        		; NO,C=0?
+		BMI	$        		; N=1?
+		BEQ	$        		; NO,Z=1?
+		BVS	$        		; NO,V=1?
+		BCC	$        		; NO,C=0?
 		STAA	TMP      		; NO,SAVE RESULT
 		EORA	DATA+7   		; DATA+7=0124.SET UP
                             			; EXEC TEST
-		BNE	0        		; RESULT=0124?
+		BNE	$        		; RESULT=0124?
 		LDAA	TMP   			; YES RESTORE ACCUM A
-		BCC	0     			; VERIFY C=1
+		BCC	$     			; VERIFY C=1
 		ADCA	DATA+3			; DATA+3=0,RESULT=0125
 						; Z=0,C=0
-		BEQ	0        		; Z=1?
-		BCS	0        		; NO,C=1?
+		BEQ	$        		; Z=1?
+		BCS	$        		; NO,C=1?
 		EORA	DATA+1   		; DATA+1=0125,SET
 						; UP EXEC TEST
-		BNE	0        		; RESULT=0125?
+		BNE	$        		; RESULT=0125?
 		LDAA	DATA+15			; YES,SET UP NEXT TEST,
 						; DATA+15=0001,C=0,Z=0
 		ADCA	DATA+5			; DATA+5=0377,C=0,SO RESULT
 						; =0,N=0,Z=1
-		BMI	0        		; N=1?
-		BNE	0        		; NO,Z=0?
+		BMI	$        		; N=1?
+		BNE	$        		; NO,Z=0?
 		EORA	DATA+3   		; NO,SET UP EXEC TEST
-		BNE	0        		; RESULT=0?
+		BNE	$        		; RESULT=0?
 		CLC				; YES,CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		ADCA	DATA+5			; ADD 0377& C=0 TO
 						; ZERO,RESULT=0377,N=1,Z=0,V
-		BPL	0        		; N=0?
-		BEQ	0        		; NO,Z=1?
-		BVS	0        		; NO,V=1?
+		BPL	$        		; N=0?
+		BEQ	$        		; NO,Z=1?
+		BVS	$        		; NO,V=1?
 		EORA	DATA+5   		; NO,SET UP EXEC TEST
-		BNE	0        		; RESULT=0377?
+		BNE	$        		; RESULT=0377?
 		LDAA	DATA+5   		; YES,RESTORE ACCUM A
 		ADCA	DATA+8   		; DATA+8=0200. ADDIN
 						; 0200,C=0.RESULT=0177,N=0,V=1,
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		ADCA	DATA+8			; NO,DATA+8=0200.ADD IN
 						; 0200 & C=1.RESULT
 						; =0,V=0
-		BVS	0        		; V=1?
+		BVS	$        		; V=1?
 		EORA	DATA+3   		; NO.DATA+3=0,SET UP EXEC TES
-		BNE	0        		; RESULT=ZERO?
+		BNE	$        		; RESULT=ZERO?
 		NOP				; YES
 ;********************************************
 
@@ -808,248 +810,248 @@ A248:		BNE	A248
 						; CARRY SET TO ZERO
 		ADCB	DATA+5			; DATA+5=0377,RESULT=0124,
 						; N=0,V=0,C=1
-		BMI	0        		; N=1?
-		BVS	0        		; NO,V=1?
-		BCC	0        		; NO,C=0?
+		BMI	$        		; N=1?
+		BVS	$        		; NO,V=1?
+		BCC	$        		; NO,C=0?
 		STAB	TMP      		; NO, SAVE RESULT
 		EORB	DATA+7   		; DATA+7=0124.SET UP
 						; EXEC TEST
-		BNE	0        		; RESULT=0124?
+		BNE	$        		; RESULT=0124?
 		LDAB	TMP      		; YES,RESTORE ACCUM B
-		BCC	0        		; VERIFY C=0
+		BCC	$        		; VERIFY C=0
 		ADCB	DATA+3   		; DATA+3=0,RESULT=
 						; Z=0,C=0
-		BEQ	0			; Z=1?
-		BCS	0			; NO,C=1?
+		BEQ	$			; Z=1?
+		BCS	$			; NO,C=1?
 		EORB	DATA+1			; NO,DATA+1=0125,
 						; SET UP EXEC TEST
-		BNE	0			; RESULT=0125?
+		BNE	$			; RESULT=0125?
 		LDAB	DATA+15			;YES,SET UP NEXT TEST,
 						; DATA+15=0001,C=0,Z=0
 		ADCB	DATA+5			; DATA+5=0377,RESULT=0,
 						; N=0,Z=1
-		BMI	0        		; N=1?
-		BNE	0        		; NO,Z=0?
+		BMI	$        		; N=1?
+		BNE	$        		; NO,Z=0?
 		EORB	DATA+3   		; NO,SET UP EXEC TEST
-		BNE	0        		; RESULT=0?
+		BNE	$        		; RESULT=0?
 		CLC				; CLEAR CARRY
-		BCS	0        		; VERIFY CARRY CLEARED
+		BCS	$        		; VERIFY CARRY CLEARED
 		ADCB	DATA+5   		; YES,ADD 0377&C=0,RESULT=
 						; 0377,N=1,Z=0,V=0
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
 		EORB	DATA+5			; NO,SET UP EXEC TEST
-		BNE	0			; RESULT=0377?
+		BNE	$			; RESULT=0377?
 		LDAB	DATA+5			; YES,RESTORE ACCUM B
 		ADCB	DATA+8			; DATA+8 =0200. ADD IN
 						; WITH C=0.RESULT=0177,N=0,V
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		ADCB	DATA+8			; NO,DATA+8=0200. ADD IN
 						; 0200 WITH C=1. RESULT
 						; =0,V=0
-		BVS	0			; V=1?
+		BVS	$			; V=1?
 		EORB	DATA+3			; NO,DATA+3=0. SET UP
 						; EXEC TEST
-		BNE	0        		; RESULT=0?
+		BNE	$        		; RESULT=0?
 		NOP				; YES
 ;********************************************
 
 ;               SUBTRACT WITH CARRY,ACCUMULATOR A (SBC)
 		LDAA	DATA+14			; DATA+14=0177,SET UP TEST,
 		SEC				; SET CARRY,
-		BCC	0			; AND VERIFY CARRY SET.N=0,Z=
+		BCC	$			; AND VERIFY CARRY SET.N=0,Z=
 		SBCA	DATA+13			; DATA+13=0176,ACCUM A=0
 						; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0? ALSO EXEC TEST.
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0? ALSO EXEC TEST.
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		SBCA	DATA+15			; DATA+15=0001,ACCUM A=A377,
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORA	DATA+5			; NO,DATA+5=0377,SET UP
 						; EXEC TEST
-		BNE	0			; SUBTRACTION RESULT=0377?
+		BNE	$			; SUBTRACTION RESULT=0377?
 		LDAA	DATA+5			; YES,DATA+5=0377,SET
 						; UP NEXT TEST,N=1.Z=0,V=0,C=
 		SBCA	DATA+14			; DATA+14=0177;ACCUM A=0177,
 						; N=0,Z=0,V=1,C=0
-		BMI	0			; N=1?
-		BEQ	0			; NO,Z=1?
-		BVC	0			; NO,V=0?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BEQ	$			; NO,Z=1?
+		BVC	$			; NO,V=0?
+		BCS	$			; NO,C=1?
 		EORA	DATA+14			; NO,DATA+14=0177,SET UP
 						; EXEC TEST
-		BNE	0			; SUBTRACTION RESULT=0177?
+		BNE	$			; SUBTRACTION RESULT=0177?
 		LDAA	DATA+14			; YES,SET UP NEXT TEST,
 		SEV				; SET OVERFLOW,
-		BVC	0        		; AND VERIFY OVERFLOW SET.V=1
+		BVC	$        		; AND VERIFY OVERFLOW SET.V=1
 		SBCA	DATA+3   		; DATA+3,V=0
-		BVS	0        		; V=1?
+		BVS	$        		; V=1?
 		EORA	DATA+14			; NO,SET UP EXEC TEST
-		BNE	0			; SUBTRACTED RESULT=0177?
+		BNE	$			; SUBTRACTED RESULT=0177?
 		NOP				; YES
 ;********************************************
 
 ;               SUBTRACT WITH CARRY ACCUM B (SBC)
 		LDAB	DATA+14			; DATA+14=0177,SET UP TEST
 		SEC				; SET CARRY,
-		BCC	0			; AND VERIFY CARRY SET.N=0,Z=
+		BCC	$			; AND VERIFY CARRY SET.N=0,Z=
 		SBCB	DATA+13 		; DATA+13=0176,ACCUM B=0,
 						; N=0,Z=1,V=0,C=1
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0? ALSO EXEC TEST
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0? ALSO EXEC TEST
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		SBCB	DATA+15			; DATA+15=0001,ACCUM B=0377,
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORB	DATA+5			; NO,DATA+5=0377,SET UP
 						; EXEC TEST
-		BNE	0        		; SUBTRACTION       NO,C=1?
-		BNE	0        		; SUBTRACTION result=0377   	*
+		BNE	$        		; SUBTRACTION       NO,C=1?
+		BNE	$        		; SUBTRACTION result=0377   	*
 		LDAB	DATA+5   		; YES,DATA+5=0377,SET		*
 						; UP NEXT TEST,N=1.Z=0,V=0,C= 	*
 		SBCB	DATA+14			; DATA+14=0177;ACCUM b=0177,	*
 						; N=0,Z=0,V=1,C=0		*
-		BMI	0        		; N=1?				*
-		BEQ	0        		; NO,Z=1?			*
-		BVC	0        		; NO,V=0?			*
-		BCS	0        		; NO,C=1?			*
+		BMI	$        		; N=1?				*
+		BEQ	$        		; NO,Z=1?			*
+		BVC	$        		; NO,V=0?			*
+		BCS	$        		; NO,C=1?			*
 		EORB	DATA+14   		; NO,DATA+14=0177,SET UP
 						; EXEC TEST
-		BNE	0			; SUBTRACTION RESULT=0177?
+		BNE	$			; SUBTRACTION RESULT=0177?
 		LDAB	DATA+14			; YES,SET UP NEXT TEST,
 		SEV				; SET OVERFLOW,
-		BVC	0			; AND VERIFY OVERFLOW SET.V=1
+		BVC	$			; AND VERIFY OVERFLOW SET.V=1
 		SBCB	DATA+3			; DATA+3=0,V=0
-		BVS	0			; V=1?
+		BVS	$			; V=1?
 		EORB	DATA+14			; NO,SET UP EXEC TEST
-		BNE	0			; SUBTRACTED RESULT=0177?
+		BNE	$			; SUBTRACTED RESULT=0177?
 		NOP				; YES
 ;********************************************
 
 ;               COMPARE ACCUMULATOR A TO MEMORY (CMP)
 		LDAA	DATA+14			; DATA+14=0177,SET UP TEST
 		CLC				; CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 						; N=0,Z=0,V=0,C=0
 		CMPA	DATA+14			; ACCUM A=0177,N=0,Z=1,V=0,C
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BCS	$			; NO,C=1?
 		EORA	DATA+14			; NO,SEY UP EXEC TEST
-		BNE	0			; WAS ACCUM A STILL=0177?
+		BNE	$			; WAS ACCUM A STILL=0177?
 						; YES.N=0,Z=1,V=0,C"=1,ACCUM
 		CMPA	DATA+15			; DATA+15=0001,N=1,Z=0,V=0,C
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORA	DATA+3			; NO,SET UP EXEC TEST,DATA+3=
-		BNE	0			; WAS ACCUM A STILL=0?
+		BNE	$			; WAS ACCUM A STILL=0?
 		LDAA	DATA+11			; YES,SET UP NEXT TEST
 						; DATA+11=0376,N=1,Z=0,V=0,C=
 		CMPA	DATA+14			; DATA+14=0177,N=0,Z=0,V=1,C
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
 		EORA	DATA+11			; NO,SET UP EXEC TEST
-		BNE	0			; WAS ACCUM A STILL=0376?
+		BNE	$			; WAS ACCUM A STILL=0376?
 		SEV				; YES,SET OVERFLOW AND
-		BVC	0			; VERIFY.NEXT TEST SET UP,V=1
+		BVC	$			; VERIFY.NEXT TEST SET UP,V=1
 		CMPA	DATA+5			; DATA+5=0377,V=0
-		BVS	0			; V=1?
+		BVS	$			; V=1?
 		EORA	DATA+3			; NO,SET UP EXEC TEST
-		BNE	0			; WAS ACCUM A STILL=0?
+		BNE	$			; WAS ACCUM A STILL=0?
 		NOP				;YES
 ;********************************************
 ;               COMPARE ACCUMULATOR B TO MEMORY (CMP)
 		LDAB	DATA+14   		; DATA+14=0177,SET UP TEST
 		CLC				; CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 						; N=0,Z=0,V=0,C=0
 ;            CMPB   DATA+14   ACCUM 
 		CMPB	DATA+14			; ACCUM b=0177,N=0,Z=1,V=0,C	*
-		BMI	0			; N=1?				*
-		BNE	0			; NO,Z=0?			*
-		BCS	0			; NO,C=1?			*
+		BMI	$			; N=1?				*
+		BNE	$			; NO,Z=0?			*
+		BCS	$			; NO,C=1?			*
 		EORB	DATA+14			; NO,SEY UP EXEC TEST		*
-		BNE	0			; WAS ACCUM b STILL=0177?	*
+		BNE	$			; WAS ACCUM b STILL=0177?	*
 						; YES.N=0,Z=1,V=0,C"=1,ACCUM	*
 		CMPB	DATA+15			; DATA+15=0001,N=1,Z=0,V=0,C
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORB	DATA+3			; NO,SET UP EXEC TEST,DATA+3=
-		BNE	0			; WAS ACCUM B STILL=0?
+		BNE	$			; WAS ACCUM B STILL=0?
 		LDAB	DATA+11			; YES,SET UP EXEC TEST
 						; DATA+11=0376,N=1,Z=0,V=0,C=0
 		CMPB	DATA+14			; DATA+14=0177,N=0,Z=0,V=1,C
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
 		EORB	DATA+11			; NO,SET UP EXEC TEST
 ;            BNE    *        WAS ACCUM B ST    NOP             YES
-		BNE	0			; WAS ACCUM b STILL=0376?	*
+		BNE	$			; WAS ACCUM b STILL=0376?	*
 		SEV				; YES,SET OVERFLOW AND		*
-		BVC	0			; VERIFY.NEXT TEST SET UP,V=1	*
+		BVC	$			; VERIFY.NEXT TEST SET UP,V=1	*
 		CMPB	DATA+5			; DATA+5=0377,V=0		*
-		BVS	0			; V=1?				*
+		BVS	$			; V=1?				*
 		EORB	DATA+3			; NO,SET UP EXEC TEST		*
-		BNE	0			; WAS ACCUM b STILL=0?		*
+		BNE	$			; WAS ACCUM b STILL=0?		*
 		NOP				; YES				*
 ;********************************************
 
 ;               BIT TEST ACCUMULATOR A (BIT)
 		LDAA	DATA+5   		; DATA+5=0377,SET UP TEST
 		SEV				; SET OVERFLOW
-		BVC	0        		; VERIFY OVERFLOW SET
+		BVC	$        		; VERIFY OVERFLOW SET
 		SEC				; SET CARRY
-		BCC	0			; VERIFY CARRY SET
+		BCC	$			; VERIFY CARRY SET
 		BITA	DATA+3			; DATA+3=0,N=0,Z=1,C=1
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORA	DATA+5			; NO,SET UP EXEC TEST
-		BNE	0			; RESULT=0377?
+		BNE	$			; RESULT=0377?
 		LDAA	DATA+3			; YES,SET UP NEXT TEST
 		BITA	DATA+5			; DATA+3=0 & DATA+5=0377,
 						; N=0,Z=1,V=0,C=1
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORA	DATA+3			; NO,SET UP EXEC TEST
-		BNE	0			; RESULT =0?
+		BNE	$			; RESULT =0?
 		LDAA	DATA+5			; YES,DATA+5=0377,
 						; SET UP NEXT TEST
 		CLC				; CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		SEV				; SET OVERFLOW
-		BVC	0      
+		BVC	$      
 		bita	DATA+5			; DATA+5=0377			**
-		bpl	0			; n=0?				**
-		beq	0			; no,z=1?			**
-		BVS	0			; NO,V=1?			*
-		BCS	0			; NO,C=1?			*
+		bpl	$			; n=0?				**
+		beq	$			; no,z=1?			**
+		BVS	$			; NO,V=1?			*
+		BCS	$			; NO,C=1?			*
 		EORA	DATA+5			; NO,SET UP EXEC TEST		*
-		BNE	0			; RESULT=0377?			*
+		BNE	$			; RESULT=0377?			*
 		LDAA	DATA+3			; DATA+3=0
 		BITA	DATA+3			; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORA	DATA+3			; NO,SET UP EXEC TEST
-		BNE	0			; RESULT=0?
+		BNE	$			; RESULT=0?
 		NOP				; YES
 ;********************************************
 
@@ -1058,46 +1060,46 @@ A248:		BNE	A248
 ;            LDAB  DATA+5   DATA+5=0377,SET E    *        NO,Z=0?
 		LDAB	DATA+5   		; DATA+5=0377,SET UP TEST	*
 		SEV				; SET OVERFLOW			*
-		BVC	0        		; VERIFY OVERFLOW SET		*
+		BVC	$        		; VERIFY OVERFLOW SET		*
 		SEC				; SET CARRY			*
-		BCC	0			; VERIFY CARRY SET		*
+		BCC	$			; VERIFY CARRY SET		*
 		BITB	DATA+3			; DATA+3=0,N=0,Z=1,C=1		*
-		BMI	0			; N=1?				*
-		BNE	0			; NO,Z=0?			*
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?				*
+		BNE	$			; NO,Z=0?			*
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORB	DATA+5			; NO,SET UP EXEC TEST
-		BNE	0			; RESULT=0377?
+		BNE	$			; RESULT=0377?
 		LDAB	DATA+3			; YES,SET UP NEXT TEST
 		BITB	DATA+5			; DATA+3=0 & DATA+5=0377,
 						; N=0,Z=1,V=0,C=1
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORB	DATA+3			; NO,SET UP EXEC TEST
-		BNE	0			; RESULT=0?
+		BNE	$			; RESULT=0?
 		LDAB	DATA+5			; YES,DATA+5=0377,
 						; SET UP NEXT TEST
 		CLC				; CLEAR CA
-		BCS	0			; VERIFY CARRY CLEARED		*
+		BCS	$			; VERIFY CARRY CLEARED		*
 		SEV				; SET OVERFLOW			*
-		BVC	0      			;				*
+		BVC	$      			;				*
 		bitb	DATA+5			; DATA+5=0377			**
-		bpl	0			; n=0?				**
-		beq	0			; no,z=1?			**
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		bpl	$			; n=0?				**
+		beq	$			; no,z=1?			**
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORB	DATA+5			; NO,SET UP EXEC TEST
-		BNE	0			; RESULT=0377?
+		BNE	$			; RESULT=0377?
 		LDAB	DATA+3			; DATA+3=0
 		BITB	DATA+3			; DATA+3=0,N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; N/,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; N/,C=1?
 		EORB	DATA+3			; NO,SET UP EXEC TEST
-		BNE	0			; RESULT=0?
+		BNE	$			; RESULT=0?
 		NOP				; YES
 ;********************************************
 ;		PAGE
@@ -1112,27 +1114,27 @@ A248:		BNE	A248
 ;*****************************************************
 		LDAA	#0xAA			; CHECK IMMEDIATE MODE - 1 BYTE
 		CMPA	DATA
-		BNE	0
+		BNE	$
 		LDAA	#0x55
 		CMPA	DATA
-		BEQ	0
+		BEQ	$
 		LDX	#0xAA55			; IMMEDIATE MODE - 2 BYTE
 		CPX	DATA
-		BNE	0
+		BNE	$
 		LDX	#0x55AA
 		CPX	DATA
-		BEQ	0
+		BEQ	$
 		LDAA	DATA2			; EXTENDED MODE - 1 BYTE
 		CMPA	#0x55
-		BNE	0
+		BNE	$
 		LDX	#0x3344			; EXTENDED MODE - 2 BYTE
 		STX	TMP2
 		LDAA	TMP2
 		LDAB	TMP2+1
 		CMPA	#0x33
-		BNE	0
+		BNE	$
 		CMPB	#0x44
-		BNE	0
+		BNE	$
 
 
 
@@ -1140,21 +1142,21 @@ A248:		BNE	A248
 		LDX	#DATA2			; INDEXED MODE - 1 BYTE
 		LDAA	0,X
 		CMPA	0,X
-		BNE	0
+		BNE	$
 		LDX	0,X			; INDEXED - 2 BYTE
 		CPX	#0x55AA
-		BNE	0
+		BNE	$
 
 ;      INDEXED MODE - NON ZERO OFFSET
 		LDX	#DATA2-128		; 1 BYTE
 		LDAA	128,X
 		INX				; BUMP SO THE OFFSET IS DIFFERENT
 		CMPA	127,X
-		BNE	0
+		BNE	$
 		INX
 		LDX	126,X 			; 2 BYTE
 		CPX	#0x55AA
-		BNE	0
+		BNE	$
 ;		PAGE
 
 
@@ -1168,28 +1170,28 @@ A248:		BNE	A248
 ;          BRANCH TO SUBROUTINE
 		LDS	#STACK			; SETUP STACK
 		BSR	BR1			; GO TO SUB
-BR2:		BRA	0			; SHOULD NEVER GET HERE
+BR2:		BRA	$			; SHOULD NEVER GET HERE
 BR1:		STS	TMP			; SEE WHAT SP IS NOW
 		LDX	TMP			; SHOULD BE DECREMENTED BY 2
 		CPX	#STACK-2
-		BNE	0
+		BNE	$
 		LDX	1,X			; GET RETURN ADDRESS OFF OF STACK
 		CPX	#BR2			; IS IT OKAY? 
-		BNE	0
+		BNE	$
 
 ;*************************************************
 
 ;        JUMP TO SUBROUTINE
 		LDS	#STACK			; RE-INIT STACK
 		JSR	JS1			; GO TO SUB
-JS2:		BRA	0			; SHOULD NEVER GET HERE
+JS2:		BRA	$			; SHOULD NEVER GET HERE
 JS1:		STS	TMP			; SEE IF SP IS DECREMENTED BY 2
 		LDX	TMP
 		CPX	#STACK-2
-		BNE	0
+		BNE	$
 		LDX	1,X			; CHECK RETURN ADDRESS ON STACK
 		CPX	#JS2
-		BNE	0
+		BNE	$
 ;      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 ;           GROUP 1 TEST COMPLETE
@@ -1230,48 +1232,48 @@ JS1:		STS	TMP			; SEE IF SP IS DECREMENTED BY 2
 ;           GMCM REVISION 1.0 - SEPT 1977
 
 GRP6:		LDAA	#0
-		BNE	0
+		BNE	$
 		TAP
 		TPA
 		EORA	#0xC0
-		BNE	0			; TEST TAP,TPA FOR 00
+		BNE	$			; TEST TAP,TPA FOR 00
 		LDAA	#0xFF
 		TAP
 
 		TPA
 		EORA	#0xFF
-		BNE	0			; TEST TAP,TPA FOR FF
+		BNE	$			; TEST TAP,TPA FOR FF
 		LDAA	#0xAA
 		TAP
 
 		TPA
 		EORA	#0xEA
-		BNE	0			; TEST TPA,TAP FOR AA
+		BNE	$			; TEST TPA,TAP FOR AA
 ;TEST  CLV SEV
 		LDAA	#0xFF
 		TAP
 		CLV
 		TPA
 		EORA	#0xFD			; TEST CLV WITH 1S
-		BNE	0
+		BNE	$
 		LDAA	#0x02
 		TAP
 		CLV
 		TPA
 		EORA	#0xC0			; TEST CLV WITH 0 S
-		BNE	0
+		BNE	$
 		LDAA	#0xFD
 		TAP
 		SEV
 		TPA
 		EORA	#0xFF			; TEST SEV WITH 1 S
-		BNE	0
+		BNE	$
 		LDAA	#0x00
 		TAP
 		SEV
 		TPA
 		EORA	#0xC2			; TEST SEV WITH 0 S
-		BNE	0
+		BNE	$
 
 ;      TEST CLC  SEC
 		LDAA	#0xFF
@@ -1279,25 +1281,25 @@ GRP6:		LDAA	#0
 		CLC
 		TPA
 		EORA	#0xFE
-		BNE	0
+		BNE	$
 		LDAA	#0x01
 		TAP
 		CLC
 		TPA
 		EORA	#0xC0			; TEST CLC WITH 0 S
-		BNE	0
+		BNE	$
 		LDAA	#0xFE
 		TAP
 		SEC
 		TPA
 		EORA	#0xFF
-		BNE	0
+		BNE	$
 		LDAA	#0x00
 		TAP
 		SEC
 		TPA
 		EORA	#0xC1
-		BNE	0			; TEST SEC9 WITH 0 S
+		BNE	$			; TEST SEC9 WITH 0 S
 
 ;      TEST CLI SEI
 		LDAA	#0xFF
@@ -1305,61 +1307,61 @@ GRP6:		LDAA	#0
 		CLI
 		TPA
 		EORA	#0xEF
-		BNE	0			; TEST CLI WITH 1 S
+		BNE	$			; TEST CLI WITH 1 S
 		LDAA	#0x10
 		TAP
 		CLI
 		TPA
 		EORA	#0xC0
-		BNE	0
+		BNE	$
 		LDAA	#0x00
 		TAP
 		SEI
 		TPA
 		EORA	#0xD0
-		BNE	0
+		BNE	$
 		LDAA	#0xEF
 		TAP
 		SEI
 		TPA
 		EORA	#0xFF			; TEST SEI WITH 1 S
-		BNE	0
+		BNE	$
 
 ;      TEST INX
 		LDAA	#0x00
 		LDX	#0xFFFF
 		TAP
 		INX
-		BNE	0
-		BMI	0
-		BVS	0
+		BNE	$
+		BMI	$
+		BVS	$
 		LDX	#0x00EF
 		INX
-		BEQ	0
-		BMI	0
-		BVS	0
+		BEQ	$
+		BMI	$
+		BVS	$
 		TPA
 		EORA	#0xC0
-		BNE	0
+		BNE	$
 		LDX	#0x8080
 		INX
-		BVS	0
+		BVS	$
 
 ;       TEST FOR DEX
 		LDAA	#0x00
 		LDX	#0x0001
 		TAP
 		DEX
-		BNE	0
-		BMI	0
-		BVS	0
+		BNE	$
+		BMI	$
+		BVS	$
 		DEX
 		TPA
 		EORA	#0xC0
-		BNE	0
+		BNE	$
 		LDX	#0x8081
 		DEX
-		BVS	0
+		BVS	$
 
 ;      TEST NOP
 
@@ -1370,24 +1372,24 @@ Z2:		LDX	#0x0000
 		TAP
 		NOP
 		EORA	#0x00
-		BNE	0
+		BNE	$
 		TPA
 		EORA	#0xC4
-		BNE	0
+		BNE	$
 		EORB	#0x00
-		BNE	0
+		BNE	$
 		CPX	Z2+1
-		BNE	0
+		BNE	$
 		TSX
 		DEX
 		CPX	#0x0FFF
-		BNE	0
+		BNE	$
 		LDAA	#0xFF
 		TAP
 		NOP
 		TPA
 		EORA	#0xFF
-		BNE	0
+		BNE	$
 
 ;           GROUP 6 TEST COMPLETE-RETURN TO START
 
@@ -1435,56 +1437,56 @@ Z2:		LDX	#0x0000
 
 GRP2:		LDAA	OC377
 		NEGA				; NEGATE 0377 TO 0001,N=0,Z=0
-		BMI	0			; N=1?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORA	OC001			; NO,SET UP EXECUTION TEST.
-		BNE	0			; WAS NEGATED NUMBER = 0001
+		BNE	$			; WAS NEGATED NUMBER = 0001
 		LDAA	ZERO			; YES
 		NEGA				; NEGATE ZERO TO ZERO,N=0,Z=1
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?				*
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?				*
 		EORA	ZERO			; NO,SET UP EXECUTION TEST.		*
-		BNE	0			; WAS NEGATED NUMBER = ZERO?		*
+		BNE	$			; WAS NEGATED NUMBER = ZERO?		*
 		LDAA	OC200			; YES					*
 		NEGA				; NEGATE 0200 TO 0200.N=1,Z=0		*
-		BPL	0        		; N=0?					*
-		BEQ	0        		; NO,Z=1?				*
-		BVC	0        		; NO,V=0?				*
-		BCC	0        		; NO,C=0?
+		BPL	$        		; N=0?					*
+		BEQ	$        		; NO,Z=1?				*
+		BVC	$        		; NO,V=0?				*
+		BCC	$        		; NO,C=0?
 		EORA	OC200    		; NO,SET UP EXEC TEST
-		BNE	0        		; WAS NEGATED NUMBER = 0200?
+		BNE	$        		; WAS NEGATED NUMBER = 0200?
 		NOP				; YES
 ;********************************************
 
 ;               NEGATE ACCUMULATOR B (NEG)
 		LDAB	OC377
 		NEGB				; NEGATE 0377 TO 0001,N=0,Z=0
-		BMI	0			; N=1?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORB	OC001			; NO,SET UP EXECUTION TEST.
-		BNE	0			; WAS NEGATED NUMBER = 0001?
+		BNE	$			; WAS NEGATED NUMBER = 0001?
 		LDAB	ZERO			; YES
 		NEGB				; NEGATE ZERO TO ZERO,N=0,Z=|
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORB	ZERO			; NO,SET UP EXECUTION TEST.
-		BNE	0			; WAS NEGATED NUMBER = ZERO?
+		BNE	$			; WAS NEGATED NUMBER = ZERO?
 		LDAB	OC200			; YES
 		NEGB				; NEGATE 0200 TO 0200.N=1,Z=0
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		EORB	OC200			; NO,SET UP EXECUTION TEST
-		BNE	0			; WAS NEGATED NUMBER = 0200?
+		BNE	$			; WAS NEGATED NUMBER = 0200?
 		NOP				; YES
 ;********************************************
 
@@ -1492,32 +1494,32 @@ GRP2:		LDAA	OC377
 		LDAA	OC377
 		STAA	TMP			; SET MEMORY LOCATION TO BE N
 		NEG	TMP			; NEGATE 0377 TO 0100,N=0,Z=0
-		BMI	0			; N=1?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		LDAA	TMP			; NO,GET NEGATED NUMBER
 		EORA	OC001			; SET UP EXECUTION TEST
-		BNE	0			; IS NDGATED NUMBER = 0001?
+		BNE	$			; IS NDGATED NUMBER = 0001?
 		NOP				; YES
 ;********************************************
 
 ;               COMPLIMENT ACCUMULATOR A (COM)
 		LDAA	OC377
 		COMA				; COMPLIMENT 0377 TO ZERO,N=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORA	ZERO			; NO,SET  UP EXECUTION TEST
-		BNE	0			; WAS COMPLIMENTED NUMBER =ZE
+		BNE	$			; WAS COMPLIMENTED NUMBER =ZE
 		COMA				; COMPLIMENT ZERO TO 0377,N=1
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORA	OC377			; NO,SET UP EXECUTION TEST
-		BNE	0			; WAS COMPLIMENTED NUMBER = 0
+		BNE	$			; WAS COMPLIMENTED NUMBER = 0
 		NOP				; YES
 ;********************************************
 
@@ -1525,19 +1527,19 @@ GRP2:		LDAA	OC377
 		LDAB	OC377
 		COMB				; CMPLMNT 0377 TO ZERO,
 						; N=0,Z=1,V=0,C=1
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORB	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; COMPLMNTD NUMBER=ZERO?
+		BNE	$			; COMPLMNTD NUMBER=ZERO?
 		COMB				; YES,CMPLMNT ZERO TO 0377
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORB	OC377			; NO,SET UP EXEC TEST
-		BNE	0			; COMPLMNTD NUMBER=0377?
+		BNE	$			; COMPLMNTD NUMBER=0377?
 		NOP				; YES
 ;********************************************
 
@@ -1547,13 +1549,13 @@ GRP2:		LDAA	OC377
 						; TO BE COMPLIMENTED
 		COM	TMP			; CMPLMNT 0377 TO ZERO,
 						; N=0,Z=1,V=0,C=1
-		BMI	0        		; N=1?
-		BNE	0        		; NO,Z=0?
-		BVS	0        		; NO,V=1?
-		BCC	0        		; NO,C=0?
+		BMI	$        		; N=1?
+		BNE	$        		; NO,Z=0?
+		BVS	$        		; NO,V=1?
+		BCC	$        		; NO,C=0?
 		LDAA	TMP      		; NO,GET CMPLMNTD NUMB
 		EORA	ZERO     		; SET UP EXEC TEST
-		BNE	0        		; COMPLMNTD NUMBER=0377?
+		BNE	$        		; COMPLMNTD NUMBER=0377?
 		NOP				; YES
 ;********************************************
 
@@ -1561,51 +1563,51 @@ GRP2:		LDAA	OC377
 		LDAA	OC377    		; SET UP ACCUM A
 		LSRA				; SHIFT ONCE TO 0177,
 						; N=0,Z=0,V=1,C=1
-		BMI	0        		; N=1?
-		BEQ	0        		; NO,Z=1?
-		BVC	0        		; NO,V=0?
-		BCC	0        		; NO,C=0?
+		BMI	$        		; N=1?
+		BEQ	$        		; NO,Z=1?
+		BVC	$        		; NO,V=0?
+		BCC	$        		; NO,C=0?
 		EORA	OC177    		; NO,SET UP EXEC TEST
-		BNE	0        		; SHFTD NUMB=0177?
+		BNE	$        		; SHFTD NUMB=0177?
 		LDAA	OC177    		; YES,RESTORE ACCUM A
 		LSRA				; SHIFT ONCE TO 0077
 		EORA	OC077			; SET UP EXEC TES"T
-		BNE	0			; SHFTD NUMB=0077
+		BNE	$			; SHFTD NUMB=0077
 		LDAA	OC077			; YES,RESTORE ACCUM A
 		LSRA				; SHIFT ONCE TO 0037
 		EORA	OC037			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0037?
+		BNE	$			; SHFTD NUMB=0037?
 		LDAA	OC037			; YES,RESTORE ACCUM A
 		LSRA				; SHIFT ONCE TO 0017
 		EORA	OC017			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0017?
+		BNE	$			; SHFTD NUMB=0017?
 		LDAA	OC017			; YES,RESTORE ACCUM A
 		LSRA				; SHIFT ONCE TO 0007
 		EORA	OC007			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0007?
+		BNE	$			; SHFTD NUMB=0007?
 		LDAA	OC007			; YES,RESTORE ACCUM A
 		LSRA				; SHIFT ONCE TO 0003
 		EORA	OC003			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0003?
+		BNE	$			; SHFTD NUMB=0003?
 		LDAA	OC003			; YES,RESTORE ACCUM A
 		LSRA				; SHIFT ONCE TO 0001
 		EORA	OC001			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0001?
+		BNE	$			; SHFTD NUMB=0001?
 		LDAA	OC001			; YES,RESTORE ACCUM A
 		LSRA				; SHIFT ONCE TO ZERO
 						; N=0,Z=1,V=1,C=1
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		EORA	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0?
+		BNE	$			; SHFTD NUMB=0?
 		LSRA				; YES,SHIFT ONCE AGAIN TO
 						; ZERO,N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		NOP				; YES
 ;********************************************
 
@@ -1613,51 +1615,51 @@ GRP2:		LDAA	OC377
 		LDAB	OC377			; SET UP ACCUM B
 		LSRB				; SHIFT ONCE TO 0177,
 						; N=0,Z=0,V=1,C=1
-		BMI	0			; N=1?
-		BEQ	0			; NO,Z=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BEQ	$			; NO,Z=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		EORB	OC177			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0177?
+		BNE	$			; SHFTD NUMB=0177?
 		LDAB	OC177			; YES,RESTORE ACCUM B
 		LSRB				; SHIFT ONCE TO 0077
 		EORB	OC077			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0077
+		BNE	$			; SHFTD NUMB=0077
 		LDAB	OC077			; YES,RESTORE ACCUM B
 		LSRB				; SHIFT ONCE TO 0037
 		EORB	OC037			; SET UP EXEC TEST
-		BNE	0			; SHIFTD NUMB=0037?
+		BNE	$			; SHIFTD NUMB=0037?
 		LDAB	OC037			; YES,RESTORE ACCUM B
 		LSRB				; SHIFT ONCE TO 0017
 		EORB	OC017			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0017
+		BNE	$			; SHFTD NUMB=0017
 		LDAB	OC017			; YES,RESTORE ACCUM B
 		LSRB				; SHIFT ONCE TO 0007
 		EORB	OC007			; SET UP EXEC TEST
-		BNE	0			; SHIFTD NUMB=0007?
+		BNE	$			; SHIFTD NUMB=0007?
 		LDAB	OC007			; YES, RESTORE ACCUM B
 		LSRB				; SHIFT ONCE TO 0003
 		EORB	OC003			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=003?
+		BNE	$			; SHFTD NUMB=003?
 		LDAB	OC003			; YES,RESTORE ACCUM B
 		LSRB				; SHIFT ONCE TO 0001
 		EORB	OC001			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0001?
+		BNE	$			; SHFTD NUMB=0001?
 		LDAB	OC001			; YES,RESTORE ACCUM B
 		LSRB				; SHIFT ONCE TO ZERO,
 						; N=0,Z=1,V=1,C=1
-		BMI	0        		; N=1?
-		BNE	0        		; NO,Z=0?
-		BVC	0        		; NO,V=0?
-		BCC	0        		; NO,C=0?
+		BMI	$        		; N=1?
+		BNE	$        		; NO,Z=0?
+		BVC	$        		; NO,V=0?
+		BCC	$        		; NO,C=0?
 		EORB	ZERO     		; NO,SET UP EXEC TEST
-		BNE	0        		; SHFTD NUMB=ZERO?
+		BNE	$        		; SHFTD NUMB=ZERO?
 		LSRB				; YES,SHIFT ONCE ZERO STAYS,
 						; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		NOP				; NO
 ;********************************************
 
@@ -1667,184 +1669,184 @@ GRP2:		LDAA	OC377
 						; TO BE SHIFTED
 		LSR	TMP			; SHIFT TMP TO 0177,
 						; N=0,Z=0,V=1,C=1
-		BMI	0			; N=1?
-		BEQ	0			; N0,Z=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BEQ	$			; N0,Z=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		LDAA	TMP			; NO,FETCH SHFTD NUMBER
 		EORA	OC177			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0177?
+		BNE	$			; SHFTD NUMB=0177?
 		LDAA	OC001			; YES
 		STAA	TMP			; SET UP MEM LOCATION
 						; TO BE SHIFTED
 		LSR	TMP			; SHIFT TMP TO ZERO.,
 						; N=0,Z=1,V=1,C=1
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		LDAA	TMP			; NO,FETCH SHFTD NUMB
 		EORA	ZERO			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=ZERO?
+		BNE	$			; SHFTD NUMB=ZERO?
 		LSR	TMP			; YES,SHFT TMP AGAIN TO ZERO
 						; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		LDAA	TMP			; NO,FETCH SHFTD NUMB
 		EORA	ZERO			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0?
+		BNE	$			; SHFTD NUMB=0?
 		NOP				; YES
 ;********************************************
 
 ;               ROTATE ACCUMULATOR A RIGHT (ROR)
 		CLC				; CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		LDAA	OC126			; SET UP TEST
 		RORA				; ROTATE 0126 TO 0053,
 						; N=0,Z=0,V=0,C=0
-		bmi	0			; negative?		*
-		beq	0			; zero?			*
-		bvs	0			; overflow?		*
-		bcs	0			; carry?		*
+		bmi	$			; negative?		*
+		beq	$			; zero?			*
+		bvs	$			; overflow?		*
+		bcs	$			; carry?		*
 		eora	OC053			; 			*
-		bne	0			; 			*
+		bne	$			; 			*
 		ldaa	OC053			; 			*
 		clc				; 			*
-		bcs	0			; 			*
+		bcs	$			; 			*
 		clv				; 			*
-		bvs	0			; 			*
+		bvs	$			; 			*
 		rora				; 			*
-		beq	0			; 			*
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		beq	$			; 			*
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		EORA	OC025			; NO,SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0025?
+		BNE	$			; ROTATED NUMB=0025?
 		LDAA	OC025			; YES,RESTORE ACCUM A &
 		SEV				; SET OVERFLOW
-		BVC	0			; VERIFY OVERFLOW SET
+		BVC	$			; VERIFY OVERFLOW SET
 		RORA				; ROTATE 0025 TO 0212,
 						; N=5,Z=0,V=0,C=1
-		BPL	0			; N=0?
-		BVS	0			; ,NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BVS	$			; ,NO,V=1?
+		BCC	$			; NO,C=0?
 		EORA	OC212			; NO,SET UP EXEC TEST
-		BNE	0			; ROTATED NUMF=0212?
+		BNE	$			; ROTATED NUMF=0212?
 		LDAA	OC212			; YES,RESTORE ACCUM A
 		RORA				; ROTATE 0212 TO 0305,
 						; N=1,Z=0,V=1,C=0
-		BPL	0			; N=0?			*
-		BVC	0			; NO,V=0?		*
-		BCS	0			; NO,C=1?		*
+		BPL	$			; N=0?			*
+		BVC	$			; NO,V=0?		*
+		BCS	$			; NO,C=1?		*
 		EORA	OC305			; NO,SET UP EXEC TEST	*
-		BNE	0			; ES,CLEAR CARRY	*
-		BCS	0			; VERIFY CARRY CLEARED	*
+		BNE	$			; ES,CLEAR CARRY	*
+		BCS	$			; VERIFY CARRY CLEARED	*
 		LDAa	OC305			; SET UP NEXT TEST	*
 		rora				; rotate 0305 to 0142,	*
 						; n=0,z=0,v=1,c=1	*
-		bmi	0			; 			*
-		beq	0			; 			*
-		bvc	0			; 			*
-		bcc	0			; 			*
+		bmi	$			; 			*
+		beq	$			; 			*
+		bvc	$			; 			*
+		bcc	$			; 			*
 		EORA	OC142			; NO,SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0142?
+		BNE	$			; ROTATED NUMB=0142?
 		CLC				; YES,CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLERAED
+		BCS	$			; VERIFY CARRY CLERAED
 		LDAA	OC001			; SET UP NET TEST
 		RORA				; SHIFT OC001 TO
 						; ZERO,Z=1
-		BNE	0			; Z=0?
+		BNE	$			; Z=0?
 		EORA	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; Z=0?
+		BNE	$			; Z=0?
 		RORA				; VERIFY CARRY CLEARED
 		LDAB	OC126			; SET UP TEST
 		RORB				; ROTATE 0126 TO 0053,
 						; N=0,Z=0,V=0,C=0
-		BMI	0			; N=1?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORB	OC053			; NO,SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0053?
+		BNE	$			; ROTATED NUMB=0053?
 		LDAB	OC025			; YES,RESTORE ACCUM B &
 		SEC				; SET carry
-		BCC	0        		; VERIFY carry set
+		BCC	$        		; VERIFY carry set
 		LDAB	OC212    		; YES,RESTORE ACCUM B
 		RORB				; ROTATE 0212 TO 0305,
 						; N=1,Z=0,V=1,C=0
-		BPL	0			; N=0?
-		BVC	0			; NO,V=0?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BVC	$			; NO,V=0?
+		BCS	$			; NO,C=1?
 		EORB	OC305			; NO,SET UP EXEC TEST
-		BNE	0			; ES,CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BNE	$			; ES,CLEAR CARRY
+		BCS	$			; VERIFY CARRY CLEARED
 		LDAB	OC001			; SET UP NEXT TEST
 		RORB				; ROTATE 0001 TO
 						; ZERO,Z=1
-		BNE	0			; Z=0?
+		BNE	$			; Z=0?
 		EORB	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; Z=0?
+		BNE	$			; Z=0?
 		RORB				; YES,ROTATE ACCUM B TO
 						; CLEARY CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		LDAA	OC126			; SET UP TEST
 		STAA	TMP			; SET UP MEM LOCATION TO BE S
 		ROR	TMP			; ROTATE 0126 TO 0053
 						; N=0,Z=0,V=0,C=0
-		BMI	0			; N=1?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		LDAA	TMP			; NO,FETCH RORATED NUMB
 		EORA	OC053			; SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0053?
+		BNE	$			; ROTATED NUMB=0053?
 		ROR	TMP			; ROTATE 0053 TO 0025,
 						; N=0,Z=0,V=1,C=1
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		LDAA	TMP			; FETCH ROTATED NUMB
 		EORA	OC025			; SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0025?
+		BNE	$			; ROTATED NUMB=0025?
 		SEV				; YES,SET OVERFLOW
-		BVC	0			; VERIFY OVERFLOW SET
+		BVC	$			; VERIFY OVERFLOW SET
 		ROR	TMP			; ROTATE 0025 TO 0212,
 						; N=1,Z=0,V=0,C=1
-		BPL	0			; N=0?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		LDAA	TMP			; NO,FETCH ROTATED NUMB
 		EORA	OC212			; SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0212?
+		BNE	$			; ROTATED NUMB=0212?
 		ROR	TMP			; ROTATE 0212 TO 0305,
 						; N=1,Z=0,V=1,C=0
-		BPL	0			; N=0?
-		BVC	0			; NO,V=0?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BVC	$			; NO,V=0?
+		BCS	$			; NO,C=1?
 		LDAA	TMP			; NO,FETCH ROTATED NUMB
 		EORA	OC305			; SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0305?
+		BNE	$			; ROTATED NUMB=0305?
 		ROR	TMP			; ROTATE 0305 TO 0142,N=0
-		BMI	0			; N=1?
+		BMI	$			; N=1?
 		LDAA	TMP			; NO,FETCH ROTATED NUMB
 		EORA	OC142			; SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0142?
+		BNE	$			; ROTATED NUMB=0142?
 		CLC				; YES,CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		LDAA	OC001			; SET UP EXEC TEST
 		STAA	TMP			; SET UP MEM LOCATION TO BE R
 		ROR	TMP			; ROTATE 0001 TO
 						; ZERO,Z=1
-		BNE	0			; Z=0?
+		BNE	$			; Z=0?
 		LDAA	TMP			; NO,FETCH ROTATED NUMB
 		EORA	ZERO			; SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=ZERO?
+		BNE	$			; ROTATED NUMB=ZERO?
 		ROR	TMP			; YES,ROTATE ZERO TO
 						; 0200,Z=0
-		BEQ	0			; Z=1?
+		BEQ	$			; Z=1?
 		LDAA	TMP			; NO,FETCH ROTATED NUMB
 		EORA	OC200			; SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0200?
+		BNE	$			; ROTATED NUMB=0200?
 		NOP				; YES
 ;********************************************
 
@@ -1852,42 +1854,42 @@ GRP2:		LDAA	OC377
 		LDAA	OC125			; SET UP TEST
 		ASRA				; SHIFT 0125 TO 0052,
 						; N=0,V=1,C=1
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		EORA	OC052			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0052?
+		BNE	$			; SHFTD NUMB=0052?
 		LDAA	OC052			; YES,RESTORE ACCUM A
 		SEV				; & SET (OVERFLOW
-		BVC	0			;  VERIFY OVERFLOW SET
+		BVC	$			;  VERIFY OVERFLOW SET
 		ASRA				; SHIFT 0052 TO 0025,
 						; N=0,V=0,C=0
-		BMI	0			; N=1?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORA	OC025			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0025?
+		BNE	$			; SHFTD NUMB=0025?
 		LDAA	OC252			; YES,SET UP NEXT TEST
 		ASRA				; SHIFT 0252 TO 0325,
 						; N=1,V=1,C=0
-		BPL	0			; N=0?
-		BVC	0			; NO,V=0?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BVC	$			; NO,V=0?
+		BCS	$			; NO,C=1?
 		EORA	OC325			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=A325?
+		BNE	$			; SHFTD NUMB=A325?
 		LDAA	OC325			; YES,RESTORE ACCUM A &
 		SEV				; SET OVERFLOW
-		BVC	0			; VERIFY OVERFLOW SET
+		BVC	$			; VERIFY OVERFLOW SET
 		ASRA				; SHIFT 0325 TO 0352,
 						; N=1,V=0,C=1
-		BPL	0			; N=0?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORA	OC352			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0352?
+		BNE	$			; SHFTD NUMB=0352?
 		LDAA	OC001			; YES,SET UP NEXT TEST
 		ASRA				; SHIFT 0001 TO ZERO,Z=1
-		BNE	0			; Z=0?
+		BNE	$			; Z=0?
 		NOP				; NO
 ;********************************************
 
@@ -1895,42 +1897,42 @@ GRP2:		LDAA	OC377
 		LDAB	OC125			; SET UP TEST
 		ASRB				; SHIFT 0125 TO 0052,
 						; N=0,V=1,C=1
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		EORB	OC052			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0052?
+		BNE	$			; SHFTD NUMB=0052?
 		LDAB	OC052			; YES,RESTORE ACCUM B
 		SEV				; & OVERFLOW
-		BVC	0			; VERIFY OVERFLOW SET
+		BVC	$			; VERIFY OVERFLOW SET
 		ASRB				; SHIFT 0052 TO 0025
 						; N=0,V=0,C=0
-		BMI	0			; N=1?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORB	OC025			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0025?
+		BNE	$			; SHFTD NUMB=0025?
 		LDAB	OC252			; YES,SET UP NEXT TEST
 		ASRB				; SHIFT 0252 TO 0325,
 						; N=1,V=1,C=0
-		BPL	0			; N=0?
-		BVC	0			; NO,V=0?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BVC	$			; NO,V=0?
+		BCS	$			; NO,C=1?
 		EORB	OC325			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0325?
+		BNE	$			; SHFTD NUMB=0325?
 		LDAB	OC325			; YES,RESTORE ACCUM B
 		SEV				; &SET OVERFLOW
-		BVC	0			; VERIFY OVERFLOW SET
+		BVC	$			; VERIFY OVERFLOW SET
 		ASRB				; SHIFT 0325 TO 0352,
 						; N=1,V=0,C=1
-		BPL	0			; N=0?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORB	OC352			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0352
+		BNE	$			; SHFTD NUMB=0352
 		LDAB	OC001			; YES,SET UP NEXT TEST
 		ASRB				; SHIFT 0001 TO ZERO,Z=1
-		BNE	0			; Z=0?
+		BNE	$			; Z=0?
 		NOP				; NO
 ;********************************************
 
@@ -1939,113 +1941,113 @@ GRP2:		LDAA	OC377
 		STAA	TMP
 		ASR	TMP			; SHIFT 0125 TO 0052,
 						; N=0,V=1,C=1
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		LDAA	TMP			; NO,FETCH SHFTD NUMB
 		EORA	OC052			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0052?
+		BNE	$			; SHFTD NUMB=0052?
 		SEV				; SHFTD NUMB =0025?
 		LDAA	OC252			; YES,SET UP NEXT TEST
 		STAA	TMP
 		ASR	TMP			; SHIFT 0252 TO 0325,
 						; N=1,V=1,C=0
-		BPL	0			; N=0?
-		BVC	0			; NO,V=0?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BVC	$			; NO,V=0?
+		BCS	$			; NO,C=1?
 		LDAA	TMP			; NO,FETCH SHFTD NUMB
 		EORA	OC325			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0325?
+		BNE	$			; SHFTD NUMB=0325?
 		SEV				; YES,SET OVERFLOW
-		BVC	0			; VERIFY OVERFLOW SET
+		BVC	$			; VERIFY OVERFLOW SET
 		ASR	TMP			; SHIFT0325 TO 0352
 						; N=1,V=0,C=1
-		BPL	0			; N=0?
-		BVS	0			; NO,V=1          NO
+		BPL	$			; N=0?
+		BVS	$			; NO,V=1          NO
 ;********************************************
 
 ;               ARITHMETICALLY SHIFT LEFT ACCUM A (ASL)
 		LDAA	OC135
 		ASLA				; SHIFT 0135 TO 0272,
 						; N=1,Z=0,V=1,C=0
-		BPL	0			; N=0?				*
-		BEQ	0			; NO,Z=1?			*
-		BVC	0			; NO,V=0?			*
-		BCS	0			; NO,C=1?			*
+		BPL	$			; N=0?				*
+		BEQ	$			; NO,Z=1?			*
+		BVC	$			; NO,V=0?			*
+		BCS	$			; NO,C=1?			*
 		EORa	OC272			; NO,SET UP EXEC TEST		*
-		BNE	0			; SHFTD NUMB=0272?		*
+		BNE	$			; SHFTD NUMB=0272?		*
 		LDAa	OC272			; YES,RESTORE ACCUM B		*
 		ASLa				; SHIFT 0272 TO 0164		*
 						; N=0,V=1,C=1			*
-		BMI	0			; N=1?				*
-		BVC	0			; NO,V=0?			*
-		BCC	0			; NO,C=0?			*
+		BMI	$			; N=1?				*
+		BVC	$			; NO,V=0?			*
+		BCC	$			; NO,C=0?			*
 		EORa	OC164			; NO,SET UP EXEC TEST		*
-		BNE	0			; SHFTD NUMB=0164?
+		BNE	$			; SHFTD NUMB=0164?
 		LDAA	OC164			; YES,RESTORE ACCUM A
 		ASLA				; SHIFT 0164 TO 0350,
 						; N=1,V=1,C=0
-		BPL	0			; N=0?
-		BVC	0			; NO,V=0?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BVC	$			; NO,V=0?
+		BCS	$			; NO,C=1?
 		EORA	OC350			; NO,SET UP EXEC TEST
-		bne	0
+		bne	$
 		LDAA	OC320			; YES,RESTORE ACCUM A
 		ASLA				; SHIFT 0320 TO
 						; 0240,V=0
-		BVS	0			; V=1?
+		BVS	$			; V=1?
 		ASLA				; NO,SHIFT 0240 TO
 						; 0100,V=1
-		BVC	0			; =0?
+		BVC	$			; =0?
 		ASLA				; NO,SHIFT 0100
 						; TO 0200,Z=0
-		BEQ	0			; Z=1?
+		BEQ	$			; Z=1?
 		ASLA				; NO,SHIFT 0200
 						; TO ZERO,Z=1,V=1
-		BNE	0			;Z=0?
-		BVC	0			;NO,V=0?
+		BNE	$			;Z=0?
+		BVC	$			;NO,V=0?
 		EORA	ZERO			;NO,SET UP EXEC TE**************************************
 
 ;               ARITHMETICALLY SHIFT LEFT ACCUM B (ASL)
 		LDAB	OC135
 		ASLB				; SHIFT 0135 TO 0272,
 						; N=1,Z=0,V=1,C=0
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVC	0			; NO,V=0?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVC	$			; NO,V=0?
+		BCS	$			; NO,C=1?
 		EORB	OC272			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0272?
+		BNE	$			; SHFTD NUMB=0272?
 		LDAB	OC272			; YES,RESTORE ACCUM B
 		ASLB				; SHIFT 0272 TO 0164
 						; N=0,V=1,C=1
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		EORB	OC164			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0164?
+		BNE	$			; SHFTD NUMB=0164?
 		LDAB	OC164			; YES,RESTORE ACCUM B
 		ASLB				; SHIFT 0164 TO 0350,
 						; N=1,V=1,C=0
-		BPL	0			; N=0?
-		BVC	0			; v=0?
-		bcs	0			; NO,C=0?
+		BPL	$			; N=0?
+		BVC	$			; v=0?
+		bcs	$			; NO,C=0?
 		EORB	OC350			; NO,SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0350?
+		BNE	$			; SHFTD NUMB=0350?
 		LDAB	OC320			; YES,RESTORE ACCUM B
 		ASLB				; SHIFT 0320 TO
 						; 0240,V=0
-		BVS	0			; V=1?
+		BVS	$			; V=1?
 		ASLB				; NO,SHIFT 0240
 						; TO 0100,V=1
-		BVC	0			; V=0?
+		BVC	$			; V=0?
 		ASLB				; NO,SHIFT 0100
 						; TO 0200,Z=0
-		BEQ	0			; Z=1?
+		BEQ	$			; Z=1?
 		ASLB				; NO,SHIFT 0200
 						; TO ZERO,Z=1,V=1
-		BNE	0			; Z=0?
-		BVC	0			; NO,V=0?
+		BNE	$			; Z=0?
+		BVC	$			; NO,V=0?
 		EORB	ZERO			; NO,SET UP EXEC TEST
 ;*****************
 
@@ -2054,442 +2056,442 @@ GRP2:		LDAA	OC377
 		STAA	TMP			; SET UP MEM LOCATION TO BE S
 		ASL	TMP			; SHIFT 0135 TO 0272,
 						; N=1,Z=0,V=1,C=1
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVC	0			; NO,NO,V=0?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVC	$			; NO,NO,V=0?
+		BCS	$			; NO,C=1?
 		LDAA	TMP			; NO,FETCH SHFTD NUMB
 		EORA	OC272			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0272
+		BNE	$			; SHFTD NUMB=0272
 		ASL	TMP			; YES,SHIFT 0272 TO 0164,
 						; N=0,V=1,C=1
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		LDAA	TMP			; NO,
 		eora	OC164
-		bne	0
+		bne	$
 		asl	TMP			; shift 0164 to 0350
 						; N=1,V=1,C=0
-		BPL	0			; N=0?
-		BVC	0			; v=0?
-		bcs	0			; NO,C=0?
+		BPL	$			; N=0?
+		BVC	$			; v=0?
+		bcs	$			; NO,C=0?
 		LDAA	TMP			; NO,FETCH SHFTD NUMB
 		EORA	OC350			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0350?
+		BNE	$			; SHFTD NUMB=0350?
 		ASL	TMP			; YES,SHIFT 0350 TO 0320
 						; N=1,Z=0,C=1
-		BPL	0			; N=0?
-		BVS	0			; NO,V=1?
-		BCC	0			; C=0?
+		BPL	$			; N=0?
+		BVS	$			; NO,V=1?
+		BCC	$			; C=0?
 		LDAA	TMP			; NO,FETCH SHFTD NUMB
 		EORA	OC320			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0320?
+		BNE	$			; SHFTD NUMB=0320?
 		ASL	TMP			; YES,SHIFT 0320 TO
 						; 0240,V=0
-		BVS	0			; V=1?
+		BVS	$			; V=1?
 		ASL	TMP			; NO,SHIFT 0240
 						; TO 0100,V=1
-		BVC	0			; V=1?
+		BVC	$			; V=1?
 		ASL	TMP			; NO,SHIFT 0100
 						; TO 0200,Z=0
-		BEQ	0			; Z=1?
+		BEQ	$			; Z=1?
 		ASL	TMP			; NO,SHIFT 0200
 						; TO ZERO,Z=1,V=1
-		BNE	0			; Z=0?
-		BVC	0			; NO,V=0?
+		BNE	$			; Z=0?
+		BVC	$			; NO,V=0?
 		LDAA	TMP			; NO,FETCH SHFTD NUMB
 		EORA	ZERO			; SET UP EXEC TEST
-		BNE	0			; SHFTD NUMB=0200?
+		BNE	$			; SHFTD NUMB=0200?
 		ASL	TMP			; YES,SHIFT,CLEARING C BIT,
 						; Z=1,V=0,C=0
-		BNE	0			; Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0
+		BNE	$			; Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$
 
 ;********************************************		*
 ;							*
 ;               ROTATE LEFT ACCUMULATOR a (ROL)		*
 ;							*
 		CLC				; CLEAR CARRY			*
-		BCS	0        		; VERIFY CARRY IS CLEARED	*
+		BCS	$        		; VERIFY CARRY IS CLEARED	*
 		LDAa	OC252    		; SET UP TEST			*
 		ROLA				; ROTATE 0252 TO 0124,
 						; N=0,V=1,C=1
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		EORA	OC124			; NO,SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0124?
+		BNE	$			; ROTATED NUMB=0124?
 		LDAA	OC124			; YES,RESTORE ACCUM A
 		ROLA				; ROTATE 0124 TO 0251,
 						; N=1,V=1,C=0
-		BPL	0			; N=0?
-		BVC	0			; NO,V=0?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BVC	$			; NO,V=0?
+		BCS	$			; NO,C=1?
 		EORA	OC251			; NO,SET UP EXECTEST
-		BNE	0			; ROTATED NUMB=0251?
+		BNE	$			; ROTATED NUMB=0251?
 		LDAA	OC251			; YES,RESTORE ACCUM A
 		ROLA				; ROTATE 0251 TO 0122,
 						; N=0,C=1
-		BMI	0			; N=1?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BCC	$			; NO,C=0?
 		EORA	OC122			; NO,SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0122?
+		BNE	$			; ROTATED NUMB=0122?
 		LDAA	OC200			; YES,SET UP NEXT TEST
 		CLC				; CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		ROLA				; ROTATE 0200 TO ZERO,
 						; Z=1,V=1
-		BNE	0			; Z=0?
-		BVC	0			; NO,V=0?
+		BNE	$			; Z=0?
+		BVC	$			; NO,V=0?
 		ROLA				; NO,ROTATE ZERO TO 0001,
 						; Z=0,V=0
-		BEQ	0			; Z=1?
-		BVS	0			; NO,V=1?
+		BEQ	$			; Z=1?
+		BVS	$			; NO,V=1?
 		LDAA	OC300			; NO,SET UP NEXT TEST
 		ROLA				; ROTATE 0300 TO
 						; 0200,V=0
-		BVS	0			; V=1?
+		BVS	$			; V=1?
 		NOP				; NO
 ;********************************************
 
 ;               ROTATE LEFT ACCUMULATOR B (ROL)
 		CLC				; CLEAR CARRY
-		BCS	0			; VERIFY CARRY IS CLEARED
+		BCS	$			; VERIFY CARRY IS CLEARED
 		LDAB	OC252			; SET UP TEST
 		ROLB				; ROTATE 0252 TO 0124,
 						; N=0,V=1,C=1
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		EORB	OC124			; NO,SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0124?
+		BNE	$			; ROTATED NUMB=0124?
 		LDAB	OC124			; YES,RESTORE ACCUM B
 		ROLB				; ROTATE 0124 TO 251,
 						; N=1,V=1,C=0
-		BPL	0			; N=0?
-		BVC	0			; NO,V=0?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BVC	$			; NO,V=0?
+		BCS	$			; NO,C=1?
 		EORB	OC251			; NO,SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0251?
+		BNE	$			; ROTATED NUMB=0251?
 		LDAB	OC251			; YES,RESTORE ACCUM B
 		ROLB				; ROTATE 0251 TO 0122,
 						; N=0,C=1
-		BMI	0			; N=|?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=|?
+		BCC	$			; NO,C=0?
 		EORB	OC122			; NO,SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0122?
+		BNE	$			; ROTATED NUMB=0122?
 		LDAB	OC200			; YES,SET UP NEXT TEST
 		CLC				; CLEAR CARRY
-		BCS	0			; CLEARED
+		BCS	$			; CLEARED
 		ROLB				; ROTATE 0200 TO ZERO,
 						; Z=1,V=1
-		BNE	0			; Z=0?
-		BVC	0			; NO,V=0?
+		BNE	$			; Z=0?
+		BVC	$			; NO,V=0?
 		ROLB				; NO,ROTATE ZERO TO 0001,
 						; Z=0,V=0
-		BEQ	0			; Z=1?
-		BVS	0			; NO,V=1?
+		BEQ	$			; Z=1?
+		BVS	$			; NO,V=1?
 		LDAB	OC300			; NO,SET UP NEXT TEST
 		ROLB				; ROTATE 0300 TO
 						; 0200,V=0
-		BVS	0			; V=1?
+		BVS	$			; V=1?
 		NOP				; NO
 ;********************************************
 
 ;               ROTATE LEFT MEMORY (ROL)
 		CLC				; CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		LDAA	OC252			; SET UP TEST
 		STAA	TMP			; SET UP MEM LOCATION TO BE R
 		ROL	TMP			; ROTATE 0252 TO 0124,
 						; N=0,V=1,C=1
-		BMI	0			; N=1?
-		BVC	0			; NO,V=0?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BVC	$			; NO,V=0?
+		BCC	$			; NO,C=0?
 		ldaa	TMP
 		EORa	OC124			; NO,SET UP EXEC TEST		*
-		BNE	0			; ROTATED NUMB=0124?		*
+		BNE	$			; ROTATED NUMB=0124?		*
 		LDAa	OC124			; YES,RESTORE ACCUM B		*
 		staa	TMP			; 				*
 		ROL	TMP			; ROTATE 0124 TO 251,		*
 						; N=1,V=1,C=0			*
-		BPL	0			; N=0?				*
-		BVC	0			; NO,V=0?			*
-		BCS	0			; NO,C=1?			*
+		BPL	$			; N=0?				*
+		BVC	$			; NO,V=0?			*
+		BCS	$			; NO,C=1?			*
 ;             LDA 0?
 ;             BCS    *        NO,C=1?
 		LDAA	TMP			; NO,FETCH ROTATED NUMB
 		EORA	OC251			; SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0251?
+		BNE	$			; ROTATED NUMB=0251?
 		ROL	TMP			; YES,ROTATE 0251 TO 0122,
 						; N=0,C=1
-		BMI	0			; N=1?
-		BCC	0			; NO,C=0?
+		BMI	$			; N=1?
+		BCC	$			; NO,C=0?
 		LDAA	TMP			; NO,FETCH ROTATED NUMB
 		EORA	OC122			; SET UP EXEC TEST
-		BNE	0			; ROTATED NUMB=0122?
+		BNE	$			; ROTATED NUMB=0122?
 		LDAA	OC200			; YES, SET UP NEXT TEST
 		STAA	TMP			; SET MEM LOCATION TO BE ROTA
 		CLC				; CLEAR CARRY
-		BCS	0			; Z=1?
-		BVS	0			; NO, V=1?
+		BCS	$			; Z=1?
+		BVS	$			; NO, V=1?
 		LDAA	OC300			; NO,SET UP NEXT TEST
 		STAA	TMP			; SET UP MEM LOCATION TO BE R
 		ROL	TMP			; ROTATE 0300 TO
 						; 0200,V=0
-		BVS	0			; V=1?
+		BVS	$			; V=1?
 		NOP				; NO
 ;*********************************************
 
 ;               DECREMENT ACCUMULATOR A (DEC)
 		CLC				; CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		LDAA	OC001			; SET UP TEST
 		DECA				; DCRMT 0001 TO ZERO,
 						; N=0,Z=1,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BCS	$			; NO,C=1?
 		EORA	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB=ZERO?
+		BNE	$			; DCRMTD NUMB=ZERO?
 		SEC				; YES,SET CARRY
-		BCC	0			; VERIFY CARRY SET
+		BCC	$			; VERIFY CARRY SET
 		DECA				; DCRMT ZERO TO -1(0377),
 						; N=1,Z=0,C=1
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BCC	$			; NO,C=0?
 		EORA	OC377			; NO,SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB= -1(377)?
+		BNE	$			; DCRMTD NUMB= -1(377)?
 		LDAA	OC377			; YES,RESTORE ACCUM A
 		DECA				; DCRMT TO -2(0376)
 						; V=0,C=1
-		BVS	0			; V=1?
-		BCC	0			; NO,C=0?
+		BVS	$			; V=1?
+		BCC	$			; NO,C=0?
 		EORA	OC376			; NO,SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB = -2(0376)?
+		BNE	$			; DCRMTD NUMB = -2(0376)?
 		LDAA	OC200			; YES,SET UP NEXT TEST
 		DECA				; DCRMT 0200 TO
 						; 0177,V=1
-		BVC	0			; V=0?
+		BVC	$			; V=0?
 		EORA	OC177			; NO,SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB=0177?
+		BNE	$			; DCRMTD NUMB=0177?
 		NOP				; YES
 ;*********************************************
 
 ;               DECREMENT ACCUMULATOR B (DEC)
 		CLC				; CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		LDAB	OC001			; SET UPPTEST
 		DECB				; DCRMT 0001 TO ZERO,
 						; N=0,Z=1,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BCS	$			; NO,C=1?
 		EORB	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB=ZERO?
+		BNE	$			; DCRMTD NUMB=ZERO?
 		SEC				; YES,SET CARRY
-		BCC	0			; VERIFY CARRY SET
+		BCC	$			; VERIFY CARRY SET
 		DECB				; DCRMT ZERO TO -1(0377)
 						; N=1,Z=0,C=1
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BCC	$			; NO,C=0?
 		EORB	OC377			; NO,SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB= -1(0377)?
+		BNE	$			; DCRMTD NUMB= -1(0377)?
 		LDAB	OC377			; YES,RESTORE ACCUM B
 		DECB				; DCRMT TO -2(0376),
 						; V=0,C=1
-		BVS	0			; V=1?
-		BCC	0			; NO,C=0?
+		BVS	$			; V=1?
+		BCC	$			; NO,C=0?
 		EORB	OC376			; NO,SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB= -2(0376)?
+		BNE	$			; DCRMTD NUMB= -2(0376)?
 		LDAB	OC200			; YES,SET UP NEXT TEST
 		DECB				; DCRMT 0200 TO
 						; 0177,V=1
-		BVC	0			; V=0?
+		BVC	$			; V=0?
 		EORB	OC177			; NO,SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB=0177?
+		BNE	$			; DCRMTD NUMB=0177?
 		NOP				; YES
 ;*********************************************
 
 ;               DECREMENT MEMORY (DEC)
 		CLC				; CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		LDAA	OC001			; SET UP TEST
 		STAA	TMP			; SET UP MEM LOCATION TO BE D
 		DEC	TMP			; DCRMT 0001 TO ZERO,
 						; N=0,Z=1,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BCS	$			; NO,C=1?
 		LDAA	TMP			; NO,FETCH DCRMTD NUMB
 		EORA	ZERO			; SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB=ZERO?
+		BNE	$			; DCRMTD NUMB=ZERO?
 		SEC				; YES,SET CARRY
-		BCC	0			; VERIFY CARRY SET
+		BCC	$			; VERIFY CARRY SET
 		DEC	TMP			; DCRMT ZERO TO -1(0377),
 						; N=1,Z=0,C=1
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BCC	$			; NO,C=0?
 		LDAA	TMP			; NO,FETCH DCRMTD NUMB
 		EORA	OC377			; SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB= -1(0377)?
+		BNE	$			; DCRMTD NUMB= -1(0377)?
 		DEC	TMP			; YES,DCRMT TO -2(0376),
 						; V=0,C=1
-		BVS	0			; V=1?
-		BCC	0			; NO,C=0?
+		BVS	$			; V=1?
+		BCC	$			; NO,C=0?
 		LDAA	TMP			; NO,FETCH DCRMTD NUMB
 		EORA	OC376			; SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB= -2(0376)?
+		BNE	$			; DCRMTD NUMB= -2(0376)?
 		LDAA	OC200			; YES,SET UP NEXT TEST
 		STAA	TMP			; SET UP MEM LOCATION TO BE D
 		DEC	TMP			; DCRMT 0200 TO
 						; 0177,V=1
-		BVC	0			; V=0?
+		BVC	$			; V=0?
 		LDAA	TMP			; NO,FETCH DCRMTD NUMB
 		EORA	OC177			; SET UP EXEC TEST
-		BNE	0			; DCRMTD NUMB=0177?
+		BNE	$			; DCRMTD NUMB=0177?
 		NOP				; YES
 ;*********************************************
 
 ;               INCREMENT ACCUMULATOR A (INC)
 		SEC				; SET CARRY
-		BCC	0			; VERIFY CARRY SET
+		BCC	$			; VERIFY CARRY SET
 		LDAA	OC376			; ACCUM A= -2(0376)
 		INCA				; ICRMT TO -1(0377),
 						; N=1,Z=0,V=0,C=1
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORA	OC377			; NO,SET UP EXEC TEST
-		BNE	0			; INCRMTD NUMB=0377?
+		BNE	$			; INCRMTD NUMB=0377?
 		CLC				; YES,CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		LDAA	OC377			; RESTORE ACCUM A
 		INCA				; ICRMT TO ZERO,
 						; N=0,Z=1,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BCS	$			; NO,C=1?
 		EORA	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; ICRMTD NUMB=ZERO
+		BNE	$			; ICRMTD NUMB=ZERO
 		LDAA	OC177			; YES,SET UP NEXT TEST
-		BVS	0			; VERIFY OVERFLOW= 0
+		BVS	$			; VERIFY OVERFLOW= 0
 		INCA				; ICRMT TO 0200,V=1
-		BVC	0			; V=0?
+		BVC	$			; V=0?
 		EORA	OC200			; NO,SET UP EXEC TEST
-		BNE	0			; ICRMTD NUMB=0200
+		BNE	$			; ICRMTD NUMB=0200
 		NOP				; YES
 ;*********************************************
 
 ;               INCREMENT ACCUMULATOR B (INC)
 		SEC				; SET CARRY
-		BCC	0			; VERIFY CARRY SET
+		BCC	$			; VERIFY CARRY SET
 		LDAB	OC376			; ACCUM B= -2(0376)
 		INCB				; ICRMT TO -1(0377),
 						; N=1,Z=0,V=0,C=1
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		EORB	OC377			; NO,SET UP EXEC TEST
-		BNE	0			; ICRMTD NUMB=0377?
+		BNE	$			; ICRMTD NUMB=0377?
 		CLC				; YES,CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		LDAB	OC377			; RESTORE ACCUM B
 		INCB				; ICRMT TO ZERO,
 						; N=0,Z=1,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BCS	$			; NO,C=1?
 		EORB	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; ICRMTD NUMB=ZERO?
+		BNE	$			; ICRMTD NUMB=ZERO?
 		LDAB	OC177			; YES,SET UP NEXT TEST
-		BVS	0			; VERIFY OVERFLOW=0
+		BVS	$			; VERIFY OVERFLOW=0
 		INCB				; ICRMT TO 0200,V=1
-		BVC	0			; V=0?
+		BVC	$			; V=0?
 		EORB	OC200			; NO,SET UP EXEC TEST
-		BNE	0			; ICRMTD NUMB=0200?
+		BNE	$			; ICRMTD NUMB=0200?
 		NOP				; YES
 ;*********************************************
 
 ;               INCREMENT MEMORY (INC)
 		SEC				; SET CARRY
-		BCC	0			; VERIFY CARRY SET
+		BCC	$			; VERIFY CARRY SET
 		LDAA	OC376
 		STAA	TMP			; SET UP MEM LOCATION TO BE I
 		INC	TMP			; ICRMT TO -1(0377),
 						; N=1,Z=0,V=0,C=1
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCC	0			; NO,C=0?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCC	$			; NO,C=0?
 		LDAA	TMP			; NO,FETCH ICRMTD NUMB
 		EORA	OC377			; SET UP EXEC TEST
-		BNE	0			; ICRMTD NUMB=0377
+		BNE	$			; ICRMTD NUMB=0377
 		CLC				; YES,CLEAR CARRY
-		BCS	0			; VERIFY CARRY CLEARED
+		BCS	$			; VERIFY CARRY CLEARED
 		INC	TMP			; ICRMT TO ZERO,
 						; N=0,Z=1,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BCS	$			; NO,C=1?
 		LDAA	TMP			; NO,FETCH ICRMTD NUMB
 		EORA	ZERO			; SET UP EXEC TEST
-		BNE	0			; ICRMTD NUMB= ZERO?
+		BNE	$			; ICRMTD NUMB= ZERO?
 		LDAA	OC177			; YES,SET UP NEXT TEST
 		STAA	TMP			; SET UP MEM LOCATION TO BE I
-		BVS	0			; VERIFY OVERFLOW=0
+		BVS	$			; VERIFY OVERFLOW=0
 		INC	TMP			; ICRMT TO 0200,V=1
-		BVC	0			; V=0?
+		BVC	$			; V=0?
 		LDAA	TMP			; NO,FETCH ICRMTD NUMB
 		EORA	OC200			; SET UP EXEC TEST
-		BNE	0			; ICRMTD NUMB=0200?
+		BNE	$			; ICRMTD NUMB=0200?
 		NOP				; YES
 ;*********************************************
 
 ;               TEST ACCUMULATOR A (TST)
 		LDAA	OC377			; SET UP TEST
 		TSTA				; N=1,Z=0,V=0,C=0
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORA	OC377			; NO,SET UP EXEC TEST
-		BNE	0			; ACCUM A=0377?
+		BNE	$			; ACCUM A=0377?
 		LDAA	ZERO			; YES,SET UP NEXT TEST
 		TSTA				; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORA	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; ACCUM A=ZERO?
+		BNE	$			; ACCUM A=ZERO?
 		NOP				; YES
 ;*********************************************
 
 ;               TEST ACCUMULATOR B (TST)
 		LDAB	OC377			; SET UP TEST
 		TSTB				; N=1,Z=0,V=0,C=0
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORB	OC377			; NO,SET UP EXEC TEST
-		BNE	0			; TSTED NUMB=0377?
+		BNE	$			; TSTED NUMB=0377?
 		LDAB	ZERO			; YES,SET UP NEXT TEST
 		TSTB				; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORB	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; TESTED NUMB=0?
+		BNE	$			; TESTED NUMB=0?
 		NOP				; YES
 ;*********************************************
 
@@ -2497,70 +2499,70 @@ GRP2:		LDAA	OC377
 		LDAA	OC377			; SET UP TEST
 		STAA	TMP			; SET UP MEM LOCATION TO BE T
 		TST	TMP			; N=1,Z=0,V=0,C=0
-		BPL	0			; N=0?
-		BEQ	0			; NO,Z=1?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BPL	$			; N=0?
+		BEQ	$			; NO,Z=1?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		LDAA	TMP			; NO,FETCH TESTED NUMB
 		EORA	OC377			; SET UP EXEC TEST
-		BNE	0			; TESTED NUMB=0377?
+		BNE	$			; TESTED NUMB=0377?
 		LDAA	ZERO			; YES,SET UP NEXT TEST
 		STAA	TMP			; SET UP MEM LOCATION TO BE T
 		TST	TMP			; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		LDAA	TMP			; NO,FETCH TESTED NUMB
-		BNE	0			; TESTED NUMB=0?
+		BNE	$			; TESTED NUMB=0?
 		NOP				; YES
 ;*********************************************
 
 ;               CLEAR ACCUMULATOR A (CLR)
 		LDAA	OC377			; SET UP TEST
 						; N=1,Z=0
-		BPL	0			; VERIFY N=1
-		BEQ	0			; VERIFY Z=0
+		BPL	$			; VERIFY N=1
+		BEQ	$			; VERIFY Z=0
 		CLRA				; CLEAR 0377 TO ZERO,
 						; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORA	ZERO			; NO,ZET UP EXEC TEST
-		BNE	0			; ACCUM A=0?
+		BNE	$			; ACCUM A=0?
 		CLRA				; CLEAR ZERO TO ZERO,
 						; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORA	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; ACCUM A=ZERO?
+		BNE	$			; ACCUM A=ZERO?
 		NOP				; YES
 ;*********************************************
 
 ;               CLEAR ACCUMULATOR B (CLR)
 		LDAB	OC377			; SET UP TEST
 						; N=1,Z=0
-		BPL	0			; VERIFY N=1
-		BEQ	0			; VERIFY Z=0
+		BPL	$			; VERIFY N=1
+		BEQ	$			; VERIFY Z=0
 		CLRB				; CLEAR 0377 TO ZERO,
 						; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORB	ZERO			; NO,SET UP EXEC TEST
-		BNE	0			; ACCUM B=ZERO?
+		BNE	$			; ACCUM B=ZERO?
 		CLRB				; CLEAR ZERO TO ZERO,
 						; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		EORB	ZERO			; NO, SET UP EXEC TEST
-		BNE	0			; ACCUM B=ZERO?
+		BNE	$			; ACCUM B=ZERO?
 		NOP				; YES
 ;*********************************************
 
@@ -2568,39 +2570,39 @@ GRP2:		LDAA	OC377
 		LDAA	OC377			; SET UP TEST
 		STAA	TMP			; SET UP MEM LOCATION TO BE C
 						; N=1,Z=0
-		BPL	0			; VERIFY N=1
-		BEQ	0			; VERIFY Z=0
+		BPL	$			; VERIFY N=1
+		BEQ	$			; VERIFY Z=0
 		CLR	TMP			; CLEAR 0377 TO ZERO,
 						; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		LDAA	TMP			; NO,FETCH CLEARED NUMB
 		EORA	ZERO			; SET UP EXEC TEST
-		BNE	0			; CLEARED NUMB=0?
+		BNE	$			; CLEARED NUMB=0?
 		CLR	TMP			; CLEAR ZERO TO ZERO,
 						; N=0,Z=1,V=0,C=0
-		BMI	0			; N=1?
-		BNE	0			; NO,Z=0?
-		BVS	0			; NO,V=1?
-		BCS	0			; NO,C=1?
+		BMI	$			; N=1?
+		BNE	$			; NO,Z=0?
+		BVS	$			; NO,V=1?
+		BCS	$			; NO,C=1?
 		LDAA	TMP			; NO,FETCH CLEARED NUMB
 		EORA	ZERO			; SET UP EXEC TEST
-		BNE	0			; CLEARED NUMB=0?
+		BNE	$			; CLEARED NUMB=0?
 		NOP				; YES
 
 ;***************************************************
 
 ;               JUMP
 		JMP	JP1			; FORWARD JUMP
-		BRA	0
+		BRA	$
 JP1:		CLRA				; FLAG
 JP3:		TSTA				; TEST FLAG
 		BNE	JP2			; ONLY GO THRU LOOP ONCE
 		INCA
 		JMP	JP3			; REVERSE JUMP
-		BRA	0
+		BRA	$
 JP2:		NOP
 
 ;********************************************************
@@ -2615,49 +2617,49 @@ JP2:		NOP
 		NEG	0,X 			; NEG USING INDEXED MODE
 		LDAA	TMP 			; SHOULD BE +1 NOW
 		CMPA	#1
-		BNE	0
+		BNE	$
 		COM	0,X			; COM USING INDEX MODE
 		LDAA	TMP			; SHOULD BE 0xFE NOW
 		CMPA	#0xFE
-		BNE	0
+		BNE	$
 		LSR	0,X 			; SHIFT USING INDEX MODE
 		LDAA	TMP 			; SHOULD BE 0x7F NOW
 		CMPA	#0x7F
-		BNE	0
+		BNE	$
 		SEC				; SET TO ROTATE IN 1
 		ROR	0,X 			; ROR USING INDEX MODE
 		LDAA	TMP 			; SHOULD BE 0xBF NOW
 		CMPA	#0xBF
-		BNE	0
+		BNE	$
 		ASR	0,X			; ASR USING INDEX MODE
 		LDAA	TMP			; SHOULD BE 0xDF NOW
 		CMPA	#0xDF
-		BNE	0
+		BNE	$
 		ASL	0,X			; ASL USING INDEX MODE
 		LDAA	TMP			; SHOULD BE 0xBE NOW
 		CMPA	#0xBE
-		BNE	0
+		BNE	$
 		SEC				; SET TO ROTATE IN 1
 		ROL	0,X			; ROL USING INDEX MODE
 		LDAA	TMP			; SHOULD BE 0x7D NOW
 		CMPA	#0x7D
-		BNE	0
+		BNE	$
 		DEC	0,X			; DEC USING INDEX MODE
 		LDAA	TMP			; SHOULD BE 0x7C NOW
 		CMPA	#0x7C
-		BNE	0
+		BNE	$
 		INC	0,X			; INC USING INDEX MODE
 		LDAA	TMP			; SHOULD BE 0x7D AGAIN
 		CMPA	#0x7D
-		BNE	0
+		BNE	$
 		CLR	0,X			; CLR USING INDEX MODE
 		LDAA	TMP			; SHOULD BE ZERO
-		BNE	0
+		BNE	$
 		TST	0,X			; TST USING INDEX MODE
-		BNE	0
+		BNE	$
 		LDX	#JP4			; DO INDEXXED JUMP
 		JMP	0,X
-		BRA	0
+		BRA	$
 JP4:		NOP
 		LDX	#TMP-128		; TRY INDEX WITH NON-ZERO OFFSET
 		CLR	128,X
@@ -2665,7 +2667,7 @@ JP4:		NOP
 		COM	127,X
 		LDAA	TMP
 		CMPA	#-1
-		BNE	0
+		BNE	$
 
 ;*********************************************
 ;      ALL DONE - 
@@ -2750,59 +2752,59 @@ GRP4:		LDAA	#0x00
 		TAB
 		TPA
 		EORA	#0xC4
-		BNE	0        		; DATA 00
+		BNE	$        		; DATA 00
 		EORB	#0x00
-		BNE	0
+		BNE	$
 		LDAA	#0xAA
 		TAB
 		TPA
 		EORA	#0xC8     		; DATA AA
-		BNE	0
+		BNE	$
 		EORB	#0xAA
-		BNE	0
+		BNE	$
 		LDAA	#0xFF
 		TAB
 		TPA
 		EORA	#0xC8
-		BNE	0        		; DATA FF
+		BNE	$        		; DATA FF
 		EORB	#0xFF
-		BNE	0
+		BNE	$
 
 ;      TEST TBA
 		LDAB	#0x00
 		TAP
 		TBA
-		BCS	0
-		BVS	0        		; DATA 00
+		BCS	$
+		BVS	$        		; DATA 00
 		ABA
-		BMI	0
+		BMI	$
 		EORA	#0x00
-		BNE	0
+		BNE	$
 		TPA
 		EORA	#0xC4
-		BNE	0
+		BNE	$
 		LDAB	#0xAA
 		TBA
-		BCS	0        		; DATA AA
-		BVS	0
-		BPL	0
-		BEQ	0
+		BCS	$        		; DATA AA
+		BVS	$
+		BPL	$
+		BEQ	$
 		EORA	#0xAA
-		BNE	0
+		BNE	$
 		TPA
 		EORA	#0xC4
-		BNE	0
+		BNE	$
 		LDAB	#0xFF
 		TBA
-		BCS	0
-		BVS	0
-		BPL	0
-		BEQ	0
+		BCS	$
+		BVS	$
+		BPL	$
+		BEQ	$
 		EORA	#0xFF     		; DATA FF
-		BNE	0
+		BNE	$
 		TPA
 		EORA	#0xC4
-		BNE	0
+		BNE	$
 
 ;      TEST ABA
 		LDS	#STACK
@@ -2812,80 +2814,80 @@ GRP4:		LDAA	#0x00
 		PSHA 
 		TPA
 		EORA	#0xC0     		; DATA #1
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x05
-		BNE	0
+		BNE	$
 		LDAA	#0x7A
 		LDAB	#0x7A
 		ABA
 		PSHA 
 		TPA
 		EORA	#0xEA     		; DATA #2
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0xF4
-		BNE	0
+		BNE	$
 		LDAA	#0x40
 		LDAB	#0xC0
 		ABA
 		PSHA 
 		TPA				; DATA 3
 		EORA	#0xC5
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x00
-		BNE	0
+		BNE	$
 		LDAA	#0x00
 		LDAB	#0x80
 		ABA
 		PSHA 
 		TPA				; DATA 4
 		EORA	#0xC8
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x80
-		BNE	0
+		BNE	$
 		LDAA	#0xC0
 		LDAB	#0x40
 		ABA
 		PSHA 
 		TPA
 		EORA	#0xC5     		; DATA 5
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x00
-		BNE	0
+		BNE	$
 		LDAA	#0x80
 		LDAB	#0x00
 		ABA
 		PSHA 
 		TPA				; DATA 6
 		EORA	#0xC8
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x80
-		BNE	0
+		BNE	$
 		LDAA	#0x80
 		LDAB	#0x80
 		ABA
 		PSHA 
 		TPA				; DATA 7
 		EORA	#0xC7
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x00
-		BNE	0
+		BNE	$
 		LDAA	#0xC0
 		LDAB	#0xC0
 		ABA
 		PSHA 
 		TPA
 		EORA	#0xC9
-		BNE	0
+		BNE	$
 		PULA				; DATA 8
 		EORA	#0x80
-		BNE	0
+		BNE	$
 
 ;      TEST SBA
 		LDAA	#0x0A
@@ -2894,84 +2896,84 @@ GRP4:		LDAA	#0x00
 		PSHA 
 		TPA
 		EORA	#0xC4     		; DATA 1
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x00
-		BNE	0
+		BNE	$
 		LDAA	#0x70
 		LDAB	#0x7F
 		SBA
 		PSHA 
 		TPA				; DATA 2
 		EORA	#0xC9
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0xF1
-		BNE	0
+		BNE	$
 		LDAA	#0x48
 		LDAB	#0xF7
 		SBA
 		PSHA 
 		TPA				; DATA 3
 		EORA	#0xC1
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x51
-		BNE	0
+		BNE	$
 		LDAA	#0x48
 		LDAB	#0xB7
 		SBA
 		PSHA				; DATA 4
 		TPA
 		EORA	#0xCB
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x91
-		BNE	0
+		BNE	$
 		LDAA	#0x8A
 		LDAB	#0x7F
 		SBA
 		PSHA 
 		TPA
 		EORA	#0xC2
-		BNE	0        		; DATA 5
+		BNE	$        		; DATA 5
 		PULA 
 		EORA	#0x0B
-		BNE	0
+		BNE	$
 		EORB	#0x7F
-		BNE	0
+		BNE	$
 		LDAA	#0xCB
 		LDAB	#0x0F
 		SBA
 		PSHA 
 		TPA
 		EORA	#0xC8
-		BNE	0        		; DATA 6
+		BNE	$        		; DATA 6
 		PULA 
 		EORA	#0xBC
-		BNE	0
+		BNE	$
 		LDAA	#0xCB
 		LDAB	#0x81
 		SBA
 		PSHA 
 		TPA				; DATA 7
 		EORA	#0xC0
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x4A
-		BNE	0
+		BNE	$
 		LDAA	#0x8B
 		LDAB	#0xF0
 		SBA
 		PSHA 
 		TPA				; DATA 8
 		EORA	#0xC9
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x9B
-		BNE	0
+		BNE	$
 		EORB	#0xF0
-		BNE	0
+		BNE	$
 
 ;      TEST CBA
 		LDAA	#0x0A
@@ -2980,24 +2982,24 @@ GRP4:		LDAA	#0x00
 		PSHA 
 		TPA				; DATA 1
 		EORA	#0xC4
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x0A
-		BNE	0
+		BNE	$
 		EORB	#0x0A
-		BNE	0
+		BNE	$
 		LDAA	#0x48
 		LDAB	#0xB7
 		CBA
 		PSHA 
 		TPA
 		EORA	#0xCB			; DATA 4
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x48
-		BNE	0
+		BNE	$
 		EORB	#0xB7
-		BNE	0
+		BNE	$
 
 ;      TEST DAA
 		LDAA	#0xE1
@@ -3007,10 +3009,10 @@ GRP4:		LDAA	#0x00
 		PSHA 
 		TPA
 		EORA	#0xE1
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x66
-		BNE	0
+		BNE	$
 		LDAA	#0xC0
 		TAP
 		LDAA	#0x99
@@ -3018,10 +3020,10 @@ GRP4:		LDAA	#0x00
 		PSHA 
 		TPA
 		EORA	#0xC8
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x99
-		BNE	0
+		BNE	$
 		LDAA	#0xC0
 		TAP
 		LDAA	#0xAA
@@ -3029,10 +3031,10 @@ GRP4:		LDAA	#0x00
 		PSHA				; DATA 3
 		TPA
 		EORA	#0xC1
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x10	;;;* Need to confirm the correct result here... YES 0xC1 and 0x10 correct on real CPU!
-		BNE	0
+		BNE	$
 		LDAA	#0xC0
 		TAP
 		LDAA	#0x9A
@@ -3040,10 +3042,10 @@ GRP4:		LDAA	#0x00
 		PSHA 
 		TPA
 		EORA	#0xC5
-		BNE	0
+		BNE	$
 		PULA 
 		EORA	#0x00
-		BNE	0
+		BNE	$
 
 		NOP
 		NOP
@@ -3089,17 +3091,17 @@ GRP4:		LDAA	#0x00
 GRP5:		LDS	#TEMP				; LOAD STACK REG
 		TSX					; TRANSFER SP+1 -> X
 		CPX	#TEMP+1 			; OK?
-		BNE	0
+		BNE	$
 		LDS	#0x1FFF			; TRY A 16 BIT VERSION
 		TSX					; SP + 1 --> X
 		CPX	#0x2000
-		BNE	0
+		BNE	$
 		CLRA					; MAKE SURE TSX DOESN'T CHANGE ANY CC'S
 		TAP
 		TSX
 		TPA
 		CMPA	#0xC0
-		BNE	0
+		BNE	$
 
 ;*********************************************************
 
@@ -3110,13 +3112,13 @@ GRP5:		LDS	#TEMP				; LOAD STACK REG
 		STS	TEMP				; SAVE NEW SP
 		LDX	TEMP				; GET IT IN X
 		CPX	#TEMP				; OK?
-		BNE	0				; HANG IF NOT
+		BNE	$				; HANG IF NOT
 		CLRA					; MAKE SURE TXS DOESN'T CHANGE ANY CC'S
 		TAP
 		TXS
 		TPA
 		CMPA	#0xC0
-		BNE	0
+		BNE	$
 
 ;**********************************************************
 
@@ -3125,18 +3127,18 @@ GRP5:		LDS	#TEMP				; LOAD STACK REG
 		INS					; INC SP
 		TSX					; SP+1 -> X
 		CPX	#TEMP+2			; OK?
-		BNE	0				; HANG IF NOT
+		BNE	$				; HANG IF NOT
 		LDS	#0xFF
 		INS					; FF+1 -> 100
 		TSX					; SP+1 -> X
 		CPX	#0x101				; OK?
-		BNE	0				; HANG IF NOT
+		BNE	$				; HANG IF NOT
 		CLRA					; MAKE SURE INS DOESN'T CHANGE ANY CC'S
 		TAP
 		INS
 		TPA
 		CMPA	#0xC0
-		BNE	0
+		BNE	$
 
 ;**********************************************************
 
@@ -3147,13 +3149,13 @@ DS1:		LDS	#0x100				; INIT SP
 		DES					; SP-1 -> SP
 		TSX					; SP+1 --> X
 		CPX	#0x100				; OK?
-		BNE	0
+		BNE	$
 		CLRA					; MAKE SURE DES DOESN'T CHANGE ANY CC'S
 		TAP
 		TSX
 		TPA
 		CMPA	#0xC0
-		BNE	0
+		BNE	$
 
 ;***********************************************************
 
@@ -3165,18 +3167,18 @@ PSA1:		LDS	#STACK				; INIT STACK
 		PSHA					; PUSH IT
 		TSX					; POINT X TO LAST ON STACK
 		CMPA	0,X 				; WAS IT PUSHED
-		BNE	0				; HANG IF NOT
+		BNE	$				; HANG IF NOT
 		LDAA	#0xAA				; TRY WITH DIFFERENT PATTERN
 		PSHA
 		TSX
 		CMPA	0,X
-		BNE	0
+		BNE	$
 		CLRA					; MAKE SURE NO CC'S ARE CHANGED
 		TAP
 		PSHA					; DO A PSHA
 		TPA					; GET CC'S
 		CMPA	#0xC0				; OK?
-		BNE	0				; HANG IF NOT
+		BNE	$				; HANG IF NOT
 		INS
 		INS
 		INS					; CLEAN UP STACK
@@ -3191,18 +3193,18 @@ PSB1:		LDS	#STACK				; INIT STACK
 		PSHB					; PUSH IT
 		TSX					; POINT X TO LAST ON STACK
 		CMPB	0,X				; WAS IT PUSHED?
-		BNE	0				; HANG IF NOT
+		BNE	$				; HANG IF NOT
 I:		LDAB	#0x55				; DO ANOTHER PATTERN
 		PSHB
 		TSX
 		CMPB	0,X
-		BNE	0
+		BNE	$
 		CLRA					; MAKE SURE NO CC'S ARE SET
 		TAP
 		PSHB					; DO A PSHB
 		TPA					; GET BACK CC'S
 		CMPA	#0xC0				; OK?
-		BNE	0				; HANG IF NOT
+		BNE	$				; HANG IF NOT
 		INS
 		INS					; CLEAN STACK
 		INS
@@ -3218,20 +3220,20 @@ PLA1:		LDS	#STACK				; INIT SP
 		COMA					; SCREW UP A
 		PULA					; RETRIEVE A
 		TSTA					; SHOULD BE ZERO
-		BNE	0
+		BNE	$
 		LDAA	#0xFF				; PUSH ALL 1'S
 		PSHA
 		CLRA					; CHANGE A
 		PULA					; SHOULD BE ALL 1'S
 		CMPA	#0xFF
-		BNE	0
+		BNE	$
 		CLRA					; MAKE SURE NO CC'S ARE CHANGED
 		TAP					; BY PSHA OR PULA
 		PSHA
 		PULA
 		TPA
 		CMPA	#0xC0				; SHOULD BE 0xC0
-		BNE	0
+		BNE	$
 
 ;*****************************************************
 
@@ -3244,30 +3246,30 @@ PLB1:		LDS	#STACK				; INIT SP
 		COMB					; SCREW IT UP
 		PULB					; RETRIEVE IT
 		TSTB					; SHOULD BE ZERO
-		BNE	0
+		BNE	$
 		LDAB	#0xFF				; PUSH ALL 1'S
 		PSHB
 		CLRB					; CHANGE B
 		PULB					; SHOULD BE ALL 1'S
 		CMPB	#0xFF
-		BNE	0
+		BNE	$
 		CLRA					; MAKE SURE NO CC'S ARE CHANGED 
 		TAP					; BY PSHB OR PULB
 		PSHB
 		PULB
 		TPA					; SHOULD BE 0xC0
 		CMPA	#0xC0
-		BNE	0
+		BNE	$
 
 ;*******************************************************
 
 ;          RETURN FROM SUBROUTINE (RTS)
 		LDS	#STACK				; INIT SP
 		JSR	RT1				; GO TO SUB
-		BRA	0				; SHOULD'T GET HERE
+		BRA	$				; SHOULD'T GET HERE
 		TPA					; CHECK CC'S AFTER RTS
 		CMPA	#0xC0
-		BNE	0
+		BNE	$
 		BRA	RT2				; OKAY,SKIP AROUND
 RT1:		TSX					; MODIFY RETURN ADDRESS TO SKIP BRA *
 		LDAA	0,X				; LOAD RETURN ADDRESS
@@ -3287,7 +3289,7 @@ RT2:		LDX	#RT3				; TRY RTS WITHOUT JSR
 		LDAB	TMP
 		PSHB					; RT3 ON STACK
 		RTS
-		BRA	0				; SHOULDN'T GET HERE
+		BRA	$				; SHOULDN'T GET HERE
 RT3:		NOP					; OKAY!
 
 

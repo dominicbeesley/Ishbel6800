@@ -1,20 +1,36 @@
 
+
 MEMORY
 {
- zero:org = 0x0000, len = 0x80
- ram: org = 0x0100, len = 0x7F00
+ zero:org = 0x0020, len = 0xE0
+ dataram: org = 0x0100, len = 0x1F00
+ ram0: org = 0x2000, len = 0x8E
+ ram1: org = 0x208E, len = 0x32
+ ram2: org = 0x20C0, len = 0x46
+ ram3: org = 0x2106, len = 0x2000-0x0106
 }
 
 SECTIONS
-{
-  zero (NOLOAD): {
+{ 
+  zero: {
     *(.dpage)
-  } >zero
-  ram : {
-    *(.text)
+  } >zero =0x3E
+  data: {
     *(.data)
     *(.bss)
-  } >ram
+  } >dataram =0x3E
+  ram0 : {
+    *(.text0)
+  } >ram0
+  ram1 : {
+    *(.text1)
+  } >ram1
+  ram2 : {
+    *(.text2)
+  } >ram2
+  ram3 : {
+    *(.text3)
+  } >ram3
 
 }
 

@@ -1,8 +1,8 @@
 
 AS=vasm6800_std
-ASFLAGS=-m6800 -I ../includes
+ASFLAGS=-m6800 -I ../includes -pad=0x3E
 LD=vlink
-LDFLAGS=-m -b srec19 -nowarn=22 -Cvbcc  -nostdlib 
+LDFLAGS=-m -b srec19 -nowarn=22 -Cvbcc  -nostdlib
 
 SCRIPTS=../../../../../scripts
 BUILD=build
