@@ -102,7 +102,9 @@ entity ws_6800_one is
 
 		-- seven segment LED matrix on 16I/Os_2
 		disp0_seg_o							: out		std_logic_vector(7 downto 0);
-		disp0_sel_o							: out		std_logic_vector(3 downto 0)
+		disp0_sel_o							: out		std_logic_vector(3 downto 0);
+
+		debug_btn_i							: in		std_logic
 
 	);
 end ws_6800_one;
@@ -159,8 +161,23 @@ architecture rtl of ws_6800_one is
 	signal   r_vidram_A		: std_logic_vector(14 downto 0);
 	signal   i_vidram_D_o	: std_logic_vector(7 downto 0);
 
+	signal	i_NMI_debug		: std_logic;
+
 begin
 
+	p_debounce_nmu:process(i_clk_pll)
+	variable v_cnt:unsigned(7 downto 0);
+	begin
+		if debug_btn_i = '0' then
+			v_cnt := (others => '0');
+		elsif rising_edge(i_clk_pll) then
+			if v_cnt(v_cnt'high) = '0' then
+				v_cnt := v_cnt + 1;
+			end if;
+		end if;
+
+		i_NMI_debug <= not v_cnt(v_cnt'high);
+	end process;
 	
 	e_main_pll:entity work.main_pll
 	port map
@@ -301,7 +318,7 @@ begin
 		RST_i		=> i_rst,
 		HALT_i	=> '0',
 		IRQ_i		=>	not i_via_nIRQ,
-		NMI_i		=>	'0',
+		NMI_i		=>	i_NMI_debug,
 		RnW_o		=>	i_cpu_RnW,
 		VMA_o		=>	i_cpu_VMA,
 		BA_o		=>	open,

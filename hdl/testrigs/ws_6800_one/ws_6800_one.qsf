@@ -173,6 +173,18 @@ set_location_assignment	PIN_B13	-to	LCD_50_VS_o				#32I/Os_2_28
 #set_location_assignment	PIN_D11	-to				#32I/Os_2_32
 
 
+#8I/Os_2
+#set_location_assignment	PIN_G1	-to	8I/Os_2_8	  
+#set_location_assignment	PIN_G2	-to	8I/Os_2_7
+#set_location_assignment	PIN_J1	-to	8I/Os_2_6
+#set_location_assignment	PIN_J2	-to	8I/Os_2_5
+#set_location_assignment	PIN_K1	-to	8I/Os_2_4
+#set_location_assignment	PIN_K2	-to	8I/Os_2_3
+#set_location_assignment	PIN_L1	-to	8I/Os_2_2
+set_location_assignment		PIN_L2	-to	debug_btn_i		#8I/Os_2_1
+
+
+
 set_global_assignment -name RESERVE_DCLK_AFTER_CONFIGURATION "USE AS REGULAR IO"
 set_global_assignment -name RESERVE_DATA0_AFTER_CONFIGURATION "USE AS REGULAR IO"
 set_global_assignment -name RESERVE_DATA1_AFTER_CONFIGURATION "USE AS REGULAR IO"
