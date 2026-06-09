@@ -1,27 +1,25 @@
 
 AS=vasm6800_std
-ASFLAGS=-m6800 -I ../includes -pad=0x3E
-LD=vlink
-LDFLAGS=-m -b srec19 -nowarn=22 -Cvbcc  -nostdlib
+ASFLAGS=-m6800 -I ../includes -pad=0x3E -uspc=0x3E
+#LD=vlink
+#LDFLAGS=-m -b srec19 -nowarn=22 -Cvbcc  -nostdlib
 
 SCRIPTS=../../../../../scripts
 BUILD=build
-TARGETS=testsuite
+TARGETS=testsuite testsuite.cmp
 TARGETS2=$(addsuffix .s19, $(addprefix $(BUILD)/, $(TARGETS)))
 
 .SECONDARY:
 
 all:: $(TARGETS2)
 
-testsuite: $(wildcard **.f16)
 
 MKDIR := $(shell mkdir -p $(BUILD))
-$(BUILD)/%.o: %.asm
-	$(AS) $(ASFLAGS) -Fvobj -o $@ -L $(basename $@).lst $<
+$(BUILD)/testsuite.cmp.s19: testsuite.asm 
+	$(AS) $(ASFLAGS) -DBUILD_COMPARE=1 -Fsrec -s19 -o $@ -L $(basename $@).lst $<
 
-$(BUILD)/%.s19: $(BUILD)/%.o 
-	$(LD) $(LDFLAGS) -M$(basename $@).map -o $@ -T./$(notdir $(basename $@)).lk -symfile $(basename $@).sym -symfmt "DEF %s 0x%08llx" $(filter %.o, $^) 
-
+$(BUILD)/testsuite.s19: testsuite.asm 
+	$(AS) $(ASFLAGS) -DBUILD_WSONE=1 -Fsrec -s19 -o $@ -L $(basename $@).lst $<
 
 clean::
 	-rm $(TARGETS2) 

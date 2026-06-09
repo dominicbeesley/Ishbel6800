@@ -52,6 +52,7 @@
 
 ;        WRITTEN BY C.D.HUNTSMAN
 ;        A.Riiber: Corrections marked '*' to the right
+;	  D.Beesley: Corrections ** DB **
 
 
 ;****************************************************
@@ -59,21 +60,26 @@
 
 
 ;	Memory start addresses
+		.equ _ZP,   0x0020
+		.equ _DATA, 0x0100
+		.equ _CODE, 0x2000
+	.ifdef BUILD_COMPARE
 		.equ PDATA, 0xE07E
+	.endif
 
 
-       .dpage
+       .org	_ZP
 	
 
 ;      DATA IN BASE PAGE FOR DIRECT ADDRESSING
 
-BOTTOM:		.skip	0x30				; STACK AREA
-STACK:		.skip	8
+BOTTOM:	.skip	0x30, 0x3E			; STACK AREA
+STACK:		.skip	8, 0x3E
 DATA:		.byte	0xAA,0x55,0xAA,0x00,0x00,0xFF,0x40,0x54 
 							; WAS @252,@125,@252,@0,@0,@377,@100,@124
 		.byte	0x80,0x81,0xBF,0xFE
 DATA1:		.byte	0x7D,0x7E,0x7F,0x01   		; WAS @175,@176,@177,@001
-TMP:		.skip	2
+TMP:		.skip	2,0x3E
 
 ;      DOUBLE PRECISION CONSTANTS
 
@@ -90,15 +96,15 @@ H4000:		.word	0x4000
 
 ;      BASE PAGE VARIABLES
 
-TEMP:		.skip	2
-OSP:		.skip	2 				; OLD SP SAVE
-NSP:		.skip	2 				; NEW SP SAVE
+TEMP:		.skip	2,0x3E
+OSP:		.skip	2,0x3E				; OLD SP SAVE
+NSP:		.skip	2,0x3E				; NEW SP SAVE
 
 
 ;      EXTENDED VARIABLES
 
-       .data
-TMP2:		.skip 2
+       	.org _DATA
+TMP2:		.skip 2, 0x3E
 ;		PAGE
 ;       TTL **** 6800 TOTAL INSTRUCTION TEST - GROUP 3 ****
 
@@ -122,19 +128,20 @@ TMP2:		.skip 2
 ;         TAP
 ;         JMP EXTENDED
 
-		.section ".text0","acrx"
-_CODE:
+		.org _CODE
 ST:		BRA	B1
 		BRA	$
 B1:		JMP	B2
-		.section ".text1","acrx"
+
+
+		.org _CODE+0x8E
 C1:		JMP	C2
 
 ;      TEST ALL PATHS OF BRANCH
 
 ;          I.E., CHECK FORWARD AND REVERSE OFFSETS
 
-		.section ".text2","acrx"		; 20C0
+		.org _CODE+0xC0
 B2:		BRA	B3
 		BRA	$
 B4:		BRA	B5
@@ -144,7 +151,7 @@ B3:		BRA	B4
 
 ;      FINAL PATH
 
-		.section ".text3","acrx"		; "106"
+		.org _CODE+0x106
 B5:		CLC
 		BCS	$
 		BRA	C1
@@ -481,16 +488,24 @@ CP14:		BCC	CP15
 ;      CASE 5:
 ;      X = AA00
 ;      DATA = AA55
-;      RESULT = FFAB
-;      Z=0, N=1, V=0, C=1			; *
+;      RESULT = 00AB
+;      Z=0, N=0, V=0, C=1			; ***DB**
+
+
+; DB: I think AR has wrongly assumed a carry from the LSB to MSB when
+; calculating the N and V flags - datasheet/patent don't mention that
+; and it is difficult with big-endian, I suspect N/V set on high byte
+; which is done first then Z is a simple EOR/SUB in second (LSB)
+; - verified on real 6800
+
 CP15:		LDX	DATA+2 			; X=AA00
 		CPX	DATA
 		BEQ	$
-		bpl	$
+		BMI	$			; ** DB **
 		BVS	$
 		BNE	CP16
 		BRA	$
-CP16:		bmi	CP17			; *
+CP16:		BPL	CP17			; ** DB **
 		BRA	$
 CP17:		BVC	CP19
 		BRA	$
@@ -3303,10 +3318,40 @@ BRKPT:		NOP					; EVERYTHINGS OKAY !!!!!!!!!!!!!!!!!!!!!!!!!
 		NOP
 		NOP
 		NOP
-		JMP	ST				; GO BACK TO START
+ENDLP:		JMP	ENDLP				; ** DB ** lock up at end
+;		JMP	ST				; GO BACK TO START
 
 OKMSG:		.byte " OK"
 		.byte 4
+
+
+	.ifdef BUILD_WSONE
+
+		.equ FT245_STAT,	0x8000
+		.equ FT245_DATA,	0x8001
+
+		.equ FT245_RXF,		0x01
+		.equ FT245_TXE,		0x02
+
+
+PUTCHAR:
+		PSHA
+		LDA	#FT245_TXE
+PC10:		BITA	FT245_STAT      	;CHECK TX STATUS
+		BNE	PC10
+		PULA
+		STAA	FT245_DATA      	;TRANSMIT CHAR.
+		RTS
+
+PDATA:		LDAA	0,X
+		CMPA	#4
+		BEQ	PDATA01
+		JSR	PUTCHAR
+		INX
+		BRA	 PDATA
+PDATA01:	RTS		
+
+	.endif
 
 ;		PAGE
 ;		END	ST
