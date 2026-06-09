@@ -1,5 +1,5 @@
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
--- GENERATED : 2026-05-07T17:11:35Z
+-- GENERATED : 2026-06-09T16:05:16Z
 -- THIS IS A GENERATED FILE - SEE makepla.pl - DO NET EDIT THIS FILE --
 -- 
 ----------------------------------------------------------------------------------
@@ -353,15 +353,17 @@ begin
                INC_L_src_o <= abl; INC_H_src_o <= abh;
             end if;
             mux_DB_DBI_o <= '1';
+            CCR_ld_ALU_N_o <= '1';
+            CCR_ld_ALU_V_o <= '1';
             CCR_ld_ALU_Z_o <= '1';
             mux_ABLI_IXL_o <= '1';
-            ALU_op_o <= alu_eor;
+            ALU_op_o <= alu_sub;
             v_next_state := CPX_TSL0_D02;
 
          when CPX_T1_D00 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
             mux_DB_DBI_o <= '1';
-            ALU_op_o <= alu_eor;
+            ALU_op_o <= alu_sub;
             mux_ABLI_IXH_o <= '1';
             v_next_state := CPX_D01;
 
@@ -404,7 +406,7 @@ begin
 
          when DX2 =>
             mux_ABL_INCL_o <= '1'; mux_ABH_INCH_o <= '1';
-            if IR_i(2 downto 0) = "111" then
+            if std_match(IR_i, "1----111") then
                -- its a write next
                VMA_o <= '0';
                INC_act_o <= hold;
