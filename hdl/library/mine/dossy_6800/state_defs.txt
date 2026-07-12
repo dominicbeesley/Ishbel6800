@@ -691,7 +691,7 @@ INT_CLEAR { INT_CLEAR_o <= '1'; }
 [CPX_T1_D00]
 	INC->AB
 	DBI->DB
-	ALU_EOR
+	ALU_SUB
 	IXH->ABLI
 	
 	NEXT=CPX_D01
@@ -707,10 +707,12 @@ INT_CLEAR { INT_CLEAR_o <= '1'; }
 
 	DBI->DB
 	
+	ALUN->CCR
+	ALUV->CCR
 	ALUZ->CCR
 
 	IXL->ABLI
-	ALU_EOR
+	ALU_SUB
 	NEXT=CPX_TSL0_D02
 
 [CPX_TSL0_D02]
@@ -1070,7 +1072,7 @@ INT_CLEAR { INT_CLEAR_o <= '1'; }
 
 [DX2]
 	INC->AB
-	{if IR_i(2 downto 0) = "111" then}
+	{if std_match(IR_i, "1----111") then}
 		{-- its a write next}
 		nVMA
 		HOLD

@@ -1,0 +1,21 @@
+
+MEMORY
+{
+ zero:org = 0x0000, len = 0x80
+ ram: org = 0x0100, len = 0x7F00
+}
+
+SECTIONS
+{
+  zero (NOLOAD): {
+    *(.dpage)
+  } >zero
+  ram : {
+    *(.text)
+    *(.data)
+    *(.bss)
+  } >ram
+
+}
+
+ENTRY(START)
