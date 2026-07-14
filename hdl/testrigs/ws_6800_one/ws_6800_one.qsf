@@ -103,6 +103,15 @@ set_location_assignment PIN_T3 -to touch_SCLK_o
 set_location_assignment PIN_K9 -to touch_MOSI_o
 set_location_assignment PIN_L9 -to touch_MISO_i
 
+# = left part of 32i/os_2
+# set_location_assignment	PIN_L8	-to	32I/Os_2_27
+# set_location_assignment	PIN_K8	-to	32I/Os_2_28
+# set_location_assignment	PIN_M7	-to	32I/Os_2_29
+set_location_assignment	PIN_M8	-to	BLINKEN_CLK_o #32I/Os_2_30
+set_location_assignment	PIN_M6	-to	BLINKEN_DAT_o #32I/Os_2_31
+set_location_assignment	PIN_L7	-to	BLINKEN_nCS_o #32I/Os_2_32
+
+
 
 set_location_assignment PIN_J12 -to LCD12864_N_o
 set_location_assignment PIN_J13 -to LCD12864_RST_o
@@ -203,6 +212,7 @@ set_global_assignment -name VHDL_FILE ../../library/mine/ram_syn.vhd
 set_global_assignment -name VHDL_FILE ../../library/mine/ram_syn_dp.vhd
 set_global_assignment -name VHDL_FILE ../../library/mine/led8.vhd
 set_global_assignment -name VHDL_FILE ../../library/mine/led8_N.vhd
+set_global_assignment -name VHDL_FILE ../../library/mine/max7219_matrix.vhd
 set_global_assignment -name VHDL_FILE ../../library/3rdparty/m6522.vhd
 set_global_assignment -name VHDL_FILE ../../library/3rdparty/mc6845.vhd
 set_global_assignment -name VHDL_FILE ../../library/mine/dossy_6800/dossy_6800_alu.vhd

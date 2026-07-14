@@ -22,6 +22,10 @@ architecture rtl of test_tb is
 
    signal   i_nTXE:              std_logic;
 
+   signal   i_BLINKEN_nCS        : std_logic;
+   signal   i_BLINKEN_DAT        : std_logic;
+   signal   i_BLINKEN_CLK        : std_logic;
+
 begin
 
 
@@ -88,9 +92,13 @@ begin
       touch_nCS_o                   => open,
       touch_SCLK_o                  => open,
       touch_MOSI_o                  => open,
-      touch_MISO_i                  => '1'
+      touch_MISO_i                  => '1',
 
+      BLINKEN_nCS_o                 => i_BLINKEN_nCS,
+      BLINKEN_DAT_o                 => i_BLINKEN_DAT,
+      BLINKEN_CLK_o                 => i_BLINKEN_CLK,
 
+      debug_btn_i                   => '1'
    );
 
    p_txe:process

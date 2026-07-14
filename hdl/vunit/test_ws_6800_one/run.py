@@ -16,6 +16,7 @@ lib.add_source_files("./*.vhd")
 lib_dossy.add_source_files("../../library/mine/dossy_6800/*.vhd")
 lib.add_source_files("../../library/mine/*.vhd")
 lib.add_source_files("../../library/3rdparty/m6522.vhd")
+lib.add_source_files("../../library/3rdparty/mc6845.vhd")
 lib.add_source_files("../../testrigs/ws_6800_one/*.vhd")
 
 vu.set_sim_option("disable_ieee_warnings",1)

@@ -47,6 +47,7 @@ use ieee.numeric_std.all;
 
 library work;
 use work.common.all;
+use work.max7219_matrix_pack.all;
 
 library dossy_6800;
 use dossy_6800.dossy_6800.all;
@@ -104,6 +105,11 @@ entity ws_6800_one is
 		disp0_seg_o							: out		std_logic_vector(7 downto 0);
 		disp0_sel_o							: out		std_logic_vector(3 downto 0);
 
+		-- max7219 blinkenlights
+		BLINKEN_nCS_o						: out		std_logic;
+		BLINKEN_DAT_o						: out		std_logic;
+		BLINKEN_CLK_o						: out		std_logic;
+
 		debug_btn_i							: in		std_logic
 
 	);
@@ -134,6 +140,7 @@ architecture rtl of ws_6800_one is
 	signal   i_CS_VIA			: std_logic;
 	signal   i_CS_1M			: std_logic;
 	signal   i_CS_CRTC		: std_logic;
+	signal   i_CS_blinken   : std_logic;
 
 	signal	i_cpu_RnW		: std_logic;
 	signal	i_cpu_VMA		: std_logic;
@@ -162,6 +169,9 @@ architecture rtl of ws_6800_one is
 	signal   i_vidram_D_o	: std_logic_vector(7 downto 0);
 
 	signal	i_NMI_debug		: std_logic;
+
+	signal	r_blinken_data	: t_max7219_matrix_data(0 to 31);
+	signal   i_blinken_D_o  : std_logic_vector(7 downto 0);
 
 begin
 
@@ -272,6 +282,7 @@ begin
 			i_CS_VIA <= '0';
 			i_CS_1M <= '0';
 			i_CS_CRTC <= '0';
+			i_CS_blinken <= '0';
 		else
 			i_CS_RAM <= '0';
 			i_CS_ROM <= '0';
@@ -282,6 +293,7 @@ begin
 			i_CS_VIA <= '0';
 			i_CS_1M <= '0';
 			i_CS_CRTC <= '0';
+			i_CS_blinken <= '0';
 
 			if i_cpu_VMA = '1' then
 
@@ -304,6 +316,8 @@ begin
 					i_CS_VIA <= '1';
 				elsif i_cpu_A(15 downto 8) = x"84" then
 					i_CS_CRTC <= '1';
+				elsif i_cpu_A(15 downto 8) = x"85" then
+					i_CS_blinken <= '1';
 				elsif i_cpu_A(15) = '0' then
 					i_CS_RAM <= '1';
 				end if;
@@ -337,6 +351,7 @@ begin
 					 LCD12864_D_io when i_CS_LCD12864 = '1' else
 					 i_via_D_o when i_CS_VIA = '1' else
 					 i_crtc_D_o when i_CS_CRTC = '1' else
+					 i_blinken_D_o when i_CS_blinken = '1' else
 					 x"FF";
 
 	e_ram:entity work.RAM_syn_dp
@@ -696,5 +711,33 @@ begin
 	    );
 
 end block;
+
+e_blinken:entity work.max7219_matrix
+generic map (
+	ROWS => 8,
+	COLS => 4
+	)
+port map (
+	RST_I			=> i_rst,
+
+	CLK_I			=> i_clk_pll,
+	CLKEN_I		=> r_via_ena4, -- 4MHz
+
+	DATA_I		=> r_blinken_data,
+
+	SPI_nCS_o	=> BLINKEN_nCS_o,
+	SPI_DAT_o	=> BLINKEN_DAT_o,
+	SPI_CLK_o	=> BLINKEN_CLK_o
+);
+
+
+	p_wr_blinken:process(all)
+	begin
+		if i_WRen = '1' and i_cpu_RnW = '0' and i_CS_blinken = '1' then
+			r_blinken_data(to_integer(unsigned(i_cpu_A(4 downto 0)))) <= i_cpu_D_o;
+		end if;
+	end process;
+
+	i_blinken_D_o <= r_blinken_data(to_integer(unsigned(i_cpu_A(4 downto 0))));
 
 end rtl;
