@@ -120,7 +120,8 @@ architecture rtl of ws_6800_one is
 	constant CLOCK_SPEED		: natural := 48;
 
 	signal	i_clk_pll		: std_logic;
-	signal	i_rst				: std_logic;
+	signal	r_rst				: std_logic := '1';
+	signal   r_reset_ctr 	: unsigned(12 downto 0) := (others => '0');
 
 	signal	r_clken_ring	: std_logic_vector(3 downto 0) := (0 => '1', others => '0');
 
@@ -173,6 +174,8 @@ architecture rtl of ws_6800_one is
 	signal	r_blinken_data	: t_max7219_matrix_data(0 to 31);
 	signal   i_blinken_D_o  : std_logic_vector(7 downto 0);
 
+
+
 begin
 
 	p_debounce_nmu:process(i_clk_pll)
@@ -204,24 +207,24 @@ begin
 	LED_o(3) <= i_cpu_A(15);
 
 	p_reset:process(i_clk_pll, EXT_nRESET_i)
-	variable v_ctr : unsigned(8 downto 0) := (others => '0');
 	begin
 		
 		if rising_edge(i_clk_pll) then
 			if EXT_nRESET_i = '0' then
-				v_ctr := (others => '0');
-			elsif v_ctr(v_ctr'high) = '0' then
-				v_ctr := v_ctr + 1;
+				r_reset_ctr <= (others => '0');
+				r_rst <= '1';
+			elsif r_reset_ctr(r_reset_ctr'high) = '0' then
+				r_reset_ctr <= r_reset_ctr + 1;
+			else
+				r_rst <= '0';
 			end if;
-
-			i_rst <= not(v_ctr(v_ctr'high));
 		end if;
 	end process;
 
 
 	--TODO: the clock stretching is very basic - it could be improved
 
-	p_clken:process(i_clk_pll, i_rst)
+	p_clken:process(i_clk_pll, r_rst)
 	variable v_stretch : boolean;
 	begin
 		if rising_edge(i_clk_pll) then
@@ -272,7 +275,7 @@ begin
 
 	p_cs:process(all)
 	begin
-		if i_rst = '1' then
+		if r_rst = '1' then
 			i_CS_RAM <= '0';
 			i_CS_ROM <= '0';
 			i_CS_FT245_D <= '0';
@@ -329,7 +332,7 @@ begin
 	port map (	
 		CLK_i		=> i_clk_pll,
 		CLKEN_i	=> i_clken_cpu,
-		RST_i		=> i_rst,
+		RST_i		=> r_rst,
 		HALT_i	=> '0',
 		IRQ_i		=>	not i_via_nIRQ,
 		NMI_i		=>	i_NMI_debug,
@@ -391,7 +394,7 @@ begin
 		q				=> i_rom_D_o
 	);
 
-	FT245_nRST_o <= '1'; --not i_rst;
+	FT245_nRST_o <= '1'; --not r_rst;
 	FT245_PWR_o <= '1';
 	FT245_nRD_o <= '0' when i_RDen = '1' and i_cpu_RnW = '1' and i_CS_FT245_D = '1' else
 						'1';
@@ -401,12 +404,12 @@ begin
 	FT245_D_io <= 	i_cpu_D_o when i_cpu_RnW = '0'  and i_CS_FT245_D = '1' else
 						(others => 'Z');
 
-	lcd32_nRESET_o <= not i_rst;
+	lcd32_nRESET_o <= not r_rst;
 
-	p_lcd_ctl:process(i_clk_pll, i_rst)
+	p_lcd_ctl:process(i_clk_pll, r_rst)
 	begin
 		
-		if i_rst = '1' then
+		if r_rst = '1' then
 			lcd32_nCS_o <= '1';
 			lcd32_RS_o <= '1';
 			lcd32_nRD_o <= '1';
@@ -461,7 +464,7 @@ begin
 	LCD12864_N_o 	<= '0';
 	LCD12864_P_o 	<= '1';
 	LCD12864_PSB_o <= '1';
-	LCD12864_RST_o <= not i_rst;
+	LCD12864_RST_o <= not r_rst;
 	LCD12864_D_io 	<= i_cpu_D_o when i_cpu_RnW = '0' and i_CS_LCD12864 = '1' else
 							(others => 'Z');
 	LCD12864_RnW_o <= i_cpu_RnW;
@@ -539,7 +542,7 @@ begin
       O_PB_OE_L             => open,
 
       I_P2_H                => r_via_1MHzE,
-      RESET_L               => not i_rst,
+      RESET_L               => not r_rst,
       ENA_4                 => r_via_ena4,
       CLK                   => i_clk_pll
    );
@@ -599,18 +602,18 @@ b_ansi_ttl_50:block
 
 begin
 
-	p_crtc_clken:process(i_clk_pll, i_rst)
+	p_crtc_clken:process(i_clk_pll, r_rst)
 	begin
-		if i_rst = '1' then
+		if r_rst = '1' then
 			r_clken_crtc <= (0 => '1', others => '0');
 		elsif rising_edge(i_clk_pll) then
 			r_clken_crtc <= r_clken_crtc(6 downto 0) & r_clken_crtc(7);
 		end if;
 	end process;
 
-	p_vidmem_A:process(i_clk_pll, i_rst)
+	p_vidmem_A:process(i_clk_pll, r_rst)
 	begin
-		if i_rst = '1' then
+		if r_rst = '1' then
 			r_vidram_A <= (others => '0');
 		elsif rising_edge(i_clk_pll) then
 			if r_clken_crtc(CRTCIX_MA) = '1' then
@@ -623,9 +626,9 @@ begin
 		end if;
 	end process;
 
-	p_attr_l:process(i_clk_pll, i_rst)
+	p_attr_l:process(i_clk_pll, r_rst)
 	begin
-		if i_rst = '1' then
+		if r_rst = '1' then
 			r_attr_0 <= (others => '0');
 		elsif rising_edge(i_clk_pll) then
 			if r_clken_crtc(CRTCIX_MA2) then
@@ -634,9 +637,9 @@ begin
 		end if;
 	end process;
 
-	p_vidshift:process(i_clk_pll, i_rst)
+	p_vidshift:process(i_clk_pll, r_rst)
 	begin
-		if i_rst = '1' then
+		if r_rst = '1' then
 			r_shift_de <= '0';
 			r_shift_cursor <= '0';
 			r_shift_px <= (others => '0');
@@ -686,7 +689,7 @@ begin
 	    CLOCK     => i_clk_pll,
 	    CLKEN     => r_clken_crtc(CRTCIX_CRTCCKEN),
 	    CLKEN_CPU => i_clken_mems,
-	    nRESET    => not i_rst,
+	    nRESET    => not r_rst,
 
 	    -- Bus interface
 	    ENABLE    => i_CS_CRTC,
@@ -718,7 +721,7 @@ generic map (
 	COLS => 4
 	)
 port map (
-	RST_I			=> i_rst,
+	RST_I			=> r_rst,
 
 	CLK_I			=> i_clk_pll,
 	CLKEN_I		=> r_via_ena4, -- 4MHz
@@ -733,8 +736,10 @@ port map (
 
 	p_wr_blinken:process(all)
 	begin
-		if i_WRen = '1' and i_cpu_RnW = '0' and i_CS_blinken = '1' then
-			r_blinken_data(to_integer(unsigned(i_cpu_A(4 downto 0)))) <= i_cpu_D_o;
+		if rising_edge(i_clk_pll) then
+			if i_WRen = '1' and i_cpu_RnW = '0' and i_CS_blinken = '1' then
+				r_blinken_data(to_integer(unsigned(i_cpu_A(4 downto 0)))) <= i_cpu_D_o;
+			end if;
 		end if;
 	end process;
 
