@@ -9,3 +9,4 @@
 *.deps
 **/build
 *.odt#
+*.NoiCtx
