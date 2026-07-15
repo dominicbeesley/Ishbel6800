@@ -95,7 +95,7 @@ architecture rtl of max7219_matrix is
 	constant MAX7219_CMD_SHUTDOWN			: std_logic_vector(7 downto 0) := x"0C";
 	constant MAX7219_CMD_TEST				: std_logic_vector(7 downto 0) := x"0F";
 
-	type t_state is (reset1, reset2, reset3, init, run);
+	type t_state is (reset, init, run);
 	type t_row_state is (start, shifting);
 	type t_bit_state is (phase0, phase1, phase2, phase3);
 
@@ -122,7 +122,7 @@ begin
 			dat_ix <= (others => '0');
 			bit_ix <= (others => '1');
 			r_row_state <= start;
-			r_state <= reset1;
+			r_state <= reset;
 			sr <= (others => '0');
 		elsif rising_edge(CLK_I) then
 			if CLKEN_I = '1' then
@@ -137,11 +137,7 @@ begin
 							if row_ix = ROWS then
 								row_ix <= to_unsigned(1, row_ix'length);
 								dat_ix <= (others => '0');
-								if r_state = reset1 then
-									r_state <= reset2;
-								elsif r_state = reset2 then
-									r_state <= reset3;
-								elsif r_state = reset3 then
+								if r_state = reset then
 									r_state <= init;
 								else
 									r_state <= run;
@@ -177,7 +173,7 @@ begin
 
 
 				if v_load then
-					if r_state = reset1 or r_state = reset2 or r_state = reset3 then
+					if r_state = reset then
 						sr <= (others => '0');
 					elsif r_state = init then
 						case to_integer(row_ix) is 
