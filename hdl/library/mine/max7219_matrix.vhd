@@ -95,7 +95,7 @@ architecture rtl of max7219_matrix is
 	constant MAX7219_CMD_SHUTDOWN			: std_logic_vector(7 downto 0) := x"0C";
 	constant MAX7219_CMD_TEST				: std_logic_vector(7 downto 0) := x"0F";
 
-	type t_state is (reset, init, run);
+	type t_state is (init, run);
 	type t_row_state is (start, shifting);
 	type t_bit_state is (phase0, phase1, phase2, phase3);
 
@@ -122,7 +122,7 @@ begin
 			dat_ix <= (others => '0');
 			bit_ix <= (others => '1');
 			r_row_state <= start;
-			r_state <= reset;
+			r_state <= init;
 			sr <= (others => '0');
 		elsif rising_edge(CLK_I) then
 			if CLKEN_I = '1' then
@@ -137,11 +137,7 @@ begin
 							if row_ix = ROWS then
 								row_ix <= to_unsigned(1, row_ix'length);
 								dat_ix <= (others => '0');
-								if r_state = reset then
-									r_state <= init;
-								else
-									r_state <= run;
-								end if;
+								r_state <= run;								
 							else
 								row_ix <= row_ix + 1;
 							end if;
@@ -173,9 +169,7 @@ begin
 
 
 				if v_load then
-					if r_state = reset then
-						sr <= (others => '0');
-					elsif r_state = init then
+					if r_state = init then
 						case to_integer(row_ix) is 
 							when 2 | 7 =>
 								sr <= MAX7219_CMD_TEST & "00000000";
@@ -201,6 +195,11 @@ begin
 		end if;
 	end process;
 		
+	-- NOTE: the clock needs to free run for some time before the
+	-- initialisation sequence otherwise some units don't init
+	-- correctly. No information on how many clocks are needed
+	-- or whether this is due to cheap knock-off chips in the 
+	-- modules I'm using
 	p_clk:process(CLK_I, CLKEN_I)
 	begin
 		if rising_edge(CLK_I) then
